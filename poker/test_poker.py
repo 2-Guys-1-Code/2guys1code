@@ -6,31 +6,40 @@ from poker import Card, Poker, BadCardError
 @pytest.mark.parametrize(
     "hand_1, hand_2, expectation",
     [
-        [[13, 13, 4, 7, 8], [12, 12, 6, 2, 3], 1],
-        [[12, 12, 4, 7, 8], [13, 13, 6, 2, 3], -1],
-        [[13, 13, 4, 7, 8], [13, 13, 6, 2, 3], 1],
-        [[9, 9, 7, 8, 5], [13, 13, 6, 2, 3], -1],
-        [[1, 1, 7, 8, 5], [13, 13, 6, 2, 3], 1],
-        [[1, 7, 8, 5, 1], [13, 6, 13, 2, 3], 1],
-        [[10, 4, 10, 8, 3], [12, 5, 9, 9, 3], 1],
-        [[10, 4, 9, 8, 3], [12, 5, 9, 9, 3], -1],
-        [[8, 4, 7, 10, 13], [1, 7, 9, 8, 12], -1],
-        [[2, 2, 7, 10, 13], [1, 7, 9, 8, 13], 1],
-        [[2, 2, 3, 3, 4], [1, 1, 9, 8, 13], 1],
-        [[8, 8, 5, 5, 4], [8, 8, 6, 6, 3], -1],
-        [[8, 8, 6, 6, 4], [8, 8, 6, 6, 13], -1],
-        [[8, 4, 8, 10, 10], [12, 5, 9, 9, 3], 1],
-        [[8, 4, 8, 10, 10], [12, 1, 9, 9, 12], -1],
-        [[10, 4, 10, 11, 11], [12, 1, 9, 9, 12], -1],
-        [[10, 2, 1, 2, 2], [12, 1, 9, 9, 12], 1],
-        [[10, 2, 1, 2, 2], [12, 1, 3, 3, 3], -1],
-        [[10, 3, 2, 3, 3], [12, 4, 3, 3, 3], -1],
-        [[2, 3, 4, 5, "6H"], [12, 4, 1, 1, 1], 1],
-        [[12, 4, 1, 1, 1], [2, 3, 4, 5, "6H"], -1],
-        [[6, "7H", 8, 9, 10], [12, 4, 3, 1, 1], 1],
-        [["6C", "7H", "8H", "9H", "10H"], [12, 4, 3, 1, 1], 1],
-        [["6C", "10H", "8H", "9H", "7H"], [12, 4, 3, 1, 1], 1],
-        [["6C", "4C", "10C", "1C", "5C"], [12, 4, 3, 1, 1], 1],
+        [["13C", "13H", "4S", "7D", "8D"], ["12C", "12S", "6C", "2D", "3H"], 1],
+        [["12C", "12H", "4S", "7C", "8D"], ["13C", "13D", "6H", "2C", "3S"], -1],
+        [["13C", "13S", "4C", "7C", "8H"], ["13C", "13C", "6C", "2C", "3H"], 1],
+        [["9C", "9S", "7C", "8C", "5D"], ["13C", "13C", "6C", "2C", "3H"], -1],
+        [["1S", "1C", "7C", "8C", "5D"], ["13S", "13C", "6C", "2C", "3H"], 1],
+        [["1C", "7C", "8C", "5C", "1H"], ["13C", "6C", "13C", "2C", "3H"], 1],
+        [["10C", "4C", "10C", "8C", "3H"], ["12C", "5C", "9C", "9C", "3H"], 1],
+        [["10C", "4C", "9C", "8C", "3H"], ["12C", "5C", "9C", "9C", "3H"], -1],
+        [["8C", "4C", "7C", "10C", "13H"], ["1C", "7C", "9C", "8C", "12H"], -1],
+        [["2C", "2C", "7C", "10C", "13H"], ["1C", "7C", "9C", "8C", "13H"], 1],
+        [["2C", "2C", "3C", "3C", "4H"], ["1C", "1C", "9C", "8C", "13H"], 1],
+        [["8C", "8C", "5C", "5C", "4H"], ["8C", "8C", "6C", "6C", "3H"], -1],
+        [["8C", "8C", "6C", "6C", "4H"], ["8C", "8C", "6C", "6C", "13H"], -1],
+        [["8C", "4C", "8C", "10C", "10H"], ["12C", "5C", "9C", "9C", "3H"], 1],
+        [["8C", "4C", "8C", "10C", "10H"], ["12C", "1C", "9C", "9C", "12H"], -1],
+        [["10C", "4C", "10C", "11C", "11H"], ["12C", "1C", "9C", "9C", "12H"], -1],
+        [["10C", "2C", "1C", "2C", "2H"], ["12C", "1C", "9C", "9C", "12H"], 1],
+        [["10C", "2C", "1C", "2C", "2H"], ["12C", "1C", "3C", "3C", "3H"], -1],
+        [["10C", "3C", "2C", "3C", "3H"], ["12C", "4C", "3C", "3C", "3H"], -1],
+        [["2C", "3C", "4C", "5C", "6H"], ["12C", "4C", "1C", "1C", "1H"], 1],
+        [["12C", "4C", "1C", "1C", "1H"], ["2C", "3C", "4C", "5C", "6H"], -1],
+        [["6C", "7H", "8C", "9C", "10H"], ["12C", "4C", "3C", "1C", "1H"], 1],
+        [["6C", "7H", "8H", "9H", "10H"], ["12C", "4C", "3C", "1C", "1H"], 1],
+        [["6C", "10H", "8H", "9H", "7H"], ["12C", "4C", "3C", "1C", "1H"], 1],
+        [["6C", "4C", "10C", "1C", "5C"], ["12C", "4C", "3C", "1C", "1H"], 1],
+        [["6C", "6S", "6D", "5H", "5C"], ["11C", "11C", "11C", "1C", "4H"], 1],
+        [["2C", "2S", "2D", "3H", "3C"], ["9C", "11C", "12C", "13C", "1C"], 1],
+        [["1C", "1S", "1D", "13H", "13C"], ["2C", "2S", "2D", "2H", "3C"], -1],
+        [["1C", "1S", "1D", "1H", "13C"], ["2C", "2S", "2D", "2H", "3C"], 1],
+        [["4C", "5C", "6C", "2C", "3C"], ["1C", "1S", "1D", "1H", "13C"], 1],
+        [["4C", "5C", "6C", "2C", "3C"], ["10C", "11C", "12C", "13C", "1C"], -1],
+        [["4C", "5C", "6C", "2C", "3C"], ["4H", "5H", "6H", "2H", "3H"], 0],
+        [["4C", "5C", "6C", "2C", "12C"], ["4S", "5S", "6S", "2S", "12S"], 0],
+        [["2S", "3C", "4S", "5C", "6S"], ["2C", "3S", "4C", "5S", "6C"], 0],
     ],
     ids=[
         "pair or Ks beats pair of Qs",
@@ -53,11 +62,22 @@ from poker import Card, Poker, BadCardError
         "higher three of kind beats lower three of a kind",
         "high card wins when three of a kinds are equal (Cheat alert!!)",
         "lowest straight (not flush!) beats highest three of a kind",
-        "lowest straight (not flush!) beats highest three of a kind (inversed order)",
+        "lowest straight (not flush!) beats highest three of a kind (inversed \
+            order)",
         "straight (not flush!) beats a pair",
         "straight (not flush, with full parsing) beats a pair",
-        "straight (not flush, with full parsing, and different order) beats a pair",
+        "straight (not flush, with full parsing, and different order) beats a \
+            pair",
         "flush beats a pair",
+        "Full House beats three of kind",
+        "lowest Full House beats highest flush (not straight)",
+        "lowest four of a kind beats highest full house",
+        "highest four of a kind beats lowest four of a kind",
+        "lowest straight flush beats highest four of a kind",
+        "highest straight flush beats lowest straight flush",
+        "two equal straight flushes draw",
+        "two equal flushes draw",
+        "two equal straights draw",
     ],
 )
 def test_compare_hands(hand_1, hand_2, expectation):
@@ -80,3 +100,20 @@ def test_reindex_card(card, expected):
 def test_card_is_not_valid(card_str):
     with pytest.raises(BadCardError):
         Card(card_str)
+
+
+# class TestObject:
+#     pass
+
+
+# def test_dunders():
+#     card = Card("3C")
+#     obj = TestObject()
+
+#     # test1 = card > None
+#     # test2 = None < card
+#     # test3 = card < None
+#     # test4 = None > card
+
+#     test5 = obj < card
+#     # test6 = card < obj
