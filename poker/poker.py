@@ -10,10 +10,13 @@ class BadCardError(Exception):
 class Card:
 
     suit = None
-    rank: int = 0
+    rank: Union[int, None] = 0
 
     def __init__(self, _card: Union[str, int]) -> None:
-        result = re.search(r"^(\d{1,2})(['C','H','S','D'])$", _card)
+        result = re.search(r"^(\d{0,2})(['C','H','S','D'])$", _card)
+        if result is None:
+            result = re.search(r"^()(BJ|RJ)$", _card)
+
         if result is None:
             raise BadCardError()
 
@@ -21,12 +24,16 @@ class Card:
         rank = result.group(1)
 
         self.suit = suit  # either there's no suit
-        self.rank = int(rank)
 
-        if self.rank > 13:
-            raise BadCardError()
+        if rank == "":
+            self.rank = None
+        else:
+            self.rank = int(rank)
 
-        self._reindex_card()
+            if self.rank > 13:
+                raise BadCardError()
+
+            self._reindex_card()
 
     def _reindex_card(self):
         if self.rank == 0:
@@ -55,6 +62,11 @@ class Card:
         return Card(f"{rank}{self.suit}")
 
     def __repr__(self) -> str:
+        if self.rank is None:
+            return self.suit
+        if self.rank == 14:
+            return f"1{self.suit}"
+
         return f"{self.rank}{self.suit}"
 
     def __hash__(self) -> int:
@@ -93,7 +105,7 @@ class Poker:
         return winner
 
     @staticmethod
-    def _parse_to_cards(hand) -> list[Card]:
+    def _parse_to_cards(hand) -> list:
         return [Card(c) for c in hand]
 
     @staticmethod
@@ -279,7 +291,7 @@ class Poker:
         return hand[0]
 
     @staticmethod
-    def _extract_full_house(hand: list) -> Union[list[Card], None]:
+    def _extract_full_house(hand: list) -> Union[list, None]:
         triple = Poker._find_set(hand, 3)
         pair = Poker._find_set(hand, 2)
 
@@ -322,7 +334,7 @@ class Poker:
                 hand.pop(x)
 
     @staticmethod
-    def _find_two_pair(hand: list) -> Union[list[Card], None]:
+    def _find_two_pair(hand: list) -> Union[list, None]:
         pairs = [k for k, v in Counter(hand).items() if v == 2]
         if len(pairs) < 2:
             return None
