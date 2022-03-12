@@ -1,79 +1,7 @@
 from collections import Counter
 from typing import Union
-import re
 
-
-class BadCardError(Exception):
-    pass
-
-
-class Card:
-
-    suit = None
-    rank: Union[int, None] = 0
-
-    def __init__(self, _card: Union[str, int]) -> None:
-        result = re.search(r"^(\d{0,2})(['C','H','S','D'])$", _card)
-        if result is None:
-            result = re.search(r"^()(BJ|RJ)$", _card)
-
-        if result is None:
-            raise BadCardError()
-
-        suit = result.group(2)
-        rank = result.group(1)
-
-        self.suit = suit  # either there's no suit
-
-        if rank == "":
-            self.rank = None
-        else:
-            self.rank = int(rank)
-
-            if self.rank > 13:
-                raise BadCardError()
-
-            self._reindex_card()
-
-    def _reindex_card(self):
-        if self.rank == 0:
-            return
-        self.rank = ((self.rank - 2 + 13) % 13) + 2
-
-    def __gt__(self, b):
-        if b is None:
-            return True
-        return self.rank > b.rank
-
-    def __lt__(self, b):
-        if b is None:
-            return False
-        return self.rank < b.rank
-
-    def __eq__(self, b):
-        return self.rank == b.rank
-
-    def __ne__(self, b):
-        return self.rank != b.rank
-
-    def __sub__(self, b):
-        rank = self.rank - b
-        # This is not resilient
-        return Card(f"{rank}{self.suit}")
-
-    def __repr__(self) -> str:
-        if self.rank is None:
-            return self.suit
-        if self.rank == 14:
-            return f"1{self.suit}"
-
-        return f"{self.rank}{self.suit}"
-
-    def __hash__(self) -> int:
-        if self.rank is not None:
-            return self.rank
-        else:
-            return 0
+from card import Card
 
 
 class Poker:
@@ -283,7 +211,7 @@ class Poker:
     def _extract_straight_flush(hand: list) -> Union[Card, None]:
         hand.sort()
         for x in range(1, len(hand)):
-            if hand[x - 1] != hand[x] - 1:
+            if hand[x - 1].rank != hand[x].rank - 1:
                 return None
             if hand[x - 1].suit != hand[x].suit:
                 return None
@@ -314,7 +242,7 @@ class Poker:
     def _extract_straight(hand: list) -> Card:
         hand.sort()
         for x in range(1, len(hand)):
-            if hand[x - 1] != hand[x] - 1:
+            if hand[x - 1].rank != hand[x].rank - 1:
                 return None
 
         return hand[0]
@@ -328,9 +256,9 @@ class Poker:
         return max(sets, default=None)
 
     @staticmethod
-    def _remove_cards_by_rank(hand: list, rank: Card) -> Card:
+    def _remove_cards_by_rank(hand: list, rank_card: Card) -> Card:
         for x in range(len(hand) - 1, -1, -1):
-            if hand[x] == rank:
+            if hand[x].rank == rank_card.rank:
                 hand.pop(x)
 
     @staticmethod
@@ -341,7 +269,7 @@ class Poker:
 
         pairs.sort(reverse=True)
         for x in range(len(hand) - 1, -1, -1):
-            if hand[x] == pairs[0] or hand[x] == pairs[1]:
+            if hand[x].rank == pairs[0].rank or hand[x].rank == pairs[1].rank:
                 hand.pop(x)
         return [pairs[0], pairs[1]]
 

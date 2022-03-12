@@ -2,14 +2,19 @@ from typing import Union
 from poker import Card
 
 
+class InvalidCardPosition(Exception):
+    pass
+
+
+class MissingCard(Exception):
+    pass
+
+
 class Deck:
 
-    card_in_deck: int
     _cards: list
 
     def __init__(self) -> None:
-        self.card_in_deck = 54
-
         self._cards = [Card("RJ"), Card("BJ")]
 
         for i in range(1, 14):
@@ -32,3 +37,20 @@ class Deck:
 
     def pull_from_top(self) -> Union[Card, None]:
         return self._cards.pop(0)
+
+    def pull_from_position(self, position: int) -> Union[Card, None]:
+        if position <= 0:
+            raise InvalidCardPosition
+        try:
+            return self._cards.pop(position - 1)
+        except IndexError:
+            raise InvalidCardPosition
+
+    def pull_card(self, card: str) -> Union[Card, None]:
+        needle = Card(card)
+        try:
+            self._cards.remove(needle)
+        except ValueError:
+            raise MissingCard()
+
+        return needle

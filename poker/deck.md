@@ -9,13 +9,11 @@ Hearts and Diamond are Red
 
 Decks can be
 shuffled (orderd randomly)
-
-
 you can take a card from the top
-You can but a card back at a random position, bottom or top?
-You can cut a deck at random pposition
-Take card from specific  cards from deck
-Take card from spefic position
+You can put a card back at a specific position
+You can cut a deck at a specific position
+Take a specific card from the deck
+Take card from specific position
 
 
 

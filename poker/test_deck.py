@@ -1,10 +1,11 @@
-from deck import Deck
+import pytest
+from deck import Deck, InvalidCardPosition, MissingCard
 from poker import Card
 
 
 def test_create_deck():
     my_deck = Deck()
-    assert my_deck.card_in_deck == 54
+    assert len(my_deck) == 54
 
 
 def test_new_deck_contains_all_cards():
@@ -27,7 +28,7 @@ def test_new_deck_contains_all_cards():
 
 def test_cards_are_cards():
     my_deck = Deck()
-    for card_index in range(0, my_deck.card_in_deck):
+    for card_index in range(0, len(my_deck)):
         assert isinstance(my_deck.get_card_at_index(card_index), Card)
 
 
@@ -35,4 +36,69 @@ def test_pull_from_top():
     deck = Deck()
     card = deck.pull_from_top()
     assert str(card) == "RJ"
+    assert len(deck) == 53
+
+
+@pytest.mark.parametrize(
+    "position, expected_card",
+    [
+        [1, "RJ"],
+        [2, "BJ"],
+        [54, "1H"],
+    ],
+)
+def test_pull_from_position(position, expected_card):
+    deck = Deck()
+    card = deck.pull_from_position(position)
+    assert str(card) == expected_card
+    assert len(deck) == 53
+
+
+@pytest.mark.parametrize(
+    "position",
+    [
+        0,
+        55,
+        999,
+    ],
+)
+def test_pull_from_position__empty_position(position):
+    deck = Deck()
+    with pytest.raises(InvalidCardPosition):
+        deck.pull_from_position(position)
+
+    assert len(deck) == 54
+
+
+@pytest.mark.parametrize(
+    "card",
+    [
+        "RJ",
+        "BJ",
+        "1H",
+    ],
+)
+def test_pull_card(card):
+    deck = Deck()
+    result = deck.pull_card(card)
+    assert result == Card(card)
+    assert len(deck) == 53
+
+
+@pytest.mark.parametrize(
+    "card",
+    [
+        "RJ",
+        Card("2S"),
+    ],
+)
+def test_pull_card_missing_card(card):
+    deck = Deck()
+    deck.pull_card(card)
+
+    assert len(deck) == 53
+
+    with pytest.raises(MissingCard):
+        deck.pull_card(card)
+
     assert len(deck) == 53
