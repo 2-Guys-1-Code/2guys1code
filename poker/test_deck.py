@@ -70,12 +70,33 @@ def test_pull_from_position__empty_position(position):
     assert len(deck) == 54
 
 
+def test_pull_from_position_54_twice():
+    deck = Deck()
+    deck.pull_from_position(54)
+
+    with pytest.raises(InvalidCardPosition):
+        deck.pull_from_position(54)
+
+    assert len(deck) == 53
+
+
+def test_pull_from_position_1_twice():
+    deck = Deck()
+    first_card = deck.pull_from_position(1)
+    second_card = deck.pull_from_position(1)
+
+    assert str(first_card) == "RJ"
+    assert str(second_card) == "BJ"
+    assert len(deck) == 52
+
+
 @pytest.mark.parametrize(
     "card",
     [
         "RJ",
         "BJ",
         "1H",
+        Card("11S"),
     ],
 )
 def test_pull_card(card):
@@ -100,5 +121,43 @@ def test_pull_card_missing_card(card):
 
     with pytest.raises(MissingCard):
         deck.pull_card(card)
+
+    assert len(deck) == 53
+
+
+@pytest.mark.parametrize(
+    "position",
+    [
+        1,
+        42,
+        54,
+    ],
+)
+def test_put_card_back_at_position(position):
+    test_deck = Deck()
+    test_card = test_deck.pull_from_top()
+    assert len(test_deck) == 53
+    test_deck.insert_at(position, test_card)
+    assert len(test_deck) == 54
+    assert test_card == test_deck.pull_from_position(position)
+
+    # todo: do we want a peek at position method , get card position
+
+
+@pytest.mark.parametrize(
+    "position",
+    [
+        0,
+        55,
+        999,
+    ],
+)
+def test_insert_card__invalid_position(position):
+    deck = Deck()
+    test_card = deck.pull_from_top()
+    assert len(deck) == 53
+
+    with pytest.raises(InvalidCardPosition):
+        deck.insert_at(position, test_card)
 
     assert len(deck) == 53

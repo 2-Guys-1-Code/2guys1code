@@ -8,9 +8,7 @@ class Poker:
     @staticmethod
     def beats(hand_1: list, hand_2: list) -> int:
         hand_1 = Poker._parse_to_cards(hand_1)
-        print("hand 1 reindexed")
         hand_2 = Poker._parse_to_cards(hand_2)
-        print("hand 2 reindexed")
 
         ordered_tests = [
             Poker._straight_flush_test,
@@ -29,12 +27,13 @@ class Poker:
             if winner != 0:
                 break
 
-        print("winning test", winning_test)
         return winner
 
     @staticmethod
     def _parse_to_cards(hand) -> list:
-        return [Card(c) for c in hand]
+        _eq = lambda s, b: s.rank == b.rank
+        _hash = lambda s: s.rank
+        return [Card(c, _eq=_eq, _hash=_hash) for c in hand]
 
     @staticmethod
     def _straight_flush_test(hand_1: list, hand_2: list) -> int:
@@ -74,9 +73,6 @@ class Poker:
     def _full_house_test(hand_1: list, hand_2: list) -> int:
         cards_1 = Poker._extract_full_house(hand_1)
         cards_2 = Poker._extract_full_house(hand_2)
-
-        print(cards_1)
-        print(cards_2)
 
         if cards_1 is None and cards_2 is None:
             return 0
@@ -231,8 +227,6 @@ class Poker:
     @staticmethod
     def _extract_flush(hand: list) -> Union[Card, None]:
         for x in range(1, len(hand)):
-            # if hand[x].suit == Card.NO_SUIT:
-            #     return None
             if hand[x - 1].suit != hand[x].suit:
                 return None
 

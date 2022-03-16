@@ -8,17 +8,16 @@ Clubs and spades are black
 Hearts and Diamond are Red
 
 Decks can be
-shuffled (orderd randomly)
-you can take a card from the top
+Take card from specific position
+Take a specific card from the deck
 You can put a card back at a specific position
 You can cut a deck at a specific position
-Take a specific card from the deck
-Take card from specific position
+shuffled (ordered randomly)
 
 
 
 Hands are sets  of cards. 
-HAsd can be for difrent  games, i,e Poker vs go fish
+Hand can be for different  games, i,e Poker vs go fish
 
 
 Should dealing the job of the deck? is deal just remove card  froma deck

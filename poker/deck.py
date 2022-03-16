@@ -36,17 +36,13 @@ class Deck:
         return self._cards[index]
 
     def pull_from_top(self) -> Union[Card, None]:
-        return self._cards.pop(0)
+        return self.pull_from_position(1)
 
     def pull_from_position(self, position: int) -> Union[Card, None]:
-        if position <= 0:
-            raise InvalidCardPosition
-        try:
-            return self._cards.pop(position - 1)
-        except IndexError:
-            raise InvalidCardPosition
+        self._validate_remove_position(position)
+        return self._cards.pop(position - 1)
 
-    def pull_card(self, card: str) -> Union[Card, None]:
+    def pull_card(self, card: Union[Card, str]) -> Union[Card, None]:
         needle = Card(card)
         try:
             self._cards.remove(needle)
@@ -54,3 +50,16 @@ class Deck:
             raise MissingCard()
 
         return needle
+
+    def _validate_insert_position(self, position: int) -> None:
+        if not (0 < position <= len(self._cards) + 1):
+            raise InvalidCardPosition
+
+    def _validate_remove_position(self, position: int) -> None:
+        if not (0 < position < len(self._cards) + 1):
+            raise InvalidCardPosition
+
+    def insert_at(self, position: int, card: Union[Card, str]) -> None:
+        self._validate_insert_position(position)
+        needle = Card(card)
+        self._cards.insert(position - 1, needle)

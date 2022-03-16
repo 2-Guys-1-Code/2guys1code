@@ -12,7 +12,10 @@ class Card:
     suit = None
     rank: Union[int, None] = 0
 
-    def __init__(self, _card: Union[str, int, "Card"]) -> None:
+    def __init__(self, _card: Union[str, int, "Card"], _eq=None, _hash=None) -> None:
+        self._equal_method = _eq if _eq is not None else self._equal
+        self._hash_method = _hash if _hash is not None else self._hash
+
         if isinstance(_card, Card):
             self.rank = _card.rank
             self.suit = _card.suit
@@ -38,6 +41,7 @@ class Card:
             if self.rank > 13:
                 raise BadCardError()
 
+            # This no longer belongs here, call in poker
             self._reindex_card()
 
     def _reindex_card(self):
@@ -56,11 +60,10 @@ class Card:
         return self.rank < b.rank
 
     def __eq__(self, b):
-        b = Card(b)
-        return self.rank == b.rank and self.suit == b.suit
+        return self._equal_method(self, b)
 
     def __ne__(self, b):
-        return self.rank != b.rank
+        return not self._equal_method(self, b)
 
     def __sub__(self, b):
         rank = self.rank - b
@@ -76,7 +79,15 @@ class Card:
         return f"{self.rank}{self.suit}"
 
     def __hash__(self) -> int:
-        return hash((self.rank, self.suit))
+        return self._hash_method(self)
+
+    @staticmethod
+    def _equal(self, b) -> bool:
+        b = Card(b)
+        return self.rank == b.rank and self.suit == b.suit
+
+    @staticmethod
+    def _hash(self) -> int:
         if self.rank is not None:
             return self.rank
         else:

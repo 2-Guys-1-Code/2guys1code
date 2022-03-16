@@ -40,6 +40,7 @@ from poker import Poker
         [["4C", "5C", "6C", "2C", "3C"], ["4H", "5H", "6H", "2H", "3H"], 0],
         [["4C", "5C", "6C", "2C", "12C"], ["4S", "5S", "6S", "2S", "12S"], 0],
         [["2S", "3C", "4S", "5C", "6S"], ["2C", "3S", "4C", "5S", "6C"], 0],
+        [["2S", "2D", "7S", "3C", "6S"], ["2C", "3S", "4C", "5S", "8C"], 1],
     ],
     ids=[
         "pair or Ks beats pair of Qs",
@@ -78,6 +79,7 @@ from poker import Poker
         "two equal straight flushes draw",
         "two equal flushes draw",
         "two equal straights draw",
+        "checking for straight (1st hand) doesn't break when subbing from a 2",
     ],
 )
 def test_compare_hands(hand_1, hand_2, expectation):
