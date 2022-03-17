@@ -11,16 +11,19 @@ Decks can be
 Take card from specific position
 Take a specific card from the deck
 You can put a card back at a specific position
+You can peek at a specific position (returns the card, but it remains in the deck)
+You can get the current position of a card
 You can cut a deck at a specific position
 shuffled (ordered randomly)
+    + different kinds of shuffling + chaining them
 
 
 
 Hands are sets  of cards. 
-Hand can be for different  games, i,e Poker vs go fish
+Hand can be for different  games, i,e Poker vs go fish, black jack (multiple decks)
 
 
-Should dealing the job of the deck? is deal just remove card  froma deck
+Should dealing the job of the deck? is deal just remove card  from a deck
 The dealer deals
 
 

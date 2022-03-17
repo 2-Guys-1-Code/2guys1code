@@ -1,5 +1,6 @@
 from typing import Union
 from poker import Card
+from shuffler import AbstractShuffler, Shuffler
 
 
 class InvalidCardPosition(Exception):
@@ -13,9 +14,11 @@ class MissingCard(Exception):
 class Deck:
 
     _cards: list
+    _shuffler: AbstractShuffler
 
-    def __init__(self) -> None:
+    def __init__(self, shuffler: AbstractShuffler = Shuffler()) -> None:
         self._cards = [Card("RJ"), Card("BJ")]
+        self._shuffler = shuffler
 
         for i in range(1, 14):
             self._cards.append(Card(f"{i}S"))
@@ -39,7 +42,7 @@ class Deck:
         return self.pull_from_position(1)
 
     def pull_from_position(self, position: int) -> Union[Card, None]:
-        self._validate_remove_position(position)
+        self._validate_read_position(position)
         return self._cards.pop(position - 1)
 
     def pull_card(self, card: Union[Card, str]) -> Union[Card, None]:
@@ -55,7 +58,7 @@ class Deck:
         if not (0 < position <= len(self._cards) + 1):
             raise InvalidCardPosition
 
-    def _validate_remove_position(self, position: int) -> None:
+    def _validate_read_position(self, position: int) -> None:
         if not (0 < position < len(self._cards) + 1):
             raise InvalidCardPosition
 
@@ -63,3 +66,24 @@ class Deck:
         self._validate_insert_position(position)
         needle = Card(card)
         self._cards.insert(position - 1, needle)
+
+    def peek(self, position: int) -> Union[Card, None]:
+        self._validate_read_position(position)
+        return self._cards[position - 1]
+
+    def get_position(self, card: Union[Card, str]) -> int:
+        try:
+            return self._cards.index(Card(card)) + 1
+        except ValueError:
+            raise MissingCard()
+
+    def cut(self, position):
+        self._validate_read_position(position)
+        tmp_cards_top = self._cards[0:position]
+        tmp_cards_bottom = self._cards[position:]
+        self._cards = tmp_cards_bottom + tmp_cards_top
+
+    def shuffle(self):
+        self._cards = list(
+            map(lambda new_pos: self._cards[new_pos - 1], self._shuffler.get_mapping())
+        )
