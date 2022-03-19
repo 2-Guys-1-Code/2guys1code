@@ -2,9 +2,34 @@ from collections import Counter
 from typing import Union
 
 from card import Card
+from deck import Deck, Hand
+from shuffler import AbstractShuffler, Shuffler
 
 
 class Poker:
+    _hands: Union[list, None] = None
+    _deck: Deck
+    _player_count: int
+    CARDS_PER_HAND: int = 5
+
+    def __init__(self, shuffler=None):
+        if shuffler is not None:
+            self._deck = Deck(shuffler=shuffler)
+        else:
+            self._deck = Deck()
+
+    def deal(self):
+        self._hands = [Hand() for _ in range(0, self._player_count)]
+        for _ in range(0, self.CARDS_PER_HAND):
+            for i in range(0, self._player_count):
+                hand = self._hands[i]
+                hand.insert_at_end(self._deck.pull_from_top())
+
+    def start(self, number_of_players: int) -> None:
+        self._player_count = number_of_players
+        self._deck.shuffle()
+        self.deal()
+
     @staticmethod
     def beats(hand_1: list, hand_2: list) -> int:
         hand_1 = Poker._parse_to_cards(hand_1)

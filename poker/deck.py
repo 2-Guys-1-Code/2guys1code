@@ -1,5 +1,6 @@
 from typing import Union
-from poker import Card
+
+from card import Card
 from shuffler import AbstractShuffler, Shuffler
 
 
@@ -35,8 +36,18 @@ class Deck:
     def __len__(self) -> int:
         return len(self._cards)
 
-    def get_card_at_index(self, index: int) -> Card:
-        return self._cards[index]
+    # called when doing "in", but it breaks
+    def __getitem__(self, index: int) -> Union[Card, None]:
+        return self.peek(index + 1)
+
+    # not called when using "in"
+    def __contains__(self, card: Union[Card, str]):
+        needle = Card(card)
+        try:
+            self.get_position(needle)
+            return True
+        except MissingCard:
+            return False
 
     def pull_from_top(self) -> Union[Card, None]:
         return self.pull_from_position(1)
@@ -67,6 +78,14 @@ class Deck:
         needle = Card(card)
         self._cards.insert(position - 1, needle)
 
+    def insert_at_start(self, card: Union[Card, str]) -> None:
+        needle = Card(card)
+        self._cards.insert(0, needle)
+
+    def insert_at_end(self, card: Union[Card, str]) -> None:
+        needle = Card(card)
+        self._cards.insert(len(self._cards), needle)
+
     def peek(self, position: int) -> Union[Card, None]:
         self._validate_read_position(position)
         return self._cards[position - 1]
@@ -87,3 +106,9 @@ class Deck:
         self._cards = list(
             map(lambda new_pos: self._cards[new_pos - 1], self._shuffler.get_mapping())
         )
+
+
+class Hand(Deck):
+    def __init__(self, shuffler: AbstractShuffler = Shuffler()) -> None:
+        self._cards = []
+        self._shuffler = shuffler

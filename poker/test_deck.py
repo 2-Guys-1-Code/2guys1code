@@ -12,8 +12,8 @@ def test_create_deck():
 def test_new_deck_contains_all_cards():
     deck = Deck()
     all_cards = []
-    for i in range(0, 54):
-        card = deck.get_card_at_index(i)
+    for i in range(1, 55):
+        card = deck.peek(i)
         all_cards.append(str(card))
 
     # fmt: off
@@ -29,8 +29,8 @@ def test_new_deck_contains_all_cards():
 
 def test_cards_are_cards():
     my_deck = Deck()
-    for card_index in range(0, len(my_deck)):
-        assert isinstance(my_deck.get_card_at_index(card_index), Card)
+    for card_index in range(1, len(my_deck) + 1):
+        assert isinstance(my_deck.peek(card_index), Card)
 
 
 def test_pull_from_top():
@@ -141,6 +141,22 @@ def test_put_card_back_at_position(position):
     test_deck.insert_at(position, test_card)
     assert len(test_deck) == 54
     assert test_deck.pull_from_position(position) == test_card
+
+
+def test_insert_at_start():
+    deck = Deck()
+    card = Card("1H")
+    deck.insert_at_start(card)
+    assert deck.peek(1) == card
+    assert len(deck) == 55
+
+
+def test_insert_at_end():
+    deck = Deck()
+    card = Card("5C")
+    deck.insert_at_end(card)
+    assert len(deck) == 55
+    assert deck.peek(55) == card
 
 
 @pytest.mark.parametrize(

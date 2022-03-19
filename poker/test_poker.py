@@ -1,6 +1,8 @@
+from card import Card
 import pytest
 
-from poker import Poker
+from poker import Hand, Poker
+from shuffler import FakeShuffler
 
 
 @pytest.mark.parametrize(
@@ -96,3 +98,58 @@ def test_compare_hands(hand_1, hand_2, expectation):
 )
 def test_reindex_card(card, expected):
     assert Poker._reindex_card(card) == expected
+
+
+def test_start_game():
+    game = Poker()
+    game.start(3)
+
+    assert len(game._hands) == 3
+    for x in range(0, 3):
+        assert isinstance(game._hands[x], Hand)
+        assert len(game._hands[x]) == game.CARDS_PER_HAND
+        assert isinstance(game._hands[x][0], Card)
+
+    assert len(game._deck) == 39
+
+
+def test_start_game_shuffles_deck():
+    # fmt: off
+    fake_shuffler = FakeShuffler([
+        54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
+        43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
+        33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
+    ])
+    # fmt: on
+    game = Poker(shuffler=fake_shuffler)
+    game.start(1)
+    assert game._hands[0][0] == Card("1H")
+    assert game._hands[0][1] == Card("RJ")
+    assert game._hands[0][2] == Card("2H")
+    assert game._hands[0][3] == Card("BJ")
+    assert game._hands[0][4] == Card("3H")
+
+
+def test_deal_cycles_hands():
+    # fmt: off
+    fake_shuffler = FakeShuffler([
+        54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
+        43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
+        33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
+    ])
+    # fmt: on
+    game = Poker(shuffler=fake_shuffler)
+    game.start(4)
+    assert game._hands[0][0] == Card("1H")
+    assert game._hands[1][0] == Card("RJ")
+    assert game._hands[2][0] == Card("2H")
+    assert game._hands[3][0] == Card("BJ")
+    assert game._hands[0][1] == Card("3H")
+
+
+def test_dealt_card_are_not_in_deck():
+    game = Poker()
+    game.start(1)
+
+    for c in game._hands[0]:
+        assert c not in game._deck
