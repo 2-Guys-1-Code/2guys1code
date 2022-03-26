@@ -11,6 +11,10 @@ class NotEnoughChips(Exception):
     pass
 
 
+class PlayerOutOfOrderException(Exception):
+    pass
+
+
 class Player:
     purse: int
 
@@ -66,6 +70,7 @@ class Poker:
     ) -> None:
         self._players = []
         self._player_count = number_of_players
+        self.current_player = 0
         self.chips_in_bank = self.chips_in_game = (
             chips_per_player * number_of_players if total_chips == 0 else total_chips
         )
@@ -74,6 +79,38 @@ class Poker:
 
         self._deck.shuffle()
         self.deal()
+
+    def play(self) -> None:
+        for player in self._players:
+            self.check(player)
+        pass
+        # self.compare_all_hands()
+
+    def check(self, player):
+        # todo: are they allowed to check? (a.k.a. is there money "pending")
+
+        if self._players.index(player) != self.current_player:
+            raise PlayerOutOfOrderException
+
+        self.current_player += 1
+
+        if self.current_player >= len(self._players):
+            self.current_player = 0
+
+    def find_winnner(self):
+        ordered = sorted(self._hands, reverse=True)
+        # self._hands.index(ordered[0])
+        winners = []
+        for k, v in enumerate(ordered):
+            print(k)
+            print(v)
+            if k != 0:
+                print(winners[0])
+                print(self._hands[winners[0]])
+            if k == 0 or v == self._hands[winners[0]]:
+                winners.append(self._hands.index(v))
+
+        return winners
 
     @staticmethod
     def beats(hand_1: list, hand_2: list) -> int:

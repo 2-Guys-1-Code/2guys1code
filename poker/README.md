@@ -47,3 +47,37 @@ In the example below, the jack plays as the highest card.
 We can start a game with X number of players
 The game shuffles the deck then deals the hands, alternating between the players
 
+players get chips (eventually, players can come with their own chips)
+players can bet, call, raise, fold (implement betting rules)
+
+We will need to implement some AIs for the computer to bet automatically
+AND/OR
+A way for humans to play
+
+Draw Poker
+if hand1> hand2:
+
+Round
+    goes to wining / tying hand is determined
+    players place bets or check or fold in squential order until 
+Bet
+Pot
+Fold
+
+
+
+Players can:
+* check
+* bet
+* raise
+* call
+* fold
+
+
+Simple steps:
+* Simple game (no exchanging cards, no ante)  1 round only, winner player with most chips. No wild cards
+    * all players check, reach the end, compare hands (no money in the pot, game will go on forever)
+    * all players go all-in, reach the end, compare hands (winner takes all, game ends)
+    * all players go all-in, reach the end, compare hands (TIE! split the pot) (2-way & 3-way tie)
+    * all players raise small, then call when they don't have enough chips to raise
+    * first player bets, all others fold. No comparison, only player left wins
