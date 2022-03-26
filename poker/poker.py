@@ -2,21 +2,57 @@ from collections import Counter
 from typing import Union
 
 from card import Card
-from deck import Deck, Hand
+from deck import Deck
+from hand import Hand
 from shuffler import AbstractShuffler, Shuffler
 
 
+class NotEnoughChips(Exception):
+    pass
+
+
+class Player:
+    purse: int
+
+    def __init__(self, purse: int = 0):
+        self.purse = purse
+
+
 class Poker:
-    _hands: Union[list, None] = None
-    _deck: Deck
-    _player_count: int
     CARDS_PER_HAND: int = 5
 
-    def __init__(self, shuffler=None):
+    TYPE_BASIC: str = "BASIC"
+    TYPE_STANDARD: str = "STANDARD"
+
+    _hands: list
+    _deck: Deck
+    _player_count: int
+    chips_in_game: int
+    chips_in_bank: int
+    _game_type: str
+    _players: list
+
+    def __init__(
+        self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
+    ):
         if shuffler is not None:
             self._deck = Deck(shuffler=shuffler)
         else:
             self._deck = Deck()
+
+        self._game_type = game_type
+
+        if self._game_type == self.TYPE_STANDARD:
+            self._deck.pull_card("RJ")
+            self._deck.pull_card("BJ")
+
+    def _distribute_chips(self, chips_per_player):
+        for _ in range(0, self._player_count):
+            new_player = Player(purse=chips_per_player)
+            self.chips_in_bank -= new_player.purse
+            if self.chips_in_bank < 0:
+                raise NotEnoughChips()
+            self._players.append(new_player)
 
     def deal(self):
         self._hands = [Hand() for _ in range(0, self._player_count)]
@@ -25,8 +61,17 @@ class Poker:
                 hand = self._hands[i]
                 hand.insert_at_end(self._deck.pull_from_top())
 
-    def start(self, number_of_players: int) -> None:
+    def start(
+        self, number_of_players: int, total_chips: int = 0, chips_per_player: int = 500
+    ) -> None:
+        self._players = []
         self._player_count = number_of_players
+        self.chips_in_bank = self.chips_in_game = (
+            chips_per_player * number_of_players if total_chips == 0 else total_chips
+        )
+
+        self._distribute_chips(chips_per_player)
+
         self._deck.shuffle()
         self.deal()
 

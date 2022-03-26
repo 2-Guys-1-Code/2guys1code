@@ -12,6 +12,10 @@ class MissingCard(Exception):
     pass
 
 
+class EmptyDeck(Exception):
+    pass
+
+
 class Deck:
 
     _cards: list
@@ -36,11 +40,13 @@ class Deck:
     def __len__(self) -> int:
         return len(self._cards)
 
-    # called when doing "in", but it breaks
     def __getitem__(self, index: int) -> Union[Card, None]:
         return self.peek(index + 1)
 
-    # not called when using "in"
+    def __iter__(self):
+        for c in self._cards:
+            yield c
+
     def __contains__(self, card: Union[Card, str]):
         needle = Card(card)
         try:
@@ -67,11 +73,14 @@ class Deck:
 
     def _validate_insert_position(self, position: int) -> None:
         if not (0 < position <= len(self._cards) + 1):
-            raise InvalidCardPosition
+            raise InvalidCardPosition()
 
     def _validate_read_position(self, position: int) -> None:
+        if len(self._cards) == 0:
+            raise EmptyDeck()
+
         if not (0 < position < len(self._cards) + 1):
-            raise InvalidCardPosition
+            raise InvalidCardPosition()
 
     def insert_at(self, position: int, card: Union[Card, str]) -> None:
         self._validate_insert_position(position)
@@ -103,12 +112,10 @@ class Deck:
         self._cards = tmp_cards_bottom + tmp_cards_top
 
     def shuffle(self):
+        mapping = self._shuffler.get_mapping(self._cards)
         self._cards = list(
-            map(lambda new_pos: self._cards[new_pos - 1], self._shuffler.get_mapping())
+            map(
+                lambda new_pos: self._cards[new_pos - 1],
+                mapping,
+            )
         )
-
-
-class Hand(Deck):
-    def __init__(self, shuffler: AbstractShuffler = Shuffler()) -> None:
-        self._cards = []
-        self._shuffler = shuffler

@@ -1,7 +1,8 @@
 from card import Card
 import pytest
-
-from poker import Hand, Poker
+from hand import Hand
+from deck import EmptyDeck
+from poker import NotEnoughChips, Poker
 from shuffler import FakeShuffler
 
 
@@ -101,7 +102,7 @@ def test_reindex_card(card, expected):
 
 
 def test_start_game():
-    game = Poker()
+    game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(3)
 
     assert len(game._hands) == 3
@@ -121,7 +122,7 @@ def test_start_game_shuffles_deck():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ])
     # fmt: on
-    game = Poker(shuffler=fake_shuffler)
+    game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(1)
     assert game._hands[0][0] == Card("1H")
     assert game._hands[0][1] == Card("RJ")
@@ -138,7 +139,7 @@ def test_deal_cycles_hands():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ])
     # fmt: on
-    game = Poker(shuffler=fake_shuffler)
+    game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(4)
     assert game._hands[0][0] == Card("1H")
     assert game._hands[1][0] == Card("RJ")
@@ -148,8 +149,56 @@ def test_deal_cycles_hands():
 
 
 def test_dealt_card_are_not_in_deck():
-    game = Poker()
+    game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(1)
 
     for c in game._hands[0]:
         assert c not in game._deck
+
+
+def test_game_fails_when_running_of_cards():
+    game = Poker(game_type=Poker.TYPE_BASIC)
+
+    with pytest.raises(EmptyDeck):
+        game.start(11)
+
+
+def test_jokers_not_in_deck():
+    game = Poker()
+    assert Card("RJ") not in game._deck
+    assert Card("BJ") not in game._deck
+
+
+def test_chips_are_handed_out():
+    game = Poker()
+    game.start(3)
+
+    assert game._players[0].purse == 500
+    assert game._players[1].purse == 500
+    assert game._players[2].purse == 500
+
+
+def test_game_can_set_starting_chips():
+    game = Poker()
+    game.start(3, total_chips=1500)
+    assert game.chips_in_game == 1500
+    assert game.chips_in_bank == 0
+    assert game._players[0].purse == 500
+    assert game._players[1].purse == 500
+    assert game._players[2].purse == 500
+
+
+def test_game_can_set_chips_per_player():
+    game = Poker()
+    game.start(2, chips_per_player=1500)
+    assert len(game._players) == 2
+    assert game.chips_in_game == 3000
+    assert game.chips_in_bank == 0
+    assert game._players[0].purse == 1500
+    assert game._players[1].purse == 1500
+
+
+def test_game_throws_if_not_enough_chips():
+    game = Poker()
+    with pytest.raises(NotEnoughChips):
+        game.start(2, total_chips=500, chips_per_player=1500)

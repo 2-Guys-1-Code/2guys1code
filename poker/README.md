@@ -42,3 +42,8 @@ A A 8 4 7
 10. High Card
 When you haven't made any of the hands above, the highest card plays.
 In the example below, the jack plays as the highest card.
+
+
+We can start a game with X number of players
+The game shuffles the deck then deals the hands, alternating between the players
+
