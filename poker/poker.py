@@ -1,4 +1,6 @@
+from abc import ABC, abstractmethod
 from collections import Counter
+from math import floor
 from typing import Union
 
 from card import Card
@@ -15,11 +17,23 @@ class PlayerOutOfOrderException(Exception):
     pass
 
 
-class Player:
+class AbstractPokerPlayer(ABC):
     purse: int
 
-    def __init__(self, purse: int = 0):
+    def __init__(self, purse: int = 0) -> None:
         self.purse = purse
+
+    @abstractmethod
+    def get_action(self, game: "Poker") -> str:
+        return NotImplemented
+
+    def add_to_purse(self, chips: int) -> None:
+        self.purse += chips
+
+
+class Player(AbstractPokerPlayer):
+    def get_action(self, game: "Poker") -> str:
+        return game.ACTION_CHECK
 
 
 class Poker:
@@ -28,13 +42,20 @@ class Poker:
     TYPE_BASIC: str = "BASIC"
     TYPE_STANDARD: str = "STANDARD"
 
+    ACTION_CHECK: str = "CHECK"
+    ACTION_BET: str = "BET"
+    ACTION_CALL: str = "CALL"
+    ACTION_FOLD: str = "FOLD"
+    ACTION_ALLIN: str = "ALLIN"
+    ACTION_RAISE: str = "RAISE"
+
     _hands: list
     _deck: Deck
-    _player_count: int
+
     chips_in_game: int
     chips_in_bank: int
     _game_type: str
-    _players: list
+    _players: list[AbstractPokerPlayer]
 
     def __init__(
         self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
@@ -51,28 +72,48 @@ class Poker:
             self._deck.pull_card("BJ")
 
     def _distribute_chips(self, chips_per_player):
-        for _ in range(0, self._player_count):
-            new_player = Player(purse=chips_per_player)
-            self.chips_in_bank -= new_player.purse
+        for p in self._players:
+            p.add_to_purse(chips_per_player)
+            self.chips_in_bank -= chips_per_player
             if self.chips_in_bank < 0:
                 raise NotEnoughChips()
-            self._players.append(new_player)
+
+        # for _ in range(0, self._player_count):
+        #     new_player = Player(purse=chips_per_player)
+        #     self.chips_in_bank -= new_player.purse
+        #     if self.chips_in_bank < 0:
+        #         raise NotEnoughChips()
+        #     self._players.append(new_player)
 
     def deal(self):
-        self._hands = [Hand() for _ in range(0, self._player_count)]
+        self._hands = [Hand(_cmp=Poker.beats) for _ in range(0, self._player_count)]
         for _ in range(0, self.CARDS_PER_HAND):
             for i in range(0, self._player_count):
                 hand = self._hands[i]
                 hand.insert_at_end(self._deck.pull_from_top())
 
+    def get_player_count(self):
+        return len(self._players)
+
+    _player_count = property(get_player_count)
+
     def start(
-        self, number_of_players: int, total_chips: int = 0, chips_per_player: int = 500
+        self,
+        number_of_players: int = 0,
+        total_chips: int = 0,
+        chips_per_player: int = 500,
+        players: list = None,
     ) -> None:
-        self._players = []
-        self._player_count = number_of_players
+
+        self._players = (
+            players
+            if players is not None
+            else [Player() for _ in range(number_of_players)]
+        )
+
         self.current_player = 0
         self.chips_in_bank = self.chips_in_game = (
-            chips_per_player * number_of_players if total_chips == 0 else total_chips
+            chips_per_player * self._player_count if total_chips == 0 else total_chips
         )
 
         self._distribute_chips(chips_per_player)
@@ -81,10 +122,13 @@ class Poker:
         self.deal()
 
     def play(self) -> None:
+        self.pot = 0
         for player in self._players:
             self.check(player)
-        pass
-        # self.compare_all_hands()
+
+        winners = self.find_winnner()
+        self.winner = self._players[winners[0]]
+        self.winning_hand = self._hands[winners[0]]
 
     def check(self, player):
         # todo: are they allowed to check? (a.k.a. is there money "pending")
@@ -97,18 +141,25 @@ class Poker:
         if self.current_player >= len(self._players):
             self.current_player = 0
 
+    def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
+        if len(winners) == 0:
+            return
+
+        chips_per_winner = floor(self.pot / len(winners))
+        for p in winners:
+            p.add_to_purse(chips_per_winner)
+            self.pot -= chips_per_winner
+
     def find_winnner(self):
-        ordered = sorted(self._hands, reverse=True)
-        # self._hands.index(ordered[0])
-        winners = []
-        for k, v in enumerate(ordered):
-            print(k)
-            print(v)
-            if k != 0:
-                print(winners[0])
-                print(self._hands[winners[0]])
-            if k == 0 or v == self._hands[winners[0]]:
-                winners.append(self._hands.index(v))
+        h1 = self._hands[0]
+        winners = [0]
+        for i, h2 in enumerate(self._hands[1:]):
+
+            if h2 == h1:
+                winners.append(i + 1)
+            elif h2 > h1:
+                h1 = h2
+                winners = [i + 1]
 
         return winners
 

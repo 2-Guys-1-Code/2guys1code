@@ -2,7 +2,13 @@ from card import Card
 import pytest
 from hand import Hand
 from deck import EmptyDeck
-from poker import NotEnoughChips, PlayerOutOfOrderException, Poker
+from poker import (
+    AbstractPokerPlayer,
+    NotEnoughChips,
+    Player,
+    PlayerOutOfOrderException,
+    Poker,
+)
 from shuffler import FakeShuffler
 
 
@@ -248,11 +254,16 @@ def test_find_winner__tied_hands():
     game._hands = []
 
     hand1 = Hand(cards=["13C", "13H", "4S", "7D", "8D"], _cmp=Poker.beats)
-    hand2 = Hand(cards=["13S", "13D", "6C", "2D", "3H"], _cmp=Poker.beats)
-    hand3 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
+    hand2 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
+    hand3 = Hand(cards=["13S", "13D", "4C", "8H", "7D"], _cmp=Poker.beats)
 
     game._hands = [hand1, hand2, hand3]
-    assert game.find_winnner() == [0, 1]
+    assert game.find_winnner() == [0, 2]
+
+
+class AllInPlayer(AbstractPokerPlayer):
+    def get_action(self, game: "Poker") -> str:
+        return game.ACTION_ALLIN
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
@@ -279,3 +290,45 @@ def test_game__all_players_check__best_hand_is_the_winner():
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
     assert game._players[2].purse == 500
+
+
+# This is temporary; the only realy winner is based on chip-count, not the last best hand
+def test_game__all_players_all_in__best_hand_is_the_winner():
+    # fmt: off
+    fake_shuffler = FakeShuffler([
+        1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
+        43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
+        33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
+    ])
+    # fmt: on
+    game = Poker(shuffler=fake_shuffler)
+    game.start(players=[AllInPlayer(), AllInPlayer(), AllInPlayer()])
+
+    game.play()
+
+    # player 1 hand: 1S 3S 3H 6S 6H
+    # player 2 hand: 2S 2H 5S 5H 8S
+    # player 3 hand: 1H 4S 4H 7S 7H
+
+    assert game.winner == game._players[2]
+    assert str(game.winning_hand) == "1H 4S 4H 7S 7H"
+
+    assert game._players[0].purse == 0
+    assert game._players[1].purse == 0
+    assert game._players[2].purse == 1500
+
+
+def test_pot_is_distributed():
+    game = Poker()
+    game._players = [Player(purse=500), Player(purse=750), Player(purse=1000)]
+    winners = [game._players[0], game._players[2]]
+    game.pot = 2250
+    game._distribute_pot(winners)
+    assert game._players[0].purse == 1625
+    assert game._players[1].purse == 750
+    assert game._players[2].purse == 2125
+    assert game.pot == 0
+
+
+# pot cannot be evenly split among winners
+# testing side-pots (only applicable if players get outbid when all-in)
