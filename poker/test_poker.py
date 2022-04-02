@@ -12,6 +12,11 @@ from poker import (
 from shuffler import FakeShuffler
 
 
+class AllInPlayer(AbstractPokerPlayer):
+    def get_action(self, game: "Poker") -> str:
+        return game.ACTION_ALLIN
+
+
 @pytest.mark.parametrize(
     "hand_1, hand_2, expectation",
     [
@@ -237,6 +242,41 @@ def test_check__not_the_players_turn():
     assert game._players[1].purse == 500
 
 
+def test_all_in():
+    game = Poker()
+    game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
+
+    game.pot = 17
+
+    assert game.current_player == 0
+
+    game.all_in(game._players[0])
+    assert game._players[0].purse == 0
+    assert game.pot == 317
+    assert game.current_player == 1
+
+    game.all_in(game._players[1])
+    assert game._players[1].purse == 0
+    assert game.pot == 545
+    assert game.current_player == 0
+
+
+def test_all_in__not_the_players_turn():
+    game = Poker()
+    game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
+
+    with pytest.raises(PlayerOutOfOrderException):
+        game.all_in(game._players[1])
+
+    assert game.current_player == 0
+
+    assert game._players[0].purse == 300
+    assert game._players[1].purse == 228
+
+
+# What about negative number of chips? we don't want to remvoe anything from the pot, but it's not really a situation you can get in.
+
+
 def test_find_winner():
     game = Poker()
     game._hands = []
@@ -259,11 +299,6 @@ def test_find_winner__tied_hands():
 
     game._hands = [hand1, hand2, hand3]
     assert game.find_winnner() == [0, 2]
-
-
-class AllInPlayer(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> str:
-        return game.ACTION_ALLIN
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
@@ -302,7 +337,9 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     ])
     # fmt: on
     game = Poker(shuffler=fake_shuffler)
-    game.start(players=[AllInPlayer(), AllInPlayer(), AllInPlayer()])
+    game.start(
+        players=[AllInPlayer(purse=500), AllInPlayer(purse=500), AllInPlayer(purse=500)]
+    )
 
     game.play()
 
@@ -318,6 +355,77 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     assert game._players[2].purse == 1500
 
 
+def test_shuffler_factory():
+    hand1 = ["1H", "3C", "4C", "5C", "6C"]
+    hand2 = ["1D", "3H", "4H", "5H", "6H"]
+    hand3 = ["1S", "3D", "4D", "5D", "6D"]
+    hand4 = ["1C", "3S", "4S", "5S", "6S"]
+
+    hands = [hand1, hand2, hand3, hand4]
+
+    shuffler = shuffler_factory(hands)
+    game = Poker(shuffler=shuffler)
+    game.start(4)
+
+    assert str(game._hands[0]) == "1H 3C 4C 5C 6C"
+    assert str(game._hands[1]) == "1D 3H 4H 5H 6H"
+    assert str(game._hands[2]) == "1S 3D 4D 5D 6D"
+    assert str(game._hands[3]) == "1C 3S 4S 5S 6S"
+
+
+def shuffler_factory(hands: list) -> FakeShuffler:
+    shuffler_list = []
+    # fmt: off
+    all_cards = [
+        # 'RJ', 'BJ',  # No jokers in Poker
+        '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
+        '1D', '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', '10D', '11D', '12D', '13D', 
+        '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
+        '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
+    ]
+    left_overs = [x for x in range(1, 53)]
+    # fmt: on
+
+    in_shuffler_count = 0
+
+    for card_no in range(0, 5):
+        for hand_no in range(len(hands)):
+            card = hands[hand_no][card_no]
+            card_index = all_cards.index(card)
+            shuffler_list.append(card_index + 1)
+            left_overs.remove(card_index + 1)
+
+    return FakeShuffler(shuffler_list + left_overs)
+
+
+def test_game__all_players_all_in__three_way_tie():
+    hand1 = ["1H", "3C", "4C", "5C", "6C"]
+    hand2 = ["1D", "3H", "4H", "5H", "6H"]
+    hand3 = ["1S", "3D", "4D", "5D", "6D"]
+    hand4 = ["8C", "3S", "4S", "5S", "6S"]
+
+    fake_shuffler = shuffler_factory([hand1, hand2, hand3, hand4])
+    game = Poker(shuffler=fake_shuffler)
+    game.start(
+        players=[
+            AllInPlayer(purse=500),
+            AllInPlayer(purse=500),
+            AllInPlayer(purse=500),
+            AllInPlayer(purse=500),
+        ]
+    )
+
+    game.play()
+
+    assert game._players[0].purse == 666
+    assert game._players[1].purse == 666
+    assert game._players[2].purse == 666
+    assert game._players[3].purse == 0
+
+    assert game.pot == 0
+    assert game.kitty == 2
+
+
 def test_pot_is_distributed():
     game = Poker()
     game._players = [Player(purse=500), Player(purse=750), Player(purse=1000)]
@@ -330,5 +438,6 @@ def test_pot_is_distributed():
     assert game.pot == 0
 
 
+# Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)
 # pot cannot be evenly split among winners
 # testing side-pots (only applicable if players get outbid when all-in)
