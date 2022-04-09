@@ -19,9 +19,6 @@ class Hand(Deck):
         self._shuffler = shuffler
         self._cmp = _cmp
 
-    def __repr__(self) -> str:
-        return " ".join([str(c) for c in self._cards])
-
     def __lt__(self, b):
         return self._cmp(self, b) < 0
 

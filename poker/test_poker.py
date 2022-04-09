@@ -2,7 +2,7 @@ import pytest
 
 from card import Card
 from hand import Hand
-from deck import EmptyDeck
+from deck import Deck, EmptyDeck
 from player import AbstractPokerPlayer, Player
 from poker import Poker
 from poker_errors import NotEnoughChips, PlayerOutOfOrderException
@@ -118,11 +118,11 @@ def test_start_game():
     game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(3)
 
-    assert len(game._hands) == 3
+    assert len(game._players) == 3
     for x in range(0, 3):
-        assert isinstance(game._hands[x], Hand)
-        assert len(game._hands[x]) == game.CARDS_PER_HAND
-        assert isinstance(game._hands[x][0], Card)
+        assert isinstance(game._players[x].hand, Hand)
+        assert len(game._players[x].hand) == game.CARDS_PER_HAND
+        assert isinstance(game._players[x].hand[0], Card)
 
     assert len(game._deck) == 39
 
@@ -137,11 +137,11 @@ def test_start_game_shuffles_deck():
     # fmt: on
     game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(1)
-    assert game._hands[0][0] == Card("1H")
-    assert game._hands[0][1] == Card("RJ")
-    assert game._hands[0][2] == Card("2H")
-    assert game._hands[0][3] == Card("BJ")
-    assert game._hands[0][4] == Card("3H")
+    assert game._players[0].hand[0] == Card("1H")
+    assert game._players[0].hand[1] == Card("RJ")
+    assert game._players[0].hand[2] == Card("2H")
+    assert game._players[0].hand[3] == Card("BJ")
+    assert game._players[0].hand[4] == Card("3H")
 
 
 def test_deal_cycles_hands():
@@ -154,18 +154,18 @@ def test_deal_cycles_hands():
     # fmt: on
     game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(4)
-    assert game._hands[0][0] == Card("1H")
-    assert game._hands[1][0] == Card("RJ")
-    assert game._hands[2][0] == Card("2H")
-    assert game._hands[3][0] == Card("BJ")
-    assert game._hands[0][1] == Card("3H")
+    assert game._players[0].hand[0] == Card("1H")
+    assert game._players[1].hand[0] == Card("RJ")
+    assert game._players[2].hand[0] == Card("2H")
+    assert game._players[3].hand[0] == Card("BJ")
+    assert game._players[0].hand[1] == Card("3H")
 
 
 def test_dealt_card_are_not_in_deck():
     game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(1)
 
-    for c in game._hands[0]:
+    for c in game._players[0].hand:
         assert c not in game._deck
 
 
@@ -279,27 +279,71 @@ def test_all_in__not_the_players_turn():
 # What about negative number of chips? we don't want to remvoe anything from the pot, but it's not really a situation you can get in.
 
 
+def test_fold():
+    game = Poker()
+    game.start(
+        players=[FoldPlayer(purse=300), AllInPlayer(purse=228), FoldPlayer(purse=100)]
+    )
+
+    game.pot = 17
+    assert len(game._round_players) == 3
+
+    assert game.current_player == 0
+
+    game.fold(game._players[0])
+    assert game._players[0].purse == 300
+    assert game.pot == 17
+    assert len(game._round_players) == 2
+    assert game.current_player == 0
+
+    game.all_in(game._players[1])
+    assert game._players[1].purse == 0
+    assert game.pot == 245
+    assert len(game._round_players) == 2
+    assert game.current_player == 1
+
+    game.fold(game._players[2])
+    assert game._players[2].purse == 100
+    assert game.pot == 245
+    assert len(game._round_players) == 1
+    assert game.current_player == 0
+
+
 def test_find_winner():
     game = Poker()
-    game._hands = []
 
     hand1 = Hand(cards=["13C", "13H", "4S", "7D", "8D"], _cmp=Poker.beats)
     hand2 = Hand(cards=["12C", "12S", "6C", "2D", "3H"], _cmp=Poker.beats)
     hand3 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
 
-    game._hands = [hand1, hand2, hand3]
+    player1 = Player()
+    player2 = Player()
+    player3 = Player()
+
+    player1.hand = hand1
+    player2.hand = hand2
+    player3.hand = hand3
+
+    game._players = [player1, player2, player3]
     assert game.find_winnner() == [0]
 
 
 def test_find_winner__tied_hands():
     game = Poker()
-    game._hands = []
 
     hand1 = Hand(cards=["13C", "13H", "4S", "7D", "8D"], _cmp=Poker.beats)
     hand2 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
     hand3 = Hand(cards=["13S", "13D", "4C", "8H", "7D"], _cmp=Poker.beats)
 
-    game._hands = [hand1, hand2, hand3]
+    player1 = Player()
+    player2 = Player()
+    player3 = Player()
+
+    player1.hand = hand1
+    player2.hand = hand2
+    player3.hand = hand3
+
+    game._players = [player1, player2, player3]
     assert game.find_winnner() == [0, 2]
 
 
@@ -366,14 +410,26 @@ def test_shuffler_factory():
     hands = [hand1, hand2, hand3, hand4]
 
     shuffler = shuffler_factory(hands)
-    # We should deal ourselves, not use a poker game. Maybe a Dealer entity?
-    game = Poker(shuffler=shuffler)
-    game.start(4)
 
-    assert str(game._hands[0]) == "1H 3C 4C 5C 6C"
-    assert str(game._hands[1]) == "1D 3H 4H 5H 6H"
-    assert str(game._hands[2]) == "1S 3D 4D 5D 6D"
-    assert str(game._hands[3]) == "1C 3S 4S 5S 6S"
+    _player_count = 4
+
+    # Maybe a Dealer entity instead of duplicating logic?
+
+    deck = Deck(shuffler=shuffler)
+    deck.pull_card("RJ")
+    deck.pull_card("BJ")
+    deck.shuffle()
+
+    _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
+    for _ in range(0, 5):
+        for i in range(0, _player_count):
+            hand = _hands[i]
+            hand.insert_at_end(deck.pull_from_top())
+
+    assert str(_hands[0]) == "1H 3C 4C 5C 6C"
+    assert str(_hands[1]) == "1D 3H 4H 5H 6H"
+    assert str(_hands[2]) == "1S 3D 4D 5D 6D"
+    assert str(_hands[3]) == "1C 3S 4S 5S 6S"
 
 
 @pytest.mark.parametrize(
@@ -417,16 +473,28 @@ def test_shuffler_factory__can_make_up_unspecified_hands():
     hands = [hand1, None, hand3]
 
     shuffler = shuffler_factory(hands)
-    # We should deal ourselves, not use a poker game. Maybe a Dealer entity?
-    game = Poker(shuffler=shuffler)
-    game.start(3)
 
-    assert str(game._hands[0]) == "1H 3C 4C 5C 6C"
-    assert str(game._hands[2]) == "1S 3D 4D 5D 6D"
+    _player_count = 3
 
-    assert len(game._hands[1]) == 5
-    for c in game._hands[1]:
-        assert c not in game._hands[0]
+    # Maybe a Dealer entity instead of duplicating logic?
+
+    deck = Deck(shuffler=shuffler)
+    deck.pull_card("RJ")
+    deck.pull_card("BJ")
+    deck.shuffle()
+
+    _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
+    for _ in range(0, 5):
+        for i in range(0, _player_count):
+            hand = _hands[i]
+            hand.insert_at_end(deck.pull_from_top())
+
+    assert str(_hands[0]) == "1H 3C 4C 5C 6C"
+    assert str(_hands[2]) == "1S 3D 4D 5D 6D"
+
+    assert len(_hands[1]) == 5
+    for c in _hands[1]:
+        assert c not in _hands[0]
 
 
 # Test that shuffler factory cannot deal the same card in more than 1 hand

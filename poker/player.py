@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
+from hand import Hand
 
 if TYPE_CHECKING:
     from poker import Poker
@@ -8,6 +10,7 @@ if TYPE_CHECKING:
 
 class AbstractPokerPlayer(ABC):
     purse: int
+    _hand: Hand
 
     def __init__(self, purse: int = 0) -> None:
         self.purse = purse
@@ -19,7 +22,15 @@ class AbstractPokerPlayer(ABC):
     def add_to_purse(self, chips: int) -> None:
         self.purse += chips
 
-    def set_hand(self, h: list):  # Why a list? Why not a Hand?
+    @property
+    def hand(self) -> Union[Hand, None]:
+        try:
+            return self._hand
+        except AttributeError:
+            return None
+
+    @hand.setter
+    def hand(self, h: Hand) -> None:
         self._hand = h
 
     # def remove_from_purse(self, chips: int) -> int:

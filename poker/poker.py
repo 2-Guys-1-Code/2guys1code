@@ -58,16 +58,16 @@ class Poker:
                 raise NotEnoughChips()
 
     def deal(self):
-        self._hands = [Hand(_cmp=Poker.beats) for _ in range(0, self._player_count)]
         for _ in range(0, self.CARDS_PER_HAND):
-            for i in range(0, self._player_count):
-                hand = self._hands[i]
-                hand.insert_at_end(self._deck.pull_from_top())
+            for p in self._players:
+                # We don't necessary love this.....
+                if p.hand is None:
+                    p.hand = Hand(_cmp=Poker.beats)
+                p.hand.insert_at_end(self._deck.pull_from_top())
 
-    def get_player_count(self):
+    @property
+    def _player_count(self):
         return len(self._players)
-
-    _player_count = property(get_player_count)
 
     def start(
         self,
@@ -117,30 +117,38 @@ class Poker:
             method = self._get_method(action)
             method(player)
 
+            # Make this better when we introduce more rounds
+            if len(self._round_players) == 1:
+                self.winner = self._round_players[0]
+                self.winning_hand = self.winner.hand
+
+                self._distribute_pot([self.winner])
+                return
+
         winners = self.find_winnner()
         self.winner = self._players[winners[0]]
-        self.winning_hand = self._hands[winners[0]]
+        self.winning_hand = self.winner.hand
 
         self._distribute_pot([self._players[i] for i in winners])
 
     def check(self, player: AbstractPokerPlayer) -> None:
         # todo: are they allowed to check? (a.k.a. is there money "pending")
 
-        if self._players.index(player) != self.current_player:
+        if self._round_players.index(player) != self.current_player:
             raise PlayerOutOfOrderException()
 
         self.current_player += 1
 
-        if self.current_player >= len(self._players):
+        if self.current_player >= len(self._round_players):
             self.current_player = 0
 
     def all_in(self, player: AbstractPokerPlayer) -> None:
-        if self._players.index(player) != self.current_player:
+        if self._round_players.index(player) != self.current_player:
             raise PlayerOutOfOrderException()
 
         self.current_player += 1
 
-        if self.current_player >= len(self._players):
+        if self.current_player >= len(self._round_players):
             self.current_player = 0
 
         # self.pot += player.remove_from_purse(player.purse)
@@ -148,7 +156,14 @@ class Poker:
         player.purse = 0
 
     def fold(self, player: AbstractPokerPlayer) -> None:
-        print("Here")
+        # TODO: Third time we duplicate this!!!! CONTEXT MANAGER!!!!! With playerTurn!!!!
+        if self._round_players.index(player) != self.current_player:
+            raise PlayerOutOfOrderException()
+
+        self._round_players.remove(player)
+
+        if self.current_player >= len(self._round_players):
+            self.current_player = 0
 
     def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
         if len(winners) == 0:
@@ -162,15 +177,15 @@ class Poker:
         self.kitty += self.pot
         self.pot = 0
 
-    def find_winnner(self):
-        h1 = self._hands[0]
+    def find_winnner(self) -> list[int]:
+        p1 = self._players[0]
         winners = [0]
-        for i, h2 in enumerate(self._hands[1:]):
+        for i, p2 in enumerate(self._players[1:]):
 
-            if h2 == h1:
+            if p2.hand == p1.hand:
                 winners.append(i + 1)
-            elif h2 > h1:
-                h1 = h2
+            elif p2.hand > p1.hand:
+                p1 = p2
                 winners = [i + 1]
 
         return winners
@@ -403,7 +418,7 @@ class Poker:
         return hand[0]
 
     @staticmethod
-    def _extract_straight(hand: list) -> Card:
+    def _extract_straight(hand: list) -> Union[Card, None]:
         hand.sort()
         for x in range(1, len(hand)):
             if hand[x - 1].rank != hand[x].rank - 1:
@@ -412,7 +427,7 @@ class Poker:
         return hand[0]
 
     @staticmethod
-    def _find_set(hand: list, set_size: int) -> Card:
+    def _find_set(hand: list, set_size: int) -> Union[Card, None]:
         sets = [k for k, v in Counter(hand).items() if v == set_size]
         if len(sets) == 0:
             return None
@@ -420,7 +435,7 @@ class Poker:
         return max(sets, default=None)
 
     @staticmethod
-    def _remove_cards_by_rank(hand: list, rank_card: Card) -> Card:
+    def _remove_cards_by_rank(hand: list, rank_card: Card) -> None:
         for x in range(len(hand) - 1, -1, -1):
             if hand[x].rank == rank_card.rank:
                 hand.pop(x)

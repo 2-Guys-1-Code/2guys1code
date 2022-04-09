@@ -37,6 +37,9 @@ class Deck:
         for i in range(13, 0, -1):
             self._cards.append(Card(f"{i}H"))
 
+    def __repr__(self) -> str:
+        return " ".join([str(c) for c in self._cards])
+
     def __len__(self) -> int:
         return len(self._cards)
 
