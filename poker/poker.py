@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from collections import Counter
 from math import floor
 from typing import Callable, Union
@@ -6,40 +5,9 @@ from typing import Callable, Union
 from card import Card
 from deck import Deck
 from hand import Hand
+from player import AbstractPokerPlayer, Player
+from poker_errors import NotEnoughChips, PlayerOutOfOrderException
 from shuffler import AbstractShuffler, Shuffler
-
-
-class NotEnoughChips(Exception):
-    pass
-
-
-class PlayerOutOfOrderException(Exception):
-    pass
-
-
-class AbstractPokerPlayer(ABC):
-    purse: int
-
-    def __init__(self, purse: int = 0) -> None:
-        self.purse = purse
-
-    @abstractmethod
-    def get_action(self, game: "Poker") -> str:
-        return NotImplemented
-
-    def add_to_purse(self, chips: int) -> None:
-        self.purse += chips
-        return NotImplemented
-
-    # def remove_from_purse(self, chips: int) -> int:
-    #     if chips > self.purse:
-
-    #     self.purse += chips
-
-
-class Player(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> str:
-        return game.ACTION_CHECK
 
 
 class Poker:
@@ -62,6 +30,7 @@ class Poker:
     chips_in_bank: int
     _game_type: str
     _players: list[AbstractPokerPlayer]
+    _round_players: list[AbstractPokerPlayer]
     kitty: int
 
     def __init__(
@@ -127,7 +96,7 @@ class Poker:
             self._distribute_chips(chips_per_player)
 
         self.kitty = 0
-
+        self._round_players = self._players.copy()
         self.current_player = 0
         self._deck.shuffle()
         self.deal()
@@ -135,6 +104,9 @@ class Poker:
     def _get_method(self, action: str) -> Callable[[AbstractPokerPlayer], None]:
         if action == self.ACTION_ALLIN:
             return self.all_in
+        elif action == self.ACTION_FOLD:
+            return self.fold
+
         # if action == self.ACTION_CHECK:
         return self.check
 
@@ -143,7 +115,6 @@ class Poker:
         for player in self._players:
             action = player.get_action(self)
             method = self._get_method(action)
-
             method(player)
 
         winners = self.find_winnner()
@@ -152,20 +123,20 @@ class Poker:
 
         self._distribute_pot([self._players[i] for i in winners])
 
-    def check(self, player):
+    def check(self, player: AbstractPokerPlayer) -> None:
         # todo: are they allowed to check? (a.k.a. is there money "pending")
 
         if self._players.index(player) != self.current_player:
-            raise PlayerOutOfOrderException
+            raise PlayerOutOfOrderException()
 
         self.current_player += 1
 
         if self.current_player >= len(self._players):
             self.current_player = 0
 
-    def all_in(self, player):
+    def all_in(self, player: AbstractPokerPlayer) -> None:
         if self._players.index(player) != self.current_player:
-            raise PlayerOutOfOrderException
+            raise PlayerOutOfOrderException()
 
         self.current_player += 1
 
@@ -175,6 +146,9 @@ class Poker:
         # self.pot += player.remove_from_purse(player.purse)
         self.pot += player.purse
         player.purse = 0
+
+    def fold(self, player: AbstractPokerPlayer) -> None:
+        print("Here")
 
     def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
         if len(winners) == 0:

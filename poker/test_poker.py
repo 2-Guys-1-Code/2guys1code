@@ -1,20 +1,22 @@
-from card import Card
 import pytest
+
+from card import Card
 from hand import Hand
 from deck import EmptyDeck
-from poker import (
-    AbstractPokerPlayer,
-    NotEnoughChips,
-    Player,
-    PlayerOutOfOrderException,
-    Poker,
-)
+from player import AbstractPokerPlayer, Player
+from poker import Poker
+from poker_errors import NotEnoughChips, PlayerOutOfOrderException
 from shuffler import FakeShuffler
 
 
 class AllInPlayer(AbstractPokerPlayer):
     def get_action(self, game: "Poker") -> str:
         return game.ACTION_ALLIN
+
+
+class FoldPlayer(AbstractPokerPlayer):
+    def get_action(self, game: "Poker") -> str:
+        return game.ACTION_FOLD
 
 
 @pytest.mark.parametrize(
@@ -364,6 +366,7 @@ def test_shuffler_factory():
     hands = [hand1, hand2, hand3, hand4]
 
     shuffler = shuffler_factory(hands)
+    # We should deal ourselves, not use a poker game. Maybe a Dealer entity?
     game = Poker(shuffler=shuffler)
     game.start(4)
 
@@ -371,6 +374,66 @@ def test_shuffler_factory():
     assert str(game._hands[1]) == "1D 3H 4H 5H 6H"
     assert str(game._hands[2]) == "1S 3D 4D 5D 6D"
     assert str(game._hands[3]) == "1C 3S 4S 5S 6S"
+
+
+@pytest.mark.parametrize(
+    "hands",
+    [
+        [
+            ["1H", "1H", "4C", "5C", "6C"],
+        ],
+        [
+            ["1H", "3C", "4C", "5C", "6C"],
+            ["1H", "3H", "4H", "5H", "6H"],
+        ],
+    ],
+    ids=[
+        "Duplicate cards within 1 hand",
+        "Duplicate cards across hands",
+    ],
+)
+# @pytest.mark.parametrize(
+#     "hands",
+#     [
+#         pytest.param("Duplicate cards within 1 hand", [["1H", "1H", "4C", "5C", "6C"]]),
+#         pytest.param(
+#             "Duplicate cards across hands",
+#             [
+#                 ["1H", "3C", "4C", "5C", "6C"],
+#                 ["1H", "3H", "4H", "5H", "6H"],
+#             ],
+#         ),
+#     ],
+# )
+def test_shuffler_factory__cannot_deal_same_card_twice(hands):
+    with pytest.raises(DuplicateCardException):
+        shuffler_factory(hands)
+
+
+def test_shuffler_factory__can_make_up_unspecified_hands():
+    hand1 = ["1H", "3C", "4C", "5C", "6C"]
+    hand3 = ["1S", "3D", "4D", "5D", "6D"]
+
+    hands = [hand1, None, hand3]
+
+    shuffler = shuffler_factory(hands)
+    # We should deal ourselves, not use a poker game. Maybe a Dealer entity?
+    game = Poker(shuffler=shuffler)
+    game.start(3)
+
+    assert str(game._hands[0]) == "1H 3C 4C 5C 6C"
+    assert str(game._hands[2]) == "1S 3D 4D 5D 6D"
+
+    assert len(game._hands[1]) == 5
+    for c in game._hands[1]:
+        assert c not in game._hands[0]
+
+
+# Test that shuffler factory cannot deal the same card in more than 1 hand
+
+
+class DuplicateCardException(Exception):
+    pass
 
 
 def shuffler_factory(hands: list) -> FakeShuffler:
@@ -386,14 +449,29 @@ def shuffler_factory(hands: list) -> FakeShuffler:
     left_overs = [x for x in range(1, 53)]
     # fmt: on
 
-    in_shuffler_count = 0
+    for i, h in enumerate(hands):
+        if h is None:
+            h = []
+            hands[i] = h
+
+        for c in h:
+            i = all_cards.index(c)
+            try:
+                left_overs.remove(i + 1)
+            except ValueError:
+                raise DuplicateCardException()
+
+    for h in hands:
+        for card_no in range(0, 5 - len(h)):
+            i = left_overs.pop(0) - 1
+            h.append(all_cards[i])
 
     for card_no in range(0, 5):
         for hand_no in range(len(hands)):
             card = hands[hand_no][card_no]
+
             card_index = all_cards.index(card)
             shuffler_list.append(card_index + 1)
-            left_overs.remove(card_index + 1)
 
     return FakeShuffler(shuffler_list + left_overs)
 
@@ -436,6 +514,29 @@ def test_pot_is_distributed():
     assert game._players[1].purse == 750
     assert game._players[2].purse == 2125
     assert game.pot == 0
+
+
+def test_game__first_player_all_in_others_fold():
+    hand1 = ["1H", "3C", "4C", "5C", "6C"]
+
+    fake_shuffler = shuffler_factory([hand1, None, None])
+    game = Poker(shuffler=fake_shuffler)
+    game.start(
+        players=[
+            AllInPlayer(purse=500),
+            FoldPlayer(purse=500),
+            FoldPlayer(purse=500),
+        ]
+    )
+
+    game.play()
+
+    assert game.winner == game._players[0]
+    assert str(game.winning_hand) == "1H 3C 4C 5C 6C"
+
+    assert game._players[0].purse == 500
+    assert game._players[1].purse == 500
+    assert game._players[2].purse == 500
 
 
 # Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)

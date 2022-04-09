@@ -79,8 +79,8 @@ Simple steps:
     * all players check, reach the end, compare hands (no money in the pot, game will go on forever)
     * all players go all-in, reach the end, compare hands (winner takes all, game ends)
     * all players go all-in, reach the end, compare hands (TIE! split the pot) (2-way & 3-way tie)
+    * first player goes all-in, all others fold. No comparison, only player left wins
     * all players raise small, then call when they don't have enough chips to raise
-    * first player bets, all others fold. No comparison, only player left wins
 
 
 Ability to record/replay a game
