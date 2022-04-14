@@ -1,3 +1,4 @@
+from typing import Union
 import pytest
 
 from card import Card
@@ -10,13 +11,29 @@ from shuffler import FakeShuffler
 
 
 class AllInPlayer(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> str:
+    def get_action(self, game: "Poker") -> Union[str, None]:
         return game.ACTION_ALLIN
 
 
 class FoldPlayer(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> str:
+    def get_action(self, game: "Poker") -> Union[str, None]:
         return game.ACTION_FOLD
+
+
+class MultiActionPlayer(AbstractPokerPlayer):
+    def __init__(
+        self, purse: int = 0, name: str = "John", actions: list = None
+    ) -> None:
+        super().__init__(purse=purse, name=name)
+        self.call_count = 0
+        self.actions = actions or []
+
+    def get_action(self, game: "Poker") -> Union[str, None]:
+        self.call_count += 1
+        if len(self.actions) >= self.call_count:
+            return self.actions[self.call_count - 1]
+
+        return None
 
 
 @pytest.mark.parametrize(
@@ -432,6 +449,54 @@ def test_shuffler_factory():
     assert str(_hands[3]) == "1C 3S 4S 5S 6S"
 
 
+def test_shuffler_factory__can_handle_multiple_rounds():
+    hand1 = ["1H", "3C", "4C", "5C", "6C"]
+    hand2 = ["1D", "3H", "4H", "5H", "6H"]
+    hand3 = ["1S", "3D", "4D", "5D", "6D"]
+    hand4 = ["1C", "3S", "4S", "5S", "6S"]
+
+    rounds = [[hand1, hand2, hand3, hand4], [hand4, hand3, hand2, hand1]]
+
+    shuffler = shuffler_factory(rounds)
+
+    _player_count = 4
+
+    # Maybe a Dealer entity instead of duplicating logic?
+
+    deck = Deck(shuffler=shuffler)
+    deck.pull_card("RJ")
+    deck.pull_card("BJ")
+    deck.shuffle()
+
+    # this is because we do not have an independent dealer yet
+    _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
+    for _ in range(0, 5):
+        for i in range(0, _player_count):
+            hand = _hands[i]
+            hand.insert_at_end(deck.pull_from_top())
+
+    assert str(_hands[0]) == "1H 3C 4C 5C 6C"
+    assert str(_hands[1]) == "1D 3H 4H 5H 6H"
+    assert str(_hands[2]) == "1S 3D 4D 5D 6D"
+    assert str(_hands[3]) == "1C 3S 4S 5S 6S"
+
+    deck = Deck(shuffler=shuffler)
+    deck.pull_card("RJ")
+    deck.pull_card("BJ")
+    deck.shuffle()
+
+    _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
+    for _ in range(0, 5):
+        for i in range(0, _player_count):
+            hand = _hands[i]
+            hand.insert_at_end(deck.pull_from_top())
+
+    assert str(_hands[3]) == "1H 3C 4C 5C 6C"
+    assert str(_hands[2]) == "1D 3H 4H 5H 6H"
+    assert str(_hands[1]) == "1S 3D 4D 5D 6D"
+    assert str(_hands[0]) == "1C 3S 4S 5S 6S"
+
+
 @pytest.mark.parametrize(
     "hands",
     [
@@ -497,15 +562,15 @@ def test_shuffler_factory__can_make_up_unspecified_hands():
         assert c not in _hands[0]
 
 
-# Test that shuffler factory cannot deal the same card in more than 1 hand
-
-
 class DuplicateCardException(Exception):
     pass
 
 
 def shuffler_factory(hands: list) -> FakeShuffler:
-    shuffler_list = []
+    all_round_hands = hands
+    if type(all_round_hands[0][0]) != list:
+        all_round_hands = [all_round_hands]
+
     # fmt: off
     all_cards = [
         # 'RJ', 'BJ',  # No jokers in Poker
@@ -514,34 +579,41 @@ def shuffler_factory(hands: list) -> FakeShuffler:
         '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
         '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
     ]
-    left_overs = [x for x in range(1, 53)]
+    # left_overs = [x for x in range(1, 53)]
     # fmt: on
 
-    for i, h in enumerate(hands):
-        if h is None:
-            h = []
-            hands[i] = h
+    rounds = []
+    for hands in all_round_hands:
+        shuffler_list = []
+        left_overs = [x for x in range(1, 53)]
 
-        for c in h:
-            i = all_cards.index(c)
-            try:
-                left_overs.remove(i + 1)
-            except ValueError:
-                raise DuplicateCardException()
+        for i, h in enumerate(hands):
+            if h is None:
+                h = []
+                hands[i] = h
 
-    for h in hands:
-        for card_no in range(0, 5 - len(h)):
-            i = left_overs.pop(0) - 1
-            h.append(all_cards[i])
+            for c in h:
+                i = all_cards.index(c)
+                try:
+                    left_overs.remove(i + 1)
+                except ValueError:
+                    raise DuplicateCardException()
 
-    for card_no in range(0, 5):
-        for hand_no in range(len(hands)):
-            card = hands[hand_no][card_no]
+        for h in hands:
+            for card_no in range(0, 5 - len(h)):
+                i = left_overs.pop(0) - 1
+                h.append(all_cards[i])
 
-            card_index = all_cards.index(card)
-            shuffler_list.append(card_index + 1)
+        for card_no in range(0, 5):
+            for hand_no in range(len(hands)):
+                card = hands[hand_no][card_no]
 
-    return FakeShuffler(shuffler_list + left_overs)
+                card_index = all_cards.index(card)
+                shuffler_list.append(card_index + 1)
+
+        rounds.append(shuffler_list + left_overs)
+
+    return FakeShuffler(rounds)
 
 
 def test_game__all_players_all_in__three_way_tie():
@@ -605,8 +677,139 @@ def test_game__first_player_all_in_others_fold():
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
     assert game._players[2].purse == 500
+    assert game.pot == 0
+
+
+def test_game__two_rounds():
+    hand1 = ["1H", "13H", "12H", "11H", "10H"]
+
+    fake_shuffler = shuffler_factory([hand1, None, None])
+    game = Poker(shuffler=fake_shuffler)
+
+    player1 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Michael"
+    )
+    player2 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Geordie"
+    )
+    player3 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Jeff"
+    )
+
+    game.start(
+        players=[
+            player1,
+            player2,
+            player3,
+        ]
+    )
+
+    game.play()
+
+    assert game.winner == game._players[0]
+    assert game.round_count == 2
+
+    assert game._players[0].purse == 1500
+    assert game._players[1].purse == 0
+    assert game._players[2].purse == 0
+
+
+def test_count_players_with_money():
+    game = Poker()
+
+    player1 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Michael"
+    )
+    player2 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Geordie"
+    )
+    player3 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_CHECK, Poker.ACTION_ALLIN], name="Jeff"
+    )
+
+    game.start(
+        players=[
+            player1,
+            player2,
+            player3,
+        ]
+    )
+
+    assert game._count_players_with_money() == 3
+
+
+def test_game__two_rounds__more_coverage():
+    hand1 = ["1H", "13H", "12H", "11H", "10H"]
+    hand2 = ["1C", "13C", "12C", "11C", "10C"]
+    hand3 = ["7D", "7S", "4H", "5C", "3S"]
+
+    fake_shuffler = shuffler_factory([hand1, hand2, hand3])
+    game = Poker(shuffler=fake_shuffler)
+
+    player1 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_ALLIN, Poker.ACTION_ALLIN], name="Michael"
+    )
+    player2 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_ALLIN, Poker.ACTION_FOLD], name="Geordie"
+    )
+    player3 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_FOLD, Poker.ACTION_FOLD], name="Jeff"
+    )
+
+    game.start(
+        players=[
+            player1,
+            player2,
+            player3,
+        ]
+    )
+
+    game.play()
+
+    assert game.winner == game._players[0]
+    assert game.round_count == 2
+
+    assert game._players[0].purse == 500
+    assert game._players[1].purse == 500
+    assert game._players[2].purse == 500
+
+
+def test_game__two_rounds__more_coverage_v2():
+    hand1 = ["1H", "13H", "12H", "11H", "10H"]
+    hand2 = ["1C", "13C", "12C", "11C", "10C"]
+    hand3 = ["7D", "7S", "4H", "5C", "3S"]
+
+    fake_shuffler = shuffler_factory([[hand1, hand2, hand3], [hand1, hand3, hand2]])
+
+    game = Poker(shuffler=fake_shuffler)
+
+    player1 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_ALLIN, Poker.ACTION_ALLIN], name="Michael"
+    )
+    player2 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_ALLIN, Poker.ACTION_ALLIN], name="Geordie"
+    )
+    player3 = MultiActionPlayer(
+        purse=500, actions=[Poker.ACTION_ALLIN, Poker.ACTION_FOLD], name="Jeff"
+    )
+
+    game.start(
+        players=[
+            player1,
+            player2,
+            player3,
+        ]
+    )
+
+    game.play()
+
+    assert game.winner == game._players[0]
+    assert game.round_count == 2
+
+    assert game._players[0].purse == 750
+    assert game._players[1].purse == 0
+    assert game._players[2].purse == 0
 
 
 # Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)
-# pot cannot be evenly split among winners
 # testing side-pots (only applicable if players get outbid when all-in)

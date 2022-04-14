@@ -98,6 +98,8 @@ class Deck:
         needle = Card(card)
         self._cards.insert(len(self._cards), needle)
 
+    # Add support for insert_hand as various positions
+
     def peek(self, position: int) -> Union[Card, None]:
         self._validate_read_position(position)
         return self._cards[position - 1]

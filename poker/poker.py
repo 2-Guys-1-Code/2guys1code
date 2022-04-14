@@ -32,10 +32,13 @@ class Poker:
     _players: list[AbstractPokerPlayer]
     _round_players: list[AbstractPokerPlayer]
     kitty: int
+    game_winner: Union[None, AbstractPokerPlayer]
+    round_count: int
 
     def __init__(
         self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
     ):
+
         if shuffler is not None:
             self._deck = Deck(shuffler=shuffler)
         else:
@@ -49,6 +52,8 @@ class Poker:
 
         # Todo: fix this; test bad? distibute pot? one source of truth
         self.kitty = 0
+        self.round_count = 0
+        self.game_winner = None
 
     def _distribute_chips(self, chips_per_player):
         for p in self._players:
@@ -101,7 +106,7 @@ class Poker:
         self._deck.shuffle()
         self.deal()
 
-    def _get_method(self, action: str) -> Callable[[AbstractPokerPlayer], None]:
+    def _get_method(self, action: str = None) -> Callable[[AbstractPokerPlayer], None]:
         if action == self.ACTION_ALLIN:
             return self.all_in
         elif action == self.ACTION_FOLD:
@@ -110,26 +115,38 @@ class Poker:
         # if action == self.ACTION_CHECK:
         return self.check
 
+    def _count_players_with_money(self) -> int:
+        return len([p for p in self._players if p.purse > 0])
+
     def play(self) -> None:
         self.pot = 0
-        for player in self._players:
-            action = player.get_action(self)
-            method = self._get_method(action)
-            method(player)
+        while self.game_winner is None and self.round_count < 2:
+            self.round_count += 1
 
-            # Make this better when we introduce more rounds
-            if len(self._round_players) == 1:
-                self.winner = self._round_players[0]
-                self.winning_hand = self.winner.hand
+            for player in self._players:
+                action = player.get_action(self)
+                method = self._get_method(action)
+                method(player)
 
-                self._distribute_pot([self.winner])
-                return
+                # Make this better when we introduce more rounds
+                if len(self._round_players) == 1:
+                    self.winner = self._round_players[0]
+                    self.winning_hand = self.winner.hand
 
-        winners = self.find_winnner()
-        self.winner = self._players[winners[0]]
-        self.winning_hand = self.winner.hand
+                    self._distribute_pot([self.winner])
+                    return
 
-        self._distribute_pot([self._players[i] for i in winners])
+            winners = self.find_winnner()
+            self.winner = self._players[winners[0]]
+            self.winning_hand = self.winner.hand
+            self._distribute_pot([self._players[i] for i in winners])
+            if self._count_players_with_money() == 1:
+                print("here")
+                self.game_winner = self.winner
+
+            print(self.round_count)
+
+    # self._distribute_pot([self._players[i] for i in winners])
 
     def check(self, player: AbstractPokerPlayer) -> None:
         # todo: are they allowed to check? (a.k.a. is there money "pending")

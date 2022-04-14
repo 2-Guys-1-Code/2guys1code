@@ -12,11 +12,15 @@ class AbstractPokerPlayer(ABC):
     purse: int
     _hand: Hand
 
-    def __init__(self, purse: int = 0) -> None:
+    def __init__(self, purse: int = 0, name: str = "John") -> None:
         self.purse = purse
+        self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
 
     @abstractmethod
-    def get_action(self, game: "Poker") -> str:
+    def get_action(self, game: "Poker") -> Union[str, None]:
         raise NotImplementedError()
 
     def add_to_purse(self, chips: int) -> None:
