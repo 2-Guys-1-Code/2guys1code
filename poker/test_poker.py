@@ -581,9 +581,9 @@ def shuffler_factory(hands: list) -> FakeShuffler:
     ]
     # left_overs = [x for x in range(1, 53)]
     # fmt: on
-
     rounds = []
     for hands in all_round_hands:
+        new_deck = []
         shuffler_list = []
         left_overs = [x for x in range(1, 53)]
 
@@ -607,11 +607,14 @@ def shuffler_factory(hands: list) -> FakeShuffler:
         for card_no in range(0, 5):
             for hand_no in range(len(hands)):
                 card = hands[hand_no][card_no]
-
                 card_index = all_cards.index(card)
+
                 shuffler_list.append(card_index + 1)
 
-        rounds.append(shuffler_list + left_overs)
+        for j in shuffler_list + left_overs:
+            new_deck.append(all_cards[j - 1])
+
+        rounds.append(new_deck)
 
     return FakeShuffler(rounds)
 
@@ -806,7 +809,7 @@ def test_game__two_rounds__more_coverage_v2():
     assert game.winner == game._players[0]
     assert game.round_count == 2
 
-    assert game._players[0].purse == 750
+    assert game._players[0].purse == 1500
     assert game._players[1].purse == 0
     assert game._players[2].purse == 0
 

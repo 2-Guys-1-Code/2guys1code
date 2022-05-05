@@ -1,7 +1,8 @@
 from typing import Union
 
 from card import Card
-from shuffler import AbstractShuffler, Shuffler
+
+# from shuffler import AbstractShuffler, Shuffler
 
 
 class InvalidCardPosition(Exception):
@@ -19,11 +20,11 @@ class EmptyDeck(Exception):
 class Deck:
 
     _cards: list
-    _shuffler: AbstractShuffler
+    # _shuffler: AbstractShuffler
 
-    def __init__(self, shuffler: AbstractShuffler = Shuffler()) -> None:
+    def __init__(self, shuffler=None) -> None:
         self._cards = [Card("RJ"), Card("BJ")]
-        self._shuffler = shuffler
+        # self._shuffler = shuffler
 
         for i in range(1, 14):
             self._cards.append(Card(f"{i}S"))
@@ -116,11 +117,12 @@ class Deck:
         tmp_cards_bottom = self._cards[position:]
         self._cards = tmp_cards_bottom + tmp_cards_top
 
-    def shuffle(self):
-        mapping = self._shuffler.get_mapping(self._cards)
-        self._cards = list(
-            map(
-                lambda new_pos: self._cards[new_pos - 1],
-                mapping,
-            )
-        )
+    # def shuffle(self):
+    #     mapping = self._shuffler.get_mapping(self._cards)
+    #     print(mapping)
+    #     self._cards = list(
+    #         map(
+    #             lambda new_pos: self._cards[new_pos - 1],
+    #             mapping,
+    #         )
+    #     )

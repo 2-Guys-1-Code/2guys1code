@@ -34,26 +34,30 @@ class Poker:
     kitty: int
     game_winner: Union[None, AbstractPokerPlayer]
     round_count: int
+    _shuffler: AbstractShuffler
 
     def __init__(
         self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
     ):
-
-        if shuffler is not None:
-            self._deck = Deck(shuffler=shuffler)
-        else:
-            self._deck = Deck()
-
         self._game_type = game_type
+        self._shuffler = shuffler or Shuffler()
 
-        if self._game_type == self.TYPE_STANDARD:
-            self._deck.pull_card("RJ")
-            self._deck.pull_card("BJ")
+        self._set_deck()
 
         # Todo: fix this; test bad? distibute pot? one source of truth
         self.kitty = 0
         self.round_count = 0
         self.game_winner = None
+
+    def _set_deck(self):
+        if self._shuffler is not None:
+            self._deck = Deck(shuffler=self._shuffler)
+        else:
+            self._deck = Deck()
+
+        if self._game_type == self.TYPE_STANDARD:
+            self._deck.pull_card("RJ")
+            self._deck.pull_card("BJ")
 
     def _distribute_chips(self, chips_per_player):
         for p in self._players:
@@ -102,9 +106,6 @@ class Poker:
 
         self.kitty = 0
         self._round_players = self._players.copy()
-        self.current_player = 0
-        self._deck.shuffle()
-        self.deal()
 
     def _get_method(self, action: str = None) -> Callable[[AbstractPokerPlayer], None]:
         if action == self.ACTION_ALLIN:
@@ -123,7 +124,16 @@ class Poker:
         while self.game_winner is None and self.round_count < 2:
             self.round_count += 1
 
+            self.current_player = 0
+            # we haven't put the cards back after the first round; this may break
+            print("shuffling")
+            # self._set_deck()
+            self._shuffler.shuffle(self._deck)
+            self.deal()
+
             for player in self._players:
+                print(player._hand)
+
                 action = player.get_action(self)
                 method = self._get_method(action)
                 method(player)
@@ -137,9 +147,11 @@ class Poker:
                     return
 
             winners = self.find_winnner()
+            print(winners)
             self.winner = self._players[winners[0]]
             self.winning_hand = self.winner.hand
             self._distribute_pot([self._players[i] for i in winners])
+            self._return_cards()
             if self._count_players_with_money() == 1:
                 print("here")
                 self.game_winner = self.winner
@@ -194,10 +206,20 @@ class Poker:
         self.kitty += self.pot
         self.pot = 0
 
+    def _return_cards(self):
+        for p in self._players:
+            for i in range(len(p._hand), 0, -1):
+                card = p._hand.pull_from_position(i)
+                self._deck.insert_at_end(card)
+
+            print(p._hand)
+
+        print(len(self._deck))
+
     def find_winnner(self) -> list[int]:
-        p1 = self._players[0]
+        p1 = self._round_players[0]
         winners = [0]
-        for i, p2 in enumerate(self._players[1:]):
+        for i, p2 in enumerate(self._round_players[1:]):
 
             if p2.hand == p1.hand:
                 winners.append(i + 1)
