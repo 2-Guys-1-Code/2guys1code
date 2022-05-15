@@ -7,7 +7,16 @@ from deck import Deck, EmptyDeck
 from player import AbstractPokerPlayer, Player
 from poker import Poker
 from poker_errors import NotEnoughChips, PlayerOutOfOrderException
-from shuffler import FakeShuffler
+from shuffler import FakeShuffler, FakeShufflerByPosition
+
+
+CARDS_NO_JOKERS = [
+    # 'RJ', 'BJ',
+    '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
+    '1D', '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', '10D', '11D', '12D', '13D', 
+    '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
+    '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
+]
 
 
 class AllInPlayer(AbstractPokerPlayer):
@@ -136,6 +145,12 @@ def test_start_game():
     game.start(3)
 
     assert len(game._players) == 3
+
+def test_start_round():
+    game = Poker(game_type=Poker.TYPE_BASIC)
+    game.start(3)
+    game.start_round()
+
     for x in range(0, 3):
         assert isinstance(game._players[x].hand, Hand)
         assert len(game._players[x].hand) == game.CARDS_PER_HAND
@@ -146,7 +161,7 @@ def test_start_game():
 
 def test_start_game_shuffles_deck():
     # fmt: off
-    fake_shuffler = FakeShuffler([
+    fake_shuffler = FakeShufflerByPosition([
         54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
@@ -154,6 +169,7 @@ def test_start_game_shuffles_deck():
     # fmt: on
     game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(1)
+    game.start_round()
     assert game._players[0].hand[0] == Card("1H")
     assert game._players[0].hand[1] == Card("RJ")
     assert game._players[0].hand[2] == Card("2H")
@@ -163,7 +179,7 @@ def test_start_game_shuffles_deck():
 
 def test_deal_cycles_hands():
     # fmt: off
-    fake_shuffler = FakeShuffler([
+    fake_shuffler = FakeShufflerByPosition([
         54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
@@ -171,6 +187,7 @@ def test_deal_cycles_hands():
     # fmt: on
     game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
     game.start(4)
+    game.start_round()
     assert game._players[0].hand[0] == Card("1H")
     assert game._players[1].hand[0] == Card("RJ")
     assert game._players[2].hand[0] == Card("2H")
@@ -181,16 +198,18 @@ def test_deal_cycles_hands():
 def test_dealt_card_are_not_in_deck():
     game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(1)
+    game.start_round()
 
     for c in game._players[0].hand:
         assert c not in game._deck
 
 
-def test_game_fails_when_running_of_cards():
+def test_game_fails_when_running_out_of_cards():
     game = Poker(game_type=Poker.TYPE_BASIC)
+    game.start(11)
 
     with pytest.raises(EmptyDeck):
-        game.start(11)
+        game.start_round()
 
 
 def test_jokers_not_in_deck():
@@ -237,6 +256,7 @@ def test_game_throws_if_not_enough_chips():
 def test_check():
     game = Poker()
     game.start(2)
+    game.start_round()
 
     assert game.current_player == 0
     game.check(game._players[0])
@@ -251,6 +271,7 @@ def test_check():
 def test_check__not_the_players_turn():
     game = Poker()
     game.start(2)
+    game.start_round()
 
     with pytest.raises(PlayerOutOfOrderException):
         game.check(game._players[1])
@@ -264,6 +285,7 @@ def test_check__not_the_players_turn():
 def test_all_in():
     game = Poker()
     game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
+    game.start_round()
 
     game.pot = 17
 
@@ -283,6 +305,7 @@ def test_all_in():
 def test_all_in__not_the_players_turn():
     game = Poker()
     game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
+    game.start_round()
 
     with pytest.raises(PlayerOutOfOrderException):
         game.all_in(game._players[1])
@@ -301,6 +324,7 @@ def test_fold():
     game.start(
         players=[FoldPlayer(purse=300), AllInPlayer(purse=228), FoldPlayer(purse=100)]
     )
+    game.start_round()
 
     game.pot = 17
     assert len(game._round_players) == 3
@@ -341,7 +365,7 @@ def test_find_winner():
     player2.hand = hand2
     player3.hand = hand3
 
-    game._players = [player1, player2, player3]
+    game._round_players = [player1, player2, player3]
     assert game.find_winnner() == [0]
 
 
@@ -360,18 +384,18 @@ def test_find_winner__tied_hands():
     player2.hand = hand2
     player3.hand = hand3
 
-    game._players = [player1, player2, player3]
+    game._round_players = [player1, player2, player3]
     assert game.find_winnner() == [0, 2]
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
 def test_game__all_players_check__best_hand_is_the_winner():
     # fmt: off
-    fake_shuffler = FakeShuffler([
+    fake_shuffler = FakeShufflerByPosition([
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ])
+    ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
     game = Poker(shuffler=fake_shuffler)
     game.start(3)
@@ -393,11 +417,11 @@ def test_game__all_players_check__best_hand_is_the_winner():
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
 def test_game__all_players_all_in__best_hand_is_the_winner():
     # fmt: off
-    fake_shuffler = FakeShuffler([
+    fake_shuffler = FakeShufflerByPosition([
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ])
+    ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
     game = Poker(shuffler=fake_shuffler)
     game.start(
@@ -432,10 +456,10 @@ def test_shuffler_factory():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck(shuffler=shuffler)
+    deck = Deck()
     deck.pull_card("RJ")
     deck.pull_card("BJ")
-    deck.shuffle()
+    shuffler.shuffle(deck)
 
     _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
     for _ in range(0, 5):
@@ -463,10 +487,10 @@ def test_shuffler_factory__can_handle_multiple_rounds():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck(shuffler=shuffler)
+    deck = Deck()
     deck.pull_card("RJ")
     deck.pull_card("BJ")
-    deck.shuffle()
+    shuffler.shuffle(deck)
 
     # this is because we do not have an independent dealer yet
     _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
@@ -480,10 +504,10 @@ def test_shuffler_factory__can_handle_multiple_rounds():
     assert str(_hands[2]) == "1S 3D 4D 5D 6D"
     assert str(_hands[3]) == "1C 3S 4S 5S 6S"
 
-    deck = Deck(shuffler=shuffler)
+    deck = Deck()
     deck.pull_card("RJ")
     deck.pull_card("BJ")
-    deck.shuffle()
+    shuffler.shuffle(deck)
 
     _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
     for _ in range(0, 5):
@@ -543,10 +567,10 @@ def test_shuffler_factory__can_make_up_unspecified_hands():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck(shuffler=shuffler)
+    deck = Deck()
     deck.pull_card("RJ")
     deck.pull_card("BJ")
-    deck.shuffle()
+    shuffler.shuffle(deck)
 
     _hands = [Hand(_cmp=Poker.beats) for _ in range(0, _player_count)]
     for _ in range(0, 5):

@@ -1,4 +1,5 @@
 from collections import Counter
+import copy
 from math import floor
 from typing import Callable, Union
 
@@ -119,17 +120,17 @@ class Poker:
     def _count_players_with_money(self) -> int:
         return len([p for p in self._players if p.purse > 0])
 
+    def start_round(self) -> None:
+        self.round_count += 1
+
+        self.current_player = 0
+        self._shuffler.shuffle(self._deck)
+        self.deal()
+
     def play(self) -> None:
         self.pot = 0
         while self.game_winner is None and self.round_count < 2:
-            self.round_count += 1
-
-            self.current_player = 0
-            # we haven't put the cards back after the first round; this may break
-            print("shuffling")
-            # self._set_deck()
-            self._shuffler.shuffle(self._deck)
-            self.deal()
+            self.start_round()
 
             for player in self._players:
                 print(player._hand)
@@ -149,7 +150,7 @@ class Poker:
             winners = self.find_winnner()
             print(winners)
             self.winner = self._players[winners[0]]
-            self.winning_hand = self.winner.hand
+            self.winning_hand = copy.deepcopy(self.winner.hand)
             self._distribute_pot([self._players[i] for i in winners])
             self._return_cards()
             if self._count_players_with_money() == 1:

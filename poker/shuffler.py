@@ -13,6 +13,22 @@ class AbstractShuffler(ABC):
     def shuffle(self, deck: Deck) -> None:
         pass
 
+def build_list_of_cards_from_mapping(mapping: list, all_cards) -> list:
+    return [all_cards[i - 1] for i in mapping]
+
+
+class FakeShufflerByPosition():
+    
+    def __init__(self, mapping: list, all_cards=None) -> None:
+        all_cards = all_cards or Deck.ALL_CARDS
+        self.mapping = build_list_of_cards_from_mapping(mapping, all_cards)
+    
+    def get_mapping(self, cards: list) -> list:
+        return self.mapping
+
+    def shuffle(self, deck: Deck) -> None:
+        deck._cards = self.mapping.copy()
+
 
 class FakeShuffler(AbstractShuffler):
     mapping: list
@@ -39,10 +55,14 @@ class FakeShuffler(AbstractShuffler):
         if self.multi_round:
             self.call_count += 1
             if len(self.mapping) >= self.call_count:
-                deck._cards = self.mapping[self.call_count - 1]
+                deck._cards = self.mapping[self.call_count - 1].copy()
                 return
 
-        deck._cards = self.mapping
+            deck._cards = self.mapping[0].copy()
+            return
+            
+        deck._cards = self.mapping.copy()
+        
 
 
 class Shuffler(AbstractShuffler):
