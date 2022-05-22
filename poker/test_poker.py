@@ -5,11 +5,12 @@ from card import Card
 from hand import Hand
 from deck import Deck, EmptyDeck
 from player import AbstractPokerPlayer, Player
-from poker import Poker
+from poker import Poker, TooManyPlayers
 from poker_errors import NotEnoughChips, PlayerOutOfOrderException
 from shuffler import FakeShuffler, FakeShufflerByPosition
 
 
+# fmt: off
 CARDS_NO_JOKERS = [
     # 'RJ', 'BJ',
     '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
@@ -17,6 +18,7 @@ CARDS_NO_JOKERS = [
     '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
     '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
 ]
+# fmt: on
 
 
 class AllInPlayer(AbstractPokerPlayer):
@@ -140,26 +142,106 @@ def test_reindex_card(card, expected):
     assert Poker._reindex_card(card) == expected
 
 
-def test_start_game():
-    game = Poker(game_type=Poker.TYPE_BASIC)
+def test_start_game__initial_state():
+    game = Poker(game_type=Poker.TYPE_STANDARD)
     game.start(3)
 
     assert len(game._players) == 3
+    assert game.chips_in_game == 1500
+    assert game.kitty == 0
 
-def test_start_round():
+    assert game._players[0].purse == 500
+    assert game._players[1].purse == 500
+    assert game._players[2].purse == 500
+
+    assert Card("RJ") not in game._deck
+    assert Card("BJ") not in game._deck
+
+
+@pytest.mark.parametrize(
+    "total_chips, expected_chips_per_player, expected_chips_in_bank",
+    [
+        [1500, 500, 0],
+        [1501, 500, 1],
+        [1499, 499, 2],
+    ],
+)
+def test_game_can_set_starting_chips(
+    total_chips, expected_chips_per_player, expected_chips_in_bank
+):
+    game = Poker()
+    game.start(3, total_chips=total_chips)
+    assert game.chips_in_game == total_chips
+    assert game.chips_in_bank == expected_chips_in_bank
+    assert game._players[0].purse == expected_chips_per_player
+    assert game._players[1].purse == expected_chips_per_player
+    assert game._players[2].purse == expected_chips_per_player
+
+
+def test_game_can_set_chips_per_player():
+    game = Poker()
+    game.start(2, chips_per_player=1500)
+    assert len(game._players) == 2
+    assert game.chips_in_game == 3000
+    assert game.chips_in_bank == 0
+    assert game._players[0].purse == 1500
+    assert game._players[1].purse == 1500
+
+
+@pytest.mark.parametrize(
+    "total_chips, chips_per_player, expected_chips_per_player",
+    [
+        [None, None, 500],
+        [None, 200, 200],
+        [1200, None, 400],
+        [1201, None, 400],
+        [1201, 200, 200],
+        [1201, 400, 400],
+    ],
+    ids=[
+        "default number of chips",
+        "specify the chips per player",
+        "split the total chips evenly",
+        "split the total chips evenly, with a remainder",
+        "conflicting parameters; only use chips_per_player",
+        "both params supplied, no conflict",
+    ],
+)
+def test_distribute_chips(total_chips, chips_per_player, expected_chips_per_player):
+    game = Poker()
+    players = [Player() for _ in range(3)]
+
+    game._distribute_chips(
+        players, total_chips=total_chips, chips_per_player=chips_per_player
+    )
+
+    for p in players:
+        assert p.purse == expected_chips_per_player
+
+
+def test_game_throws_if_not_enough_chips():
+    game = Poker()
+    with pytest.raises(NotEnoughChips):
+        game.start(2, total_chips=500, chips_per_player=1500)
+
+
+def test_start_round__initial_state():
     game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(3)
     game.start_round()
 
+    assert len(game._round_players) == 3
     for x in range(0, 3):
-        assert isinstance(game._players[x].hand, Hand)
-        assert len(game._players[x].hand) == game.CARDS_PER_HAND
-        assert isinstance(game._players[x].hand[0], Card)
+        assert isinstance(game._round_players[x].hand, Hand)
+        assert len(game._round_players[x].hand) == game.CARDS_PER_HAND
+        assert isinstance(game._round_players[x].hand[0], Card)
 
     assert len(game._deck) == 39
+    assert game.current_player == 0
+    assert game.round_count == 1
 
 
-def test_start_game_shuffles_deck():
+def test_start_round_shuffles_deck_and_deals():
     # fmt: off
     fake_shuffler = FakeShufflerByPosition([
         54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
@@ -185,72 +267,39 @@ def test_deal_cycles_hands():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ])
     # fmt: on
+    deck = Deck()
+    fake_shuffler.shuffle(deck)
+
     game = Poker(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC)
-    game.start(4)
-    game.start_round()
-    assert game._players[0].hand[0] == Card("1H")
-    assert game._players[1].hand[0] == Card("RJ")
-    assert game._players[2].hand[0] == Card("2H")
-    assert game._players[3].hand[0] == Card("BJ")
-    assert game._players[0].hand[1] == Card("3H")
+
+    players = [Player() for _ in range(4)]
+    game.deal(players, deck)
+
+    assert players[0].hand[0] == Card("1H")
+    assert players[1].hand[0] == Card("RJ")
+    assert players[2].hand[0] == Card("2H")
+    assert players[3].hand[0] == Card("BJ")
+    assert players[0].hand[1] == Card("3H")
 
 
-def test_dealt_card_are_not_in_deck():
+def test_deal__cards_are_removed_from_deck():
+    deck = Deck()
+
     game = Poker(game_type=Poker.TYPE_BASIC)
-    game.start(1)
-    game.start_round()
 
-    for c in game._players[0].hand:
-        assert c not in game._deck
+    player = Player()
+    game.deal([player], deck)
+
+    for c in player.hand:
+        assert c not in deck
 
 
-def test_game_fails_when_running_out_of_cards():
+def test_game_fails_when_too_many_players():
     game = Poker(game_type=Poker.TYPE_BASIC)
     game.start(11)
 
-    with pytest.raises(EmptyDeck):
+    with pytest.raises(TooManyPlayers):
         game.start_round()
-
-
-def test_jokers_not_in_deck():
-    game = Poker()
-    assert Card("RJ") not in game._deck
-    assert Card("BJ") not in game._deck
-
-
-def test_chips_are_handed_out():
-    game = Poker()
-    game.start(3)
-
-    assert game._players[0].purse == 500
-    assert game._players[1].purse == 500
-    assert game._players[2].purse == 500
-
-
-def test_game_can_set_starting_chips():
-    game = Poker()
-    game.start(3, total_chips=1500)
-    assert game.chips_in_game == 1500
-    assert game.chips_in_bank == 0
-    assert game._players[0].purse == 500
-    assert game._players[1].purse == 500
-    assert game._players[2].purse == 500
-
-
-def test_game_can_set_chips_per_player():
-    game = Poker()
-    game.start(2, chips_per_player=1500)
-    assert len(game._players) == 2
-    assert game.chips_in_game == 3000
-    assert game.chips_in_bank == 0
-    assert game._players[0].purse == 1500
-    assert game._players[1].purse == 1500
-
-
-def test_game_throws_if_not_enough_chips():
-    game = Poker()
-    with pytest.raises(NotEnoughChips):
-        game.start(2, total_chips=500, chips_per_player=1500)
 
 
 def test_check():
@@ -262,7 +311,8 @@ def test_check():
     game.check(game._players[0])
     assert game.current_player == 1
     game.check(game._players[1])
-    assert game.current_player == 0
+    assert game.current_player == 1
+    # assert round ended?
 
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
@@ -283,7 +333,15 @@ def test_check__not_the_players_turn():
 
 
 def test_all_in():
-    game = Poker()
+    # fmt: off
+    fake_shuffler = FakeShufflerByPosition([
+        1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
+        43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
+        33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
+    ], all_cards=CARDS_NO_JOKERS)
+    # fmt: on
+    game = Poker(shuffler=fake_shuffler)
+
     game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
     game.start_round()
 
@@ -297,9 +355,9 @@ def test_all_in():
     assert game.current_player == 1
 
     game.all_in(game._players[1])
-    assert game._players[1].purse == 0
-    assert game.pot == 545
-    assert game.current_player == 0
+    assert game._players[1].purse == 545
+    assert game.pot == 0
+    assert game.current_player == 1
 
 
 def test_all_in__not_the_players_turn():
@@ -334,20 +392,22 @@ def test_fold():
     game.fold(game._players[0])
     assert game._players[0].purse == 300
     assert game.pot == 17
-    assert len(game._round_players) == 2
-    assert game.current_player == 0
+    assert len([p for p in game._round_players if p.in_round]) == 2
+    assert game.current_player == 1
 
     game.all_in(game._players[1])
     assert game._players[1].purse == 0
     assert game.pot == 245
-    assert len(game._round_players) == 2
-    assert game.current_player == 1
+    assert len([p for p in game._round_players if p.in_round]) == 2
+    assert game.current_player == 2
 
     game.fold(game._players[2])
     assert game._players[2].purse == 100
-    assert game.pot == 245
-    assert len(game._round_players) == 1
-    assert game.current_player == 0
+
+    assert game._players[1].purse == 245
+    assert game.pot == 0
+    assert len([p for p in game._round_players if p.in_round]) == 1
+    assert game.current_player == 2  # Should be 0?
 
 
 def test_find_winner():
@@ -399,8 +459,12 @@ def test_game__all_players_check__best_hand_is_the_winner():
     # fmt: on
     game = Poker(shuffler=fake_shuffler)
     game.start(3)
+    game.start_round()
 
-    game.play()
+    # game.play()
+    game.check(game._players[0])
+    game.check(game._players[1])
+    game.check(game._players[2])
 
     # player 1 hand: 1S 3S 3H 6S 6H
     # player 2 hand: 2S 2H 5S 5H 8S
@@ -688,13 +752,16 @@ def test_game__first_player_all_in_others_fold():
 
     fake_shuffler = shuffler_factory([hand1, None, None])
     game = Poker(shuffler=fake_shuffler)
-    game.start(
-        players=[
-            AllInPlayer(purse=500),
-            FoldPlayer(purse=500),
-            FoldPlayer(purse=500),
-        ]
-    )
+    players = [
+        AllInPlayer(purse=500),
+        FoldPlayer(purse=500),
+        FoldPlayer(purse=500),
+    ]
+    game.start(players=players)
+
+    # game.all_in(game._players[0])
+    # game.fold(game._players[1])
+    # game.fold(game._players[2])
 
     game.play()
 
