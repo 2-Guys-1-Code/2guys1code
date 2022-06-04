@@ -6,6 +6,7 @@ authors = ["2guys1Code <2guys1code@protonmail.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
+mock = "^4.0.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"

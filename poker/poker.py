@@ -7,16 +7,17 @@ from card import Card
 from deck import Deck, EmptyDeck
 from hand import Hand
 from player import AbstractPokerPlayer, Player
-from poker_errors import NotEnoughChips, PlayerOutOfOrderException
+from poker_errors import (
+    EndOfRound,
+    InvalidAmountNegative,
+    InvalidAmountNotAnInteger,
+    InvalidAmountTooMuch,
+    NotEnoughChips,
+    PlayerOutOfOrderException,
+    TooManyPlayers,
+)
 from shuffler import AbstractShuffler, Shuffler
-
-
-class TooManyPlayers(Exception):
-    pass
-
-
-class EndOfRound(Exception):
-    pass
+from turn import TurnManager
 
 
 class Poker:
@@ -44,6 +45,7 @@ class Poker:
     game_winner: Union[None, AbstractPokerPlayer]
     round_count: int
     _shuffler: AbstractShuffler
+    current_player: Union[None, AbstractPokerPlayer]
 
     def __init__(
         self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
@@ -54,9 +56,11 @@ class Poker:
         self._set_deck()
 
         # Todo: fix this; test bad? distibute pot? one source of truth
+        self.pot = 0
         self.kitty = 0
         self.round_count = 0
         self.game_winner = None
+        self.current_player = None
 
     def _set_deck(self):
         if self._shuffler is not None:
@@ -125,6 +129,7 @@ class Poker:
             sum([(p.purse or 0) for p in self._players]) + self.chips_in_bank
         )
 
+        self.pot = 0
         self.kitty = 0
         self._round_players = self._players.copy()
 
@@ -134,7 +139,6 @@ class Poker:
         elif action == self.ACTION_FOLD:
             return self.fold
 
-        # if action == self.ACTION_CHECK:
         return self.check
 
     def _count_players_with_money(self) -> int:
@@ -149,163 +153,91 @@ class Poker:
         self.nb_players_in_round = len(self._round_players)
         self._shuffler.shuffle(self._deck)
 
-        print(self._deck)
-
         try:
             self.deal(self._round_players, self._deck)
         except EmptyDeck as e:
             raise TooManyPlayers()
 
     def play(self) -> None:
-        print(self.round_count)
         while self.game_winner is None and self.round_count < 2:
             self.start_round()
 
             while self.current_player is not None:
-                print(self.current_player._hand)
-
                 action = self.current_player.get_action(self)
                 method = self._get_method(action)
                 method(self.current_player)
 
-                # Make this better when we introduce more rounds
-                # if len(self._round_players) == 1:
-                #     self.winner = self._round_players[0]
-                #     self.winning_hand = self.winner.hand
-
-                #     self._distribute_pot([self.winner])
-                #     return
-
-            # winners = self.find_winnner()
-            # print(winners)
-            # self.winner = self._players[winners[0]]
-            # self.winning_hand = copy.deepcopy(self.winner.hand)
-            # self._distribute_pot([self._players[i] for i in winners])
-            # self._return_cards()
-            # if self._count_players_with_money() == 1:
-            #     print("here")
-            #     self.game_winner = self.winner
-
-            print(self.round_count)
-
-    # self._distribute_pot([self._players[i] for i in winners])
-
     def check_end_round(self):
-        print("check end of round!")
-        print(len(self._round_players))
         if len(self._round_players) == 1:
             raise EndOfRound()
 
-        print(self.current_player)
-
         if self.action_count == self.nb_players_in_round:
             raise EndOfRound()
+
+    def end_round(self):
+        if len(self._round_players) == 1:
+            winners = [0]
+        else:
+            winners = self.find_winnner()
+
+        print(winners)
+
+        self.winner = self._round_players[winners[0]]  # That's gonna have to change
+        self.winning_hand = copy.deepcopy(
+            self.winner.hand
+        )  # That's gonna have to change
+        self._distribute_pot([self._round_players[i] for i in winners])
+
+        self._return_cards()
+
+        if self._count_players_with_money() == 1:
+            self.game_winner = self.winner
+
+        self.current_player = None
 
     def maybe_end_round(self):
         try:
             self.check_end_round()
         except EndOfRound as e:
-            print("end of round!")
-            # Do end of round logic
-
-            if len(self._round_players) == 1:
-                winners = [0]
-            else:
-                winners = self.find_winnner()
-
-            print(winners)
-
-            self.winner = self._round_players[winners[0]]  # That's gonna have to change
-            self.winning_hand = copy.deepcopy(
-                self.winner.hand
-            )  # That's gonna have to change
-            self._distribute_pot([self._round_players[i] for i in winners])
-
-            self._return_cards()
-
-            if self._count_players_with_money() == 1:
-                self.game_winner = self.winner
-
-            self.current_player = None
+            self.end_round()
             raise EndOfRound
+
+    def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
+        if type(amount) is not int:
+            raise InvalidAmountNotAnInteger()
+
+        if amount < 0:
+            raise InvalidAmountNegative()
+
+        if amount > player.purse:
+            raise InvalidAmountTooMuch()
+
+        self.pot += amount
+        player.purse -= amount
 
     def check(self, player: AbstractPokerPlayer) -> None:
         # todo: are they allowed to check? (a.k.a. is there money "pending")
 
-        if self.current_player != player:
-            raise PlayerOutOfOrderException()
-
-        self.action_count += 1
-
-        player_index = self._round_players.index(player)
-        if player_index + 1 == len(self._round_players):
-            next_player = self._round_players[0]
-        else:
-            next_player = self._round_players[player_index + 1]
-
-        # if only 1 player left
-        # if current player is last and all players are even or all-in
-
-        try:
-            self.maybe_end_round()
-        except EndOfRound as e:
-            return
-
-        self.current_player = next_player
+        with TurnManager(self, player, "check"):
+            self.action_count += 1
 
     def all_in(self, player: AbstractPokerPlayer) -> None:
-        if self.current_player != player:
-            raise PlayerOutOfOrderException()
-
-        self.action_count += 1
-
-        player_index = self._round_players.index(player)
-        if player_index + 1 == len(self._round_players):
-            next_player = self._round_players[0]
-        else:
-            next_player = self._round_players[player_index + 1]
-
-        # self.pot += player.remove_from_purse(player.purse)
-        self.pot += player.purse
-        player.purse = 0
-
-        try:
-            self.maybe_end_round()
-        except EndOfRound as e:
-            return
-
-        self.current_player = next_player
+        with TurnManager(self, player, "check"):
+            self.action_count += 1
+            # self.pot += player.remove_from_purse(player.purse)
+            self.pot += player.purse
+            player.purse = 0
 
     def fold(self, player: AbstractPokerPlayer) -> None:
-        # TODO: Third time we duplicate this!!!! CONTEXT MANAGER!!!!! With playerTurn!!!!
+        with TurnManager(self, player, "check"):
+            self.action_count += 1
+            self._round_players.remove(player)
 
-        if self.current_player != player:
-            raise PlayerOutOfOrderException()
-
-        self.action_count += 1
-
-        player_index = self._round_players.index(player)
-        if player_index + 1 == len(self._round_players):
-            next_player = self._round_players[0]
-        else:
-            next_player = self._round_players[player_index + 1]
-
-        # next_player =  player_index = self._round_players.index(player)
-        # self._round_players.remove(player)
-
-        self._round_players.remove(player)
-
-        try:
-            self.maybe_end_round()
-        except EndOfRound as e:
-            return
-
-        self.current_player = next_player
-
-    # self.current_player += 1
-
-    # if self.current_player >= len(self._round_players):
-    #     self.current_player = 0
+    def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
+        with TurnManager(self, player, "check"):
+            self.action_count += 1
+            self.current_player.purse -= bet_amount
+            self.pot += bet_amount
 
     def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
         if len(winners) == 0:

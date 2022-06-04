@@ -5,8 +5,15 @@ from card import Card
 from hand import Hand
 from deck import Deck, EmptyDeck
 from player import AbstractPokerPlayer, Player
-from poker import Poker, TooManyPlayers
-from poker_errors import NotEnoughChips, PlayerOutOfOrderException
+from poker import Poker
+from poker_errors import (
+    InvalidAmountNegative,
+    InvalidAmountNotAnInteger,
+    InvalidAmountTooMuch,
+    NotEnoughChips,
+    PlayerOutOfOrderException,
+    TooManyPlayers,
+)
 from shuffler import FakeShuffler, FakeShufflerByPosition
 
 
@@ -461,7 +468,6 @@ def test_game__all_players_check__best_hand_is_the_winner():
     game.start(3)
     game.start_round()
 
-    # game.play()
     game.check(game._players[0])
     game.check(game._players[1])
     game.check(game._players[2])
@@ -904,6 +910,68 @@ def test_game__two_rounds__more_coverage_v2():
     assert game._players[0].purse == 1500
     assert game._players[1].purse == 0
     assert game._players[2].purse == 0
+
+
+def test_bet():
+    hand1 = ["1H", "13H", "12H", "11H", "10H"]
+    hand2 = ["7D", "7S", "4H", "5C", "3S"]
+
+    fake_shuffler = shuffler_factory([[hand1, hand2], [hand1, hand2]])
+
+    game = Poker(shuffler=fake_shuffler)
+
+    player1 = Player(purse=500, name="Michael")
+    player2 = Player(purse=500, name="Geordie")
+
+    game.start(
+        players=[
+            player1,
+            player2,
+        ]
+    )
+    game.start_round()
+
+    game.bet(player1, 200)
+
+    assert player1.purse == 300
+    assert game.pot == 200
+    assert game.current_player == player2
+
+
+def test_transfer_to_pot():
+    game = Poker()
+    player1 = Player(purse=500, name="Michael")
+    game.start(
+        players=[
+            player1,
+        ]
+    )
+    game._transfer_to_pot(player1, 250)
+    assert game.pot == 250
+    assert player1.purse == 250
+
+    game._transfer_to_pot(player1, 200)
+    assert game.pot == 450
+    assert player1.purse == 50
+
+
+def test_transfer_to_pot__invalid_amout():
+    game = Poker()
+    player1 = Player(purse=500, name="Michael")
+    game.start(
+        players=[
+            player1,
+        ]
+    )
+
+    with pytest.raises(InvalidAmountTooMuch):
+        game._transfer_to_pot(player1, 600)
+
+    with pytest.raises(InvalidAmountNegative):
+        game._transfer_to_pot(player1, -600)
+
+    with pytest.raises(InvalidAmountNotAnInteger):
+        game._transfer_to_pot(player1, -600.66)
 
 
 # Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)
