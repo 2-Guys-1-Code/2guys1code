@@ -2,11 +2,14 @@ from typing import Union
 import pytest
 
 from card import Card
+from conftest import make_pot
 from hand import Hand
 from deck import Deck, EmptyDeck
 from player import AbstractPokerPlayer, Player
-from poker import Poker
+from poker import Poker, Pot
 from poker_errors import (
+    IllegalActionException,
+    IllegalBetException,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
@@ -339,7 +342,7 @@ def test_check__not_the_players_turn():
     assert game._players[1].purse == 500
 
 
-def test_all_in():
+def test_all_in(pot_factory_factory):
     # fmt: off
     fake_shuffler = FakeShufflerByPosition([
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
@@ -347,23 +350,25 @@ def test_all_in():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
-    game = Poker(shuffler=fake_shuffler)
+
+    game = Poker(
+        shuffler=fake_shuffler,
+        pot_factory=pot_factory_factory([(AllInPlayer(), 17)]),
+    )
 
     game.start(players=[AllInPlayer(purse=300), AllInPlayer(purse=228)])
     game.start_round()
-
-    game.pot = 17
 
     assert game.current_player == game._players[0]
 
     game.all_in(game._players[0])
     assert game._players[0].purse == 0
-    assert game.pot == 317
+    assert game.pot.total == 317
     assert game.current_player == game._players[1]
 
     game.all_in(game._players[1])
     assert game._players[1].purse == 545
-    assert game.pot == 0
+    assert game.pot is None
     assert game.current_player == None
 
 
@@ -384,27 +389,26 @@ def test_all_in__not_the_players_turn():
 # What about negative number of chips? we don't want to remvoe anything from the pot, but it's not really a situation you can get in.
 
 
-def test_fold():
-    game = Poker()
+def test_fold(pot_factory_factory):
+    game = Poker(pot_factory=pot_factory_factory([(AllInPlayer(), 17)]))
     players = [FoldPlayer(purse=300), AllInPlayer(purse=228), FoldPlayer(purse=100)]
 
     game.start(players=players)
     game.start_round()
 
-    game.pot = 17
     assert len(game._round_players) == 3
 
     assert game.current_player == players[0]
 
     game.fold(players[0])
     assert players[0].purse == 300
-    assert game.pot == 17
+    assert game.pot.total == 17
     assert len(game._round_players) == 2
     assert game.current_player == players[1]
 
     game.all_in(players[1])
     assert players[1].purse == 0
-    assert game.pot == 245
+    assert game.pot.total == 245
     assert len(game._round_players) == 2
     assert game.current_player == players[2]
 
@@ -412,7 +416,7 @@ def test_fold():
     assert players[2].purse == 100
 
     assert players[1].purse == 245
-    assert game.pot == 0
+    assert game.pot is None
     assert len(game._round_players) == 1
     assert game.current_player == None
 
@@ -737,20 +741,21 @@ def test_game__all_players_all_in__three_way_tie():
     assert game._players[2].purse == 666
     assert game._players[3].purse == 0
 
-    assert game.pot == 0
+    assert game.pot is None
     assert game.kitty == 2
 
 
 def test_pot_is_distributed():
     game = Poker()
-    game._players = [Player(purse=500), Player(purse=750), Player(purse=1000)]
+    game.start(players=[Player(purse=500), Player(purse=750), Player(purse=1000)])
+    game.pot = make_pot([(Player(), 2250)])
     winners = [game._players[0], game._players[2]]
-    game.pot = 2250
+
     game._distribute_pot(winners)
     assert game._players[0].purse == 1625
     assert game._players[1].purse == 750
     assert game._players[2].purse == 2125
-    assert game.pot == 0
+    assert game.pot is None
 
 
 @pytest.mark.skip()
@@ -778,7 +783,7 @@ def test_game__first_player_all_in_others_fold():
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
     assert game._players[2].purse == 500
-    assert game.pot == 0
+    assert game.pot is None
 
 
 def test_game__two_rounds():
@@ -934,8 +939,64 @@ def test_bet():
     game.bet(player1, 200)
 
     assert player1.purse == 300
-    assert game.pot == 200
+    assert game.pot.total == 200
     assert game.current_player == player2
+
+
+def test_bet__cannot_check_if_bet_not_met():
+    game = Poker()
+
+    player1 = Player(purse=500, name="Michael")
+    player2 = Player(purse=500, name="Geordie")
+
+    game.start(
+        players=[
+            player1,
+            player2,
+        ]
+    )
+    game.start_round()
+
+    game.bet(player1, 200)
+    game.bet(player2, 400)
+
+    with pytest.raises(IllegalActionException):
+        game.check(player1)
+
+    assert player1.purse == 300
+    assert game.pot.total == 600
+    assert game.current_player == player1
+
+
+def test_bet__next_player_must_meet_bet():
+    game = Poker()
+
+    player1 = Player(purse=500, name="Michael")
+    player2 = Player(purse=500, name="Geordie")
+    player3 = Player(purse=500, name="John")
+
+    game.start(
+        players=[
+            player1,
+            player2,
+            player3,
+        ]
+    )
+    game.start_round()
+
+    game.bet(player1, 200)
+
+    with pytest.raises(IllegalBetException):
+        game.bet(player2, 150)
+
+    assert player2.purse == 500
+    assert game.pot.total == 200
+
+    game.bet(player2, 200)
+
+    assert player2.purse == 300
+    assert game.pot.total == 400
+    assert game.current_player == player3
 
 
 def test_transfer_to_pot():
@@ -946,12 +1007,13 @@ def test_transfer_to_pot():
             player1,
         ]
     )
+    game.pot = make_pot()
     game._transfer_to_pot(player1, 250)
-    assert game.pot == 250
+    assert game.pot.total == 250
     assert player1.purse == 250
 
     game._transfer_to_pot(player1, 200)
-    assert game.pot == 450
+    assert game.pot.total == 450
     assert player1.purse == 50
 
 
@@ -972,6 +1034,58 @@ def test_transfer_to_pot__invalid_amout():
 
     with pytest.raises(InvalidAmountNotAnInteger):
         game._transfer_to_pot(player1, -600.66)
+
+
+def test_pot__add_bet():
+    test_pot = Pot()
+
+    player1 = Player()
+    player2 = Player()
+
+    test_pot.add_bet(player1, 250)
+    assert test_pot.bets[player1][0] == 250
+    assert test_pot.total == 250
+
+    test_pot.add_bet(player2, 250)
+    assert test_pot.bets[player2][0] == 250
+    assert test_pot.total == 500
+
+
+def test_pot__max_player_total():
+    test_pot = Pot()
+
+    player1 = Player()
+    player2 = Player()
+
+    test_pot.add_bet(player1, 50)
+    assert test_pot.max_player_total == 50
+
+    test_pot.add_bet(player1, 100)
+    assert test_pot.max_player_total == 150
+
+    test_pot.add_bet(player2, 350)
+    assert test_pot.max_player_total == 350
+
+
+def test_pot__player_total():
+    test_pot = Pot()
+
+    player1 = Player()
+    player2 = Player()
+
+    test_pot.add_bet(player1, 50)
+    test_pot.add_bet(player1, 150)
+    test_pot.add_bet(player1, 200)
+
+    test_pot.add_bet(player2, 120)
+    test_pot.add_bet(player2, 130)
+    test_pot.add_bet(player2, 200)
+
+    assert test_pot.player_total(player1) == 400
+    assert test_pot.player_total(player2) == 450
+
+
+# Also need to get player_total for specific player
 
 
 # Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)

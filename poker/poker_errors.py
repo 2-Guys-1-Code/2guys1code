@@ -28,3 +28,11 @@ class InvalidAmountNegative(TransferToPotException):
 
 class InvalidAmountNotAnInteger(TransferToPotException):
     pass
+
+
+class IllegalActionException(Exception):
+    pass
+
+
+class IllegalBetException(IllegalActionException):
+    pass

@@ -9,6 +9,8 @@ from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
     EndOfRound,
+    IllegalActionException,
+    IllegalBetException,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
@@ -18,6 +20,30 @@ from poker_errors import (
 )
 from shuffler import AbstractShuffler, Shuffler
 from turn import TurnManager
+
+
+class Pot:
+    bets: dict
+
+    def __init__(self) -> None:
+        self.bets = {}
+
+    def add_bet(self, player: AbstractPokerPlayer, amount: int) -> None:
+        if player not in self.bets:
+            self.bets[player] = []
+
+        self.bets[player].append(amount)
+
+    def player_total(self, player: AbstractPokerPlayer) -> int:
+        return sum(self.bets[player])
+
+    @property
+    def total(self) -> int:
+        return sum([self.player_total(p) for p in self.bets.keys()])
+
+    @property
+    def max_player_total(self) -> int:
+        return max([self.player_total(p) for p in self.bets.keys()])
 
 
 class Poker:
@@ -48,7 +74,10 @@ class Poker:
     current_player: Union[None, AbstractPokerPlayer]
 
     def __init__(
-        self, shuffler: AbstractShuffler = None, game_type: str = TYPE_STANDARD
+        self,
+        shuffler: AbstractShuffler = None,
+        game_type: str = TYPE_STANDARD,
+        pot_factory: Pot = Pot,
     ):
         self._game_type = game_type
         self._shuffler = shuffler or Shuffler()
@@ -56,8 +85,9 @@ class Poker:
         self._set_deck()
 
         # Todo: fix this; test bad? distibute pot? one source of truth
-        self.pot = 0
-        self.kitty = 0
+        # self.pot = Pot
+        # self.kitty = 0
+        self.pot_factory = pot_factory
         self.round_count = 0
         self.game_winner = None
         self.current_player = None
@@ -129,7 +159,7 @@ class Poker:
             sum([(p.purse or 0) for p in self._players]) + self.chips_in_bank
         )
 
-        self.pot = 0
+        # self.pot = 0
         self.kitty = 0
         self._round_players = self._players.copy()
 
@@ -147,7 +177,7 @@ class Poker:
     def start_round(self) -> None:
         self.round_count += 1
 
-        self.pot = 0
+        self.pot = self.pot_factory()
         self.current_player = self._round_players[0]
         self.action_count = 0
         self.nb_players_in_round = len(self._round_players)
@@ -212,44 +242,53 @@ class Poker:
         if amount > player.purse:
             raise InvalidAmountTooMuch()
 
-        self.pot += amount
+        self.pot.add_bet(player, amount)
         player.purse -= amount
 
     def check(self, player: AbstractPokerPlayer) -> None:
         # todo: are they allowed to check? (a.k.a. is there money "pending")
 
+        if self.pot.total > 0:
+            raise IllegalActionException()
+
         with TurnManager(self, player, "check"):
             self.action_count += 1
 
     def all_in(self, player: AbstractPokerPlayer) -> None:
-        with TurnManager(self, player, "check"):
+        with TurnManager(self, player, "all_in"):
             self.action_count += 1
             # self.pot += player.remove_from_purse(player.purse)
-            self.pot += player.purse
-            player.purse = 0
+            # self.pot += player.purse
+            # player.purse = 0
+
+            self._transfer_to_pot(player, player.purse)
 
     def fold(self, player: AbstractPokerPlayer) -> None:
-        with TurnManager(self, player, "check"):
+        with TurnManager(self, player, "fold"):
             self.action_count += 1
             self._round_players.remove(player)
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
-        with TurnManager(self, player, "check"):
+        if bet_amount < self.pot.total:
+            raise IllegalBetException()
+
+        with TurnManager(self, player, "bet"):
             self.action_count += 1
-            self.current_player.purse -= bet_amount
-            self.pot += bet_amount
+            self._transfer_to_pot(player, bet_amount)
+            # self.player.purse -= bet_amount
+            # self.pot += bet_amount
 
     def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
         if len(winners) == 0:
             return
 
-        chips_per_winner = floor(self.pot / len(winners))
+        chips_per_winner = floor(self.pot.total / len(winners))
         for p in winners:
             p.add_to_purse(chips_per_winner)
-            self.pot -= chips_per_winner
+            # self.pot -= chips_per_winner
 
-        self.kitty += self.pot
-        self.pot = 0
+        self.kitty += self.pot.total - (chips_per_winner * len(winners))
+        self.pot = None
 
     def _return_cards(self):
         for p in self._players:
