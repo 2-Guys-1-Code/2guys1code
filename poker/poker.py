@@ -1,5 +1,6 @@
 from collections import Counter
 import copy
+from functools import partial
 from math import floor
 from typing import Callable, Union
 
@@ -13,9 +14,7 @@ from poker_errors import (
     IllegalBetException,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
-    InvalidAmountTooMuch,
     NotEnoughChips,
-    PlayerOutOfOrderException,
     TooManyPlayers,
 )
 from shuffler import AbstractShuffler, Shuffler
@@ -35,7 +34,16 @@ class Pot:
         self.bets[player].append(amount)
 
     def player_total(self, player: AbstractPokerPlayer) -> int:
+        if player not in self.bets:
+            return 0
+
         return sum(self.bets[player])
+
+    def player_owed(self, player: AbstractPokerPlayer) -> int:
+        if player not in self.bets:
+            return self.max_player_total
+
+        return self.max_player_total - self.player_total(player)
 
     @property
     def total(self) -> int:
@@ -43,7 +51,7 @@ class Pot:
 
     @property
     def max_player_total(self) -> int:
-        return max([self.player_total(p) for p in self.bets.keys()])
+        return max([self.player_total(p) for p in self.bets.keys()], default=0)
 
 
 class Poker:
@@ -62,7 +70,7 @@ class Poker:
     _hands: list
     _deck: Deck
 
-    chips_in_game: int
+    # chips_in_game: int
     chips_in_bank: int
     _game_type: str
     _players: list[AbstractPokerPlayer]
@@ -78,16 +86,15 @@ class Poker:
         shuffler: AbstractShuffler = None,
         game_type: str = TYPE_STANDARD,
         pot_factory: Pot = Pot,
+        hand_factory: Hand = Hand,
     ):
         self._game_type = game_type
         self._shuffler = shuffler or Shuffler()
 
         self._set_deck()
 
-        # Todo: fix this; test bad? distibute pot? one source of truth
-        # self.pot = Pot
-        # self.kitty = 0
         self.pot_factory = pot_factory
+        self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
         self.round_count = 0
         self.game_winner = None
         self.current_player = None
@@ -125,14 +132,7 @@ class Poker:
     def deal(self, players, deck):
         for _ in range(0, self.CARDS_PER_HAND):
             for p in players:
-                # We don't necessary love this.....
-                if p.hand is None:
-                    p.hand = Hand(_cmp=Poker.beats)
-                p.hand.insert_at_end(deck.pull_from_top())
-
-    @property
-    def _player_count(self):
-        return len(self._players)
+                p.add_card(deck.pull_from_top())
 
     def start(
         self,
@@ -141,8 +141,8 @@ class Poker:
         chips_per_player: int = None,
         players: list = None,
     ) -> None:
-        self.chips_in_bank = 0
-        self.chips_in_game = 0
+        # self.chips_in_bank = 0
+        # self.chips_in_game = 0
 
         if players is not None:
             self._players = players
@@ -155,27 +155,36 @@ class Poker:
                 chips_per_player=chips_per_player,
             )
 
-        self.chips_in_game = (
-            sum([(p.purse or 0) for p in self._players]) + self.chips_in_bank
-        )
+        for p in self._players:
+            p.hand_factory = self.hand_factory
 
-        # self.pot = 0
+        # We still have not found a purpose for that
+        # self.chips_in_game = (
+        #     sum([(p.purse or 0) for p in self._players]) + self.chips_in_bank
+        # )
+
         self.kitty = 0
-        self._round_players = self._players.copy()
-
-    def _get_method(self, action: str = None) -> Callable[[AbstractPokerPlayer], None]:
-        if action == self.ACTION_ALLIN:
-            return self.all_in
-        elif action == self.ACTION_FOLD:
-            return self.fold
-
-        return self.check
 
     def _count_players_with_money(self) -> int:
         return len([p for p in self._players if p.purse > 0])
 
     def start_round(self) -> None:
+        # I moved thid here from end_round so we can assert the state at the end of the round;
+        # Maybe it would be better to keep a list of rounds and the results and make
+        # assertions on that instead of the live game state
+        self._return_cards()
+
+        if getattr(self, "_round_players", None):
+            for p in self._round_players:
+                if p.purse == 0:
+                    self._players.remove(p)
+
+        # TODO: Now we can just check the length of self._players
+        if len(self._players) == 1:
+            self.game_winner = self._players[0]
+
         self.round_count += 1
+        self._round_players = self._players.copy()
 
         self.pot = self.pot_factory()
         self.current_player = self._round_players[0]
@@ -188,20 +197,17 @@ class Poker:
         except EmptyDeck as e:
             raise TooManyPlayers()
 
-    def play(self) -> None:
-        while self.game_winner is None and self.round_count < 2:
-            self.start_round()
-
-            while self.current_player is not None:
-                action = self.current_player.get_action(self)
-                method = self._get_method(action)
-                method(self.current_player)
-
     def check_end_round(self):
         if len(self._round_players) == 1:
             raise EndOfRound()
 
-        if self.action_count == self.nb_players_in_round:
+        players_left = [
+            p
+            for p in self._round_players
+            if self.pot.player_owed(p) != 0 and p.purse != 0
+        ]
+
+        if self.action_count >= self.nb_players_in_round and not len(players_left):
             raise EndOfRound()
 
     def end_round(self):
@@ -210,18 +216,13 @@ class Poker:
         else:
             winners = self.find_winnner()
 
-        print(winners)
-
-        self.winner = self._round_players[winners[0]]  # That's gonna have to change
-        self.winning_hand = copy.deepcopy(
-            self.winner.hand
-        )  # That's gonna have to change
-        self._distribute_pot([self._round_players[i] for i in winners])
-
-        self._return_cards()
-
-        if self._count_players_with_money() == 1:
-            self.game_winner = self.winner
+        self.winners = [
+            self._round_players[i] for i in winners
+        ]  # That's gonna have to change
+        # self.winning_hand = copy.deepcopy(
+        #     self.winner.hand
+        # )  # That's gonna have to change
+        self._distribute_pot(self.winners)
 
         self.current_player = None
 
@@ -239,16 +240,12 @@ class Poker:
         if amount < 0:
             raise InvalidAmountNegative()
 
-        if amount > player.purse:
-            raise InvalidAmountTooMuch()
-
+        # TODO: Move take_from_purse inside add_bet?
+        player.take_from_purse(amount)
         self.pot.add_bet(player, amount)
-        player.purse -= amount
 
     def check(self, player: AbstractPokerPlayer) -> None:
-        # todo: are they allowed to check? (a.k.a. is there money "pending")
-
-        if self.pot.total > 0:
+        if self.pot.player_owed(player) != 0:
             raise IllegalActionException()
 
         with TurnManager(self, player, "check"):
@@ -257,10 +254,6 @@ class Poker:
     def all_in(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, "all_in"):
             self.action_count += 1
-            # self.pot += player.remove_from_purse(player.purse)
-            # self.pot += player.purse
-            # player.purse = 0
-
             self._transfer_to_pot(player, player.purse)
 
     def fold(self, player: AbstractPokerPlayer) -> None:
@@ -269,14 +262,23 @@ class Poker:
             self._round_players.remove(player)
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
-        if bet_amount < self.pot.total:
+        if bet_amount < self.pot.player_owed(player):
             raise IllegalBetException()
 
         with TurnManager(self, player, "bet"):
             self.action_count += 1
             self._transfer_to_pot(player, bet_amount)
-            # self.player.purse -= bet_amount
-            # self.pot += bet_amount
+
+    def call(self, player: AbstractPokerPlayer) -> None:
+        with TurnManager(self, player, "call"):
+            self.action_count += 1
+            bet_amount = self.pot.player_owed(player)
+            self._transfer_to_pot(player, bet_amount)
+
+    def raise_bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
+        with TurnManager(self, player, "call"):
+            self.action_count += 1
+            self._transfer_to_pot(player, self.pot.player_owed(player) + bet_amount)
 
     def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
         if len(winners) == 0:
@@ -285,30 +287,22 @@ class Poker:
         chips_per_winner = floor(self.pot.total / len(winners))
         for p in winners:
             p.add_to_purse(chips_per_winner)
-            # self.pot -= chips_per_winner
 
         self.kitty += self.pot.total - (chips_per_winner * len(winners))
         self.pot = None
 
     def _return_cards(self):
         for p in self._players:
-            for i in range(len(p._hand), 0, -1):
-                card = p._hand.pull_from_position(i)
+            for i in range(len(p.hand), 0, -1):
+                card = p.hand.pull_from_position(i)
                 self._deck.insert_at_end(card)
-
-            print(p._hand)
-
-        print(len(self._deck))
 
     # TODO: Finding a winner should not modify the players' hands
     def find_winnner(self) -> list[int]:
         p1 = self._round_players[0]
         winners = [0]
+
         for i, p2 in enumerate(self._round_players[1:]):
-
-            print(p1.hand)
-            print(p2.hand)
-
             if p2.hand == p1.hand:
                 winners.append(i + 1)
             elif p2.hand > p1.hand:

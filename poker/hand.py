@@ -17,7 +17,10 @@ class Hand(Deck):
             self._cards = [Card(c) for c in cards]
 
         self._shuffler = shuffler
-        self._cmp = _cmp
+        self._cmp = _cmp or self.cmp
+
+    def cmp(self, a, b) -> int:
+        return 0
 
     def __lt__(self, b):
         return self._cmp(self, b) < 0
