@@ -45,6 +45,61 @@ class Pot:
 
         return self.max_player_total - self.player_total(player)
 
+    def get_side_pots(self):
+        player_totals = {p: self.player_total(p) for p in self.bets.keys()}
+
+        # {
+        #     p1: 100,
+        #     p2: 200,
+        #     p3: 200,
+        # }
+
+        players_per_total = {}
+        for p, t in player_totals.items():
+            if t not in players_per_total:
+                players_per_total[t] = []
+            players_per_total[t].append(p)
+
+        # {
+        #     100: [p1],
+        #     200: [p2, p3],
+        #     300: [p4],
+        # }
+
+        totals = [(t, p) for t, p in players_per_total.items()]
+
+        # [
+        #     (200, [p2, p3]),
+        #     (300, [p4]),
+        #     (100, [p1]),
+        # ]
+
+        totals.sort(key=lambda x: x[0])
+
+        # [
+        #     (100, [p1]),
+        #     (200, [p2, p3]),
+        #     (300, [p4]),
+        # ]
+
+        side_pots = []
+        for i, (total, players) in enumerate(totals):
+            all_players = players
+            for j in range(i + 1, len(totals)):
+                all_players.extend(totals[j][1])
+            amount = total
+            if i > 0:
+                amount -= totals[i - 1][0]
+            side_pots.append((amount, all_players))
+
+        # [
+        #     (100, [p1, p2, p3, p4]),
+        #     (100, [p2, p3, p4]),
+        #     (100, [p4]),
+        # ]
+
+        return side_pots
+
     @property
     def total(self) -> int:
         return sum([self.player_total(p) for p in self.bets.keys()])
@@ -70,8 +125,6 @@ class Poker:
     _hands: list
     _deck: Deck
 
-    # chips_in_game: int
-    chips_in_bank: int
     _game_type: str
     _players: list[AbstractPokerPlayer]
     _round_players: list[AbstractPokerPlayer]
@@ -99,7 +152,7 @@ class Poker:
         self.game_winner = None
         self.current_player = None
 
-    def _set_deck(self):
+    def _set_deck(self) -> None:
         if self._shuffler is not None:
             self._deck = Deck(shuffler=self._shuffler)
         else:
@@ -110,39 +163,24 @@ class Poker:
             self._deck.pull_card("BJ")
 
     def _distribute_chips(
-        self, players, total_chips: int = None, chips_per_player: int = None
-    ):
-        if chips_per_player is None:
-            if total_chips is None:
-                chips_per_player = 500
-            else:
-                chips_per_player = floor(total_chips / len(players))
-
-        if total_chips is None:
-            self.chips_in_bank = chips_per_player * len(players)
-        else:
-            self.chips_in_bank = total_chips
-
+        self, players: list[AbstractPokerPlayer], chips_per_player: int
+    ) -> None:
         for p in players:
             p.add_to_purse(chips_per_player)
-            self.chips_in_bank -= chips_per_player
-            if self.chips_in_bank < 0:
-                raise NotEnoughChips()
 
-    def deal(self, players, deck):
+    def deal(self, players, deck) -> None:
         for _ in range(0, self.CARDS_PER_HAND):
             for p in players:
                 p.add_card(deck.pull_from_top())
 
     def start(
         self,
+        chips_per_player: int,
         number_of_players: int = 0,
-        total_chips: int = None,
-        chips_per_player: int = None,
         players: list = None,
     ) -> None:
-        # self.chips_in_bank = 0
-        # self.chips_in_game = 0
+        if chips_per_player is None:
+            chips_per_player = 500
 
         if players is not None:
             self._players = players
@@ -151,17 +189,11 @@ class Poker:
 
             self._distribute_chips(
                 self._players,
-                total_chips=total_chips,
-                chips_per_player=chips_per_player,
+                chips_per_player,
             )
 
         for p in self._players:
             p.hand_factory = self.hand_factory
-
-        # We still have not found a purpose for that
-        # self.chips_in_game = (
-        #     sum([(p.purse or 0) for p in self._players]) + self.chips_in_bank
-        # )
 
         self.kitty = 0
 
@@ -197,7 +229,7 @@ class Poker:
         except EmptyDeck as e:
             raise TooManyPlayers()
 
-    def check_end_round(self):
+    def check_end_round(self) -> None:
         if len(self._round_players) == 1:
             raise EndOfRound()
 
@@ -210,11 +242,11 @@ class Poker:
         if self.action_count >= self.nb_players_in_round and not len(players_left):
             raise EndOfRound()
 
-    def end_round(self):
+    def end_round(self) -> None:
         if len(self._round_players) == 1:
             winners = [0]
         else:
-            winners = self.find_winnner()
+            winners = self.find_winnner(self._round_players)
 
         self.winners = [
             self._round_players[i] for i in winners
@@ -226,7 +258,7 @@ class Poker:
 
         self.current_player = None
 
-    def maybe_end_round(self):
+    def maybe_end_round(self) -> None:
         try:
             self.check_end_round()
         except EndOfRound as e:
@@ -298,11 +330,11 @@ class Poker:
                 self._deck.insert_at_end(card)
 
     # TODO: Finding a winner should not modify the players' hands
-    def find_winnner(self) -> list[int]:
-        p1 = self._round_players[0]
+    def find_winnner(self, players: list[AbstractPokerPlayer]) -> list[int]:
+        p1 = players[0]
         winners = [0]
 
-        for i, p2 in enumerate(self._round_players[1:]):
+        for i, p2 in enumerate(players[1:]):
             if p2.hand == p1.hand:
                 winners.append(i + 1)
             elif p2.hand > p1.hand:
