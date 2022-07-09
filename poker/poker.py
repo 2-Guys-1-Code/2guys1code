@@ -1,6 +1,7 @@
 from collections import Counter
 import copy
 from functools import partial
+from itertools import groupby
 from math import floor
 from typing import Callable, Union
 
@@ -14,7 +15,6 @@ from poker_errors import (
     IllegalBetException,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
-    NotEnoughChips,
     TooManyPlayers,
 )
 from shuffler import AbstractShuffler, Shuffler
@@ -46,35 +46,22 @@ class Pot:
         return self.max_player_total - self.player_total(player)
 
     def get_side_pots(self):
-        player_totals = {p: self.player_total(p) for p in self.bets.keys()}
-
-        # {
-        #     p1: 100,
-        #     p2: 200,
-        #     p3: 200,
-        # }
-
         players_per_total = {}
-        for p, t in player_totals.items():
-            if t not in players_per_total:
-                players_per_total[t] = []
-            players_per_total[t].append(p)
+        for p in self.bets.keys():
+            total = self.player_total(p)
+            if total not in players_per_total:
+                players_per_total[total] = []
+            players_per_total[total].append(p)
 
         # {
         #     100: [p1],
-        #     200: [p2, p3],
         #     300: [p4],
+        #     200: [p2, p3],
         # }
 
-        totals = [(t, p) for t, p in players_per_total.items()]
-
-        # [
-        #     (200, [p2, p3]),
-        #     (300, [p4]),
-        #     (100, [p1]),
-        # ]
-
-        totals.sort(key=lambda x: x[0])
+        totals = sorted(
+            [(t, p) for t, p in players_per_total.items()], key=lambda x: x[0]
+        )
 
         # [
         #     (100, [p1]),
@@ -112,8 +99,10 @@ class Pot:
 class Poker:
     CARDS_PER_HAND: int = 5
 
-    TYPE_BASIC: str = "BASIC"
-    TYPE_STANDARD: str = "STANDARD"
+    TYPE_BASIC: str = "BASIC"  # This should not be a thing anymore
+    TYPE_STUD: str = "STUD"
+    TYPE_DRAW: str = "DRAW"
+    TYPE_HOLDEM: str = "HOLDEM"
 
     ACTION_CHECK: str = "CHECK"
     ACTION_BET: str = "BET"
@@ -137,7 +126,7 @@ class Poker:
     def __init__(
         self,
         shuffler: AbstractShuffler = None,
-        game_type: str = TYPE_STANDARD,
+        game_type: str = TYPE_STUD,
         pot_factory: Pot = Pot,
         hand_factory: Hand = Hand,
     ):
@@ -158,7 +147,7 @@ class Poker:
         else:
             self._deck = Deck()
 
-        if self._game_type == self.TYPE_STANDARD:
+        if self._game_type == self.TYPE_STUD:
             self._deck.pull_card("RJ")
             self._deck.pull_card("BJ")
 
@@ -243,19 +232,7 @@ class Poker:
             raise EndOfRound()
 
     def end_round(self) -> None:
-        if len(self._round_players) == 1:
-            winners = [0]
-        else:
-            winners = self.find_winnner(self._round_players)
-
-        self.winners = [
-            self._round_players[i] for i in winners
-        ]  # That's gonna have to change
-        # self.winning_hand = copy.deepcopy(
-        #     self.winner.hand
-        # )  # That's gonna have to change
-        self._distribute_pot(self.winners)
-
+        self._distribute_pot()
         self.current_player = None
 
     def maybe_end_round(self) -> None:
@@ -312,15 +289,18 @@ class Poker:
             self.action_count += 1
             self._transfer_to_pot(player, self.pot.player_owed(player) + bet_amount)
 
-    def _distribute_pot(self, winners: list[AbstractPokerPlayer]) -> None:
-        if len(winners) == 0:
-            return
+    def _distribute_pot(self) -> None:
+        side_pots = self.pot.get_side_pots()
+        for side_pot in side_pots:
+            elligible = list(set(side_pot[1]).intersection(self._round_players))
+            winners = self.find_winnner(elligible)
+            amount = side_pot[0] * len(side_pot[1])
+            chips_per_winner = floor(amount / len(winners))
+            for p in winners:
+                p.add_to_purse(chips_per_winner)
 
-        chips_per_winner = floor(self.pot.total / len(winners))
-        for p in winners:
-            p.add_to_purse(chips_per_winner)
+            self.kitty += amount - (chips_per_winner * len(winners))
 
-        self.kitty += self.pot.total - (chips_per_winner * len(winners))
         self.pot = None
 
     def _return_cards(self):
@@ -329,24 +309,25 @@ class Poker:
                 card = p.hand.pull_from_position(i)
                 self._deck.insert_at_end(card)
 
-    # TODO: Finding a winner should not modify the players' hands
-    def find_winnner(self, players: list[AbstractPokerPlayer]) -> list[int]:
+    def find_winnner(
+        self, players: list[AbstractPokerPlayer]
+    ) -> list[AbstractPokerPlayer]:
         p1 = players[0]
-        winners = [0]
+        winners = [p1]
 
-        for i, p2 in enumerate(players[1:]):
+        for p2 in players[1:]:
             if p2.hand == p1.hand:
-                winners.append(i + 1)
+                winners.append(p2)
             elif p2.hand > p1.hand:
                 p1 = p2
-                winners = [i + 1]
+                winners = [p2]
 
         return winners
 
     @staticmethod
     def beats(hand_1: list, hand_2: list) -> int:
-        hand_1 = Poker._parse_to_cards(hand_1)
-        hand_2 = Poker._parse_to_cards(hand_2)
+        hand_1 = Poker._parse_to_cards(hand_1).copy()
+        hand_2 = Poker._parse_to_cards(hand_2).copy()
 
         ordered_tests = [
             Poker._straight_flush_test,

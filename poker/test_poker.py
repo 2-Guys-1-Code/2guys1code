@@ -14,80 +14,11 @@ from poker_errors import (
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
-    NotEnoughChips,
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
 from shuffler import AbstractShuffler, FakeShuffler, FakeShufflerByPosition
-
-
-# fmt: off
-CARDS_NO_JOKERS = [
-    # 'RJ', 'BJ',
-    '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
-    '1D', '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', '10D', '11D', '12D', '13D', 
-    '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
-    '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
-]
-# fmt: on
-
-
-class AllInPlayer(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> Union[str, None]:
-        return game.ACTION_ALLIN
-
-
-class FoldPlayer(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> Union[str, None]:
-        return game.ACTION_FOLD
-
-
-class MultiActionPlayer(AbstractPokerPlayer):
-    def __init__(
-        self, purse: int = 0, name: str = "John", actions: list = None
-    ) -> None:
-        super().__init__(purse=purse, name=name)
-        self.call_count = 0
-        self.actions = actions or []
-
-    def get_action(self, game: "Poker") -> Union[str, None]:
-        self.call_count += 1
-        if len(self.actions) >= self.call_count:
-            return self.actions[self.call_count - 1]
-
-        return None
-
-
-def game_factory(
-    players: Union[int, list] = 3,
-    game_type: str = Poker.TYPE_STANDARD,
-    chips_per_player: int = 500,
-    shuffler: AbstractShuffler = None,
-    pot_factory=None,
-) -> Poker:
-    init_params = {}
-
-    if shuffler is not None:
-        init_params["shuffler"] = shuffler
-
-    if game_type is not None:
-        init_params["game_type"] = game_type
-
-    if pot_factory is not None:
-        init_params["pot_factory"] = pot_factory
-
-    game = Poker(**init_params)
-
-    start_params = {}
-
-    if type(players) is int:
-        start_params["number_of_players"] = players
-    else:
-        start_params["players"] = players
-
-    game.start(chips_per_player, **start_params)
-
-    return game
+from conftest import game_factory, CARDS_NO_JOKERS
 
 
 @pytest.mark.parametrize(
@@ -302,12 +233,11 @@ def test_all_in(pot_factory_factory):
     ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
 
-    player1 = Player(purse=300)
-    player2 = Player(purse=228)
+    player1 = Player(purse=300, name="Jack")
+    player2 = Player(purse=228, name="Paul")
 
     game = game_factory(
         shuffler=fake_shuffler,
-        pot_factory=pot_factory_factory([(AllInPlayer(), 17)]),
         players=[player1, player2],
     )
 
@@ -317,11 +247,12 @@ def test_all_in(pot_factory_factory):
 
     game.all_in(player1)
     assert player1.purse == 0
-    assert game.pot.total == 317
+    assert game.pot.total == 300
     assert game.current_player == player2
 
     game.all_in(player2)
-    assert player2.purse == 545
+    assert player1.purse == 72
+    assert player2.purse == 456
     assert game.pot is None
     assert game.current_player == None
 
@@ -360,7 +291,6 @@ def test_fold(pot_factory_factory):
     player2 = Player(purse=228)
     player3 = Player(purse=100)
     game = game_factory(
-        pot_factory=pot_factory_factory([(AllInPlayer(), 17)]),
         players=[player1, player2, player3],
     )
 
@@ -372,20 +302,20 @@ def test_fold(pot_factory_factory):
 
     game.fold(player1)
     assert player1.purse == 300
-    assert game.pot.total == 17
+    assert game.pot.total == 0
     assert len(game._round_players) == 2
     assert game.current_player == player2
 
     game.all_in(player2)
     assert player2.purse == 0
-    assert game.pot.total == 245
+    assert game.pot.total == 228
     assert len(game._round_players) == 2
     assert game.current_player == player3
 
     game.fold(player3)
     assert player3.purse == 100
 
-    assert player2.purse == 245
+    assert player2.purse == 228
     assert game.pot is None
     assert len(game._round_players) == 1
     assert game.current_player == None
@@ -407,7 +337,7 @@ def test_find_winner():
     player3.hand = hand3
 
     # game._round_players = [player1, player2, player3]
-    assert game.find_winnner([player1, player2, player3]) == [0]
+    assert game.find_winnner([player1, player2, player3]) == [player1]
 
 
 def test_find_winner__tied_hands():
@@ -426,7 +356,7 @@ def test_find_winner__tied_hands():
     player3.hand = hand3
 
     # game._round_players = [player1, player2, player3]
-    assert game.find_winnner([player1, player2, player3]) == [0, 2]
+    assert game.find_winnner([player1, player2, player3]) == [player1, player3]
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
@@ -450,8 +380,8 @@ def test_game__all_players_check__best_hand_is_the_winner():
     # player 2 hand: 2S 2H 5S 5H 8S
     # player 3 hand: 1H 4S 4H 7S 7H
 
-    assert game.winners == [game._players[2]]
-    assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
+    # assert game.winners == [game._players[2]]
+    # assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
 
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
@@ -483,8 +413,8 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     # player 2 hand: 2S 2H 5S 5H 8S
     # player 3 hand: 1H 4S 4H 7S 7H
 
-    assert game.winners == [player3]
-    assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
+    # assert game.winners == [player3]
+    # assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
 
     assert player1.purse == 0
     assert player2.purse == 0
@@ -723,22 +653,7 @@ def test_game__all_players_all_in__three_way_tie():
     assert game.kitty == 2
 
 
-def test_pot_is_distributed():
-    game = game_factory(
-        players=[Player(purse=500), Player(purse=750), Player(purse=1000)]
-    )
-
-    game.pot = make_pot([(Player(), 2250)])
-    winners = [game._players[0], game._players[2]]
-
-    game._distribute_pot(winners)
-    assert game._players[0].purse == 1625
-    assert game._players[1].purse == 750
-    assert game._players[2].purse == 2125
-    assert game.pot is None
-
-
-def test_game__side_pot_are_accounted_for():
+def test_game__side_pots_are_accounted_for():
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["12D", "3H", "4H", "5H", "6H"]
     hand3 = ["13S", "3D", "4D", "5D", "6D"]
@@ -778,8 +693,8 @@ def test_game__first_player_all_in_others_fold():
     game.fold(player2)
     game.fold(player3)
 
-    assert game.winners == [player1]
-    assert str(game.winners[0].hand) == "1H 3C 4C 5C 6C"
+    # assert game.winners == [player1]
+    # assert str(game.winners[0].hand) == "1H 3C 4C 5C 6C"
 
     assert player1.purse == 500
     assert player2.purse == 500
@@ -809,7 +724,7 @@ def test_game__two_rounds():
     game.all_in(player2)
     game.all_in(player3)
 
-    assert game.winners == [player1]
+    # assert game.winners == [player1]
     assert game.round_count == 2
 
     assert player1.purse == 1500
@@ -856,7 +771,7 @@ def test_game__two_rounds__more_coverage():
     game.fold(player2)
     game.fold(player3)
 
-    assert game.winners == [player1]
+    # assert game.winners == [player1]
     assert game.round_count == 2
 
     assert player1.purse == 500
@@ -888,7 +803,7 @@ def test_game__two_rounds__more_coverage_v2():
     game.all_in(player2)
     # game.fold(player3)
 
-    assert game.winners == [player1]
+    # assert game.winners == [player1]
     assert game.round_count == 2
 
     assert player1.purse == 1500
@@ -1062,6 +977,39 @@ def test_raise():
         wrapped.assert_called_with(player2, 300)
 
 
+def test_game__side_pot_participant_cannot_win_when_out():
+    hand1 = ["1H", "13H", "12H", "11H", "10H"]
+    hand2 = ["7D", "7S", "4H", "5C", "3S"]
+    hand3 = ["8S", "7C", "4D", "5D", "3D"]
+
+    fake_shuffler = shuffler_factory([[hand1, hand2, hand3]])
+    player1 = Player(purse=500, name="Michael")
+    player2 = Player(purse=500, name="Geordie")
+    player3 = Player(purse=500, name="Eugene")
+
+    game = game_factory(
+        shuffler=fake_shuffler,
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+    )
+
+    game.start_round()
+
+    game.bet(player1, 100)
+    game.raise_bet(player2, 100)
+    game.call(player3)
+    game.fold(player1)
+
+    assert player1.purse == 400
+    assert player2.purse == 800
+    assert player3.purse == 300
+    assert game.pot is None
+    assert game.current_player is None
+
+
 def test_transfer_to_pot():
     player1 = Player(purse=500, name="Michael")
     game = game_factory(
@@ -1196,8 +1144,14 @@ def test_pot__get_side_pots():
     assert side_pots[2] == (100, [player3])
 
 
-# Also need to get player_total for specific player
-
-
-# Game operations should be prevented when game not started (e.g. distributing a pot without starting the game means there's no kitty yet)
-# testing side-pots (only applicable if players get outbid when all-in)
+# Rule sets
+# Stud
+#   distribute 5 cards
+#   round of betting
+#   find winner
+# Draw
+#   distribute 5 cards
+#   round of betting
+#   players change up to 3 cards (up to four is they have an Ace)
+#   round of betting
+#   find winner
