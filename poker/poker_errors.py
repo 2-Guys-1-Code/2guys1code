@@ -36,3 +36,11 @@ class IllegalActionException(Exception):
 
 class IllegalBetException(IllegalActionException):
     pass
+
+
+class DuplicateCardException(Exception):
+    pass
+
+
+class IllegalCardSwitch(IllegalActionException):
+    pass

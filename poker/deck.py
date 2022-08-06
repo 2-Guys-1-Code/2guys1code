@@ -22,6 +22,7 @@ class Deck:
     _cards: list
     # _shuffler: AbstractShuffler
 
+    # fmt: off
     ALL_CARDS = [
         'RJ', 'BJ',
         '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
@@ -29,6 +30,7 @@ class Deck:
         '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
         '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
     ]
+    # fmt: on
 
     def __init__(self, shuffler=None) -> None:
         self._cards = [Card("RJ"), Card("BJ")]
@@ -52,7 +54,12 @@ class Deck:
     def __len__(self) -> int:
         return len(self._cards)
 
-    def __getitem__(self, index: int) -> Union[Card, None]:
+    def __getitem__(self, index: Union[int, slice]) -> Union[Card, None]:
+        if isinstance(index, slice):
+            _slice = []
+            for i in range(index.start, index.stop + 1, index.step or 1):
+                _slice.append(self._cards[i])
+            return _slice
         return self.peek(index + 1)
 
     def __iter__(self):

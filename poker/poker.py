@@ -6,13 +6,14 @@ from math import floor
 from typing import Callable, Union
 
 from card import Card
-from deck import Deck, EmptyDeck
+from deck import Deck, EmptyDeck, MissingCard
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
     EndOfRound,
     IllegalActionException,
     IllegalBetException,
+    IllegalCardSwitch,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     TooManyPlayers,
@@ -110,9 +111,11 @@ class Poker:
     ACTION_FOLD: str = "FOLD"
     ACTION_ALLIN: str = "ALLIN"
     ACTION_RAISE: str = "RAISE"
+    MAX_CARD_SWITCH: int = 3
 
     _hands: list
     _deck: Deck
+    _discard_pile: Hand
 
     _game_type: str
     _players: list[AbstractPokerPlayer]
@@ -134,7 +137,7 @@ class Poker:
         self._shuffler = shuffler or Shuffler()
 
         self._set_deck()
-
+        self._discard_pile = Hand()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
         self.round_count = 0
@@ -593,3 +596,27 @@ class Poker:
     @staticmethod
     def _reindex_hand(hand: list) -> list:
         return [Poker._reindex_card(c) for c in hand]
+
+    def _can_switch_cards(self, hand: Hand, cards_to_switch: list) -> bool:
+        has_ace = {Card("1H"), Card("1D"), Card("1S"), Card("1C")}.intersection(
+            {c for c in hand}
+        )
+        if (not has_ace and len(cards_to_switch) > 3) or len(cards_to_switch) > 4:
+            return False
+
+        for card in cards_to_switch:
+            if not card in hand:
+
+
+                return False
+
+        return True
+
+    def switch_cards(self, player: Player, cards_to_switch: list) -> None:
+        if not self._can_switch_cards(player.hand, cards_to_switch):
+            raise IllegalCardSwitch()
+
+        for card in cards_to_switch:
+            player.hand.pull_card(card)
+            self._discard_pile.insert_at_end(card)
+            player.add_card(self._deck.pull_from_top())
