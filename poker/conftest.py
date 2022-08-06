@@ -78,7 +78,9 @@ def game_factory(
     return game
 
 
-def shuffler_factory(hands: list, padding: list = None) -> FakeShuffler:
+def shuffler_factory(
+    hands: list, padding: list = None, cards_per_hand: int = 5
+) -> FakeShuffler:
     all_round_hands = hands
     if type(all_round_hands[0][0]) != list:
         all_round_hands = [all_round_hands]
@@ -133,14 +135,14 @@ def shuffler_factory(hands: list, padding: list = None) -> FakeShuffler:
             except ValueError:
                 raise DuplicateCardException()
 
-        # Top up the hands to 5 cards by picking from the top of the leftovers
+        # Top up the hands by picking from the top of the leftovers
         for h in hands:
-            for card_no in range(0, 5 - len(h)):
+            for card_no in range(0, cards_per_hand - len(h)):
                 i = left_overs.pop(0) - 1
                 h.append(all_cards[i])
 
         # Place the cards in the deck in the appropriate order, accounting for cycling
-        for card_no in range(0, 5):
+        for card_no in range(0, cards_per_hand):
             for hand_no in range(len(hands)):
                 card = hands[hand_no][card_no]
                 card_index = all_cards.index(card)

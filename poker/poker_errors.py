@@ -14,6 +14,10 @@ class EndOfRound(Exception):
     pass
 
 
+class EndOfStep(Exception):
+    pass
+
+
 class TransferToPotException(Exception):
     pass
 

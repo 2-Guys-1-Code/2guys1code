@@ -59,6 +59,7 @@ from conftest import game_factory, CARDS_NO_JOKERS
         [["4C", "5C", "6C", "2C", "12C"], ["4S", "5S", "6S", "2S", "12S"], 0],
         [["2S", "3C", "4S", "5C", "6S"], ["2C", "3S", "4C", "5S", "6C"], 0],
         [["2S", "2D", "7S", "3C", "6S"], ["2C", "3S", "4C", "5S", "8C"], 1],
+        [["1S", "13D", "12S", "11C", "9S"], ["1C", "13S", "12C", "11S", "8C"], 1],
     ],
     ids=[
         "pair or Ks beats pair of Qs",
@@ -98,6 +99,7 @@ from conftest import game_factory, CARDS_NO_JOKERS
         "two equal flushes draw",
         "two equal straights draw",
         "checking for straight (1st hand) doesn't break when subbing from a 2",
+        "Always fall back on the kicker",
     ],
 )
 def test_compare_hands(hand_1, hand_2, expectation):
