@@ -1,5 +1,4 @@
 from functools import partial
-from this import s
 
 import pytest
 from card import Card

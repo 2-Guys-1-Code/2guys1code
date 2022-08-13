@@ -147,10 +147,10 @@ def test_start_round__initial_state():
     assert len(game._round_players) == 3
     for x in range(0, 3):
         assert isinstance(game._round_players[x].hand, Hand)
-        assert len(game._round_players[x].hand) == game.CARDS_PER_HAND
+        assert len(game._round_players[x].hand) == 5
         assert isinstance(game._round_players[x].hand[0], Card)
 
-    assert len(game._deck) == 39
+    assert len(game._deck) == 37
     assert game.current_player == game._players[0]
     assert game.round_count == 1
 

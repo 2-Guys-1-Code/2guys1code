@@ -99,8 +99,6 @@ class Pot:
 
 
 class Poker:
-    CARDS_PER_HAND: int = 5
-
     TYPE_BASIC: str = "BASIC"  # This should not be a thing anymore
     TYPE_STUD: str = "STUD"
     TYPE_DRAW: str = "DRAW"
@@ -117,6 +115,7 @@ class Poker:
     STEP_BETTING: str = "BETTING"
     STEP_DEAL: str = "DEAL"
     STEP_SWITCH: str = "SWITCH"
+    STEP_COMMUNITY_CARDS: str = "COMMUNITY"
 
     _hands: list
     _deck: Deck
@@ -145,6 +144,7 @@ class Poker:
         self._set_deck()
         self._set_round_steps()
         self._discard_pile = Hand()
+        self._community_pile = Hand()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
 
@@ -154,21 +154,27 @@ class Poker:
         else:
             self._deck = Deck()
 
-        if self._game_type == self.TYPE_STUD:
-            self._deck.pull_card("RJ")
-            self._deck.pull_card("BJ")
+        self._deck.pull_card("RJ")
+        self._deck.pull_card("BJ")
 
     # We should have a steps factory per game type that
     # returns the whole list of steps with their config
     def _step_factory(self, step: str) -> dict:
         if step == self.STEP_DEAL:
-            return {
-                "name": self.STEP_DEAL,
-                # "actions": [],
-                "config": {
-                    "cards_per_player": self.CARDS_PER_HAND,
-                },
-            }
+            if self._game_type == self.TYPE_HOLDEM:
+                return {
+                    "name": self.STEP_DEAL,
+                    "config": {
+                        "cards_per_player": 2,
+                    },
+                }
+            else:
+                return {
+                    "name": self.STEP_DEAL,
+                    "config": {
+                        "cards_per_player": 5,
+                    },
+                }
 
         if step == self.STEP_BETTING:
             return {
@@ -191,6 +197,15 @@ class Poker:
                 ],
             }
 
+        if step == self.STEP_COMMUNITY_CARDS:
+            return {
+                "name": self.STEP_COMMUNITY_CARDS,
+                    "config": {
+                        "cards_to_burn": 1, 
+                        "cards_to_reveal": 3,
+                    },
+            }
+
     def _set_round_steps(self) -> None:
         self.steps = [
             self._step_factory(self.STEP_DEAL),
@@ -199,6 +214,10 @@ class Poker:
 
         if self._game_type == self.TYPE_DRAW:
             self.steps.append(self._step_factory(self.STEP_SWITCH))
+            self.steps.append(self._step_factory(self.STEP_BETTING))
+
+        if self._game_type == self.TYPE_HOLDEM:
+            self.steps.append(self._step_factory(self.STEP_COMMUNITY_CARDS))
             self.steps.append(self._step_factory(self.STEP_BETTING))
 
     def _distribute_chips(
@@ -214,6 +233,15 @@ class Poker:
         for _ in range(0, cards_per_player):
             for p in players:
                 p.add_card(deck.pull_from_top())
+
+    def deal_community_cards(
+        self, deck: Deck, cards_to_burn: int = 0, cards_to_reveal: int = 0
+    ) -> None:
+        for _ in range(0, cards_to_burn):
+            self._discard_pile.insert_at_end(deck.pull_from_top())
+
+        for _ in range(0, cards_to_reveal):
+            self._community_pile.insert_at_end(deck.pull_from_top())
 
     def start(
         self,
@@ -282,6 +310,10 @@ class Poker:
                 self.end_step()
             except EmptyDeck as e:
                 raise TooManyPlayers()
+        if current_step.get("name") == self.STEP_COMMUNITY_CARDS:
+            self.current_player = None
+            self.deal_community_cards(self._deck, **current_step.get("config", {}))
+            self.end_step()
         else:
             self.current_player = self._round_players[0]
 
@@ -634,6 +666,29 @@ class Poker:
                 return None
 
         return hand[0]
+
+    @staticmethod
+    def _extract_straight_flush__v2(hand: list) -> Union[Card, None]:
+        hand.sort()
+        new_hand = []
+        for x in range(1, len(hand)):
+            if hand[x - 1].rank != hand[x].rank - 1:
+                new_hand = []
+                continue
+            if hand[x - 1].suit != hand[x].suit:
+                new_hand = []
+                continue
+
+            if len(hand) - x < 5:
+                # Not enough cards left to build a straight flush
+                return None
+            
+            new_hand.append(hand[x])
+
+        if len(new_hand) == 5:
+            return new_hand
+
+        return None
 
     @staticmethod
     def _extract_full_house(hand: list) -> Union[list, None]:
