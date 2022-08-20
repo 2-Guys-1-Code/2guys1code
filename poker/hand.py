@@ -27,3 +27,10 @@ class Hand(Deck):
 
     def __eq__(self, b):
         return self._cmp(self, b) == 0
+
+    def __add__(self, other: "Hand") -> "Hand":
+        new = Hand(self._cards)
+        for c in other:
+            new.insert_at_end(c)
+
+        return new

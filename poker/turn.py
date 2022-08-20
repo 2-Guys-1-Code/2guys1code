@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from poker import Poker
 
 
-class StepManager:
+class TurnManager:
     def __init__(self, game: "Poker", player: AbstractPokerPlayer, action: str) -> None:
         self.game = game
         self.player = player

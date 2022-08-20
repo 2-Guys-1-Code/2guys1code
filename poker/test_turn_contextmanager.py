@@ -1,7 +1,7 @@
 import pytest
 from player import AbstractPokerPlayer
 from poker_errors import IllegalActionException, PlayerOutOfOrderException
-from turn import StepManager
+from turn import TurnManager
 
 
 class FakeGame:
@@ -13,11 +13,11 @@ class FakeGame:
         self.steps = steps or [{"actions": ["action"]}]
 
     def test_action(self, player: AbstractPokerPlayer):
-        with StepManager(self, player, "action") as tm:
+        with TurnManager(self, player, "action") as tm:
             self.logic_called = 1
 
     def test_action_with_remove(self, player: AbstractPokerPlayer):
-        with StepManager(self, player, "action") as tm:
+        with TurnManager(self, player, "action") as tm:
             self._round_players.remove(player)
 
     def maybe_end_step(self):

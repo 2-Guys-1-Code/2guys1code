@@ -20,7 +20,7 @@ from poker_errors import (
     TooManyPlayers,
 )
 from shuffler import AbstractShuffler, Shuffler
-from turn import StepManager
+from turn import TurnManager
 
 
 class Pot:
@@ -115,7 +115,9 @@ class Poker:
     STEP_BETTING: str = "BETTING"
     STEP_DEAL: str = "DEAL"
     STEP_SWITCH: str = "SWITCH"
-    STEP_COMMUNITY_CARDS: str = "COMMUNITY"
+    STEP_REVEAL_FLOP: str = "REVEAL_FLOP"
+    STEP_REVEAL_TURN: str = "REVEAL_TURN"
+
 
     _hands: list
     _deck: Deck
@@ -197,13 +199,22 @@ class Poker:
                 ],
             }
 
-        if step == self.STEP_COMMUNITY_CARDS:
+        if step == self.STEP_REVEAL_FLOP:
             return {
-                "name": self.STEP_COMMUNITY_CARDS,
-                    "config": {
-                        "cards_to_burn": 1, 
-                        "cards_to_reveal": 3,
-                    },
+                "name": self.STEP_REVEAL_FLOP,
+                "config": {
+                    "cards_to_burn": 1, 
+                    "cards_to_reveal": 3,
+                },
+            }
+        
+        if step == self.STEP_REVEAL_TURN:
+            return {
+                "name": self.STEP_REVEAL_TURN,
+                "config": {
+                    "cards_to_burn": 1, 
+                    "cards_to_reveal": 1,
+                },
             }
 
     def _set_round_steps(self) -> None:
@@ -217,7 +228,9 @@ class Poker:
             self.steps.append(self._step_factory(self.STEP_BETTING))
 
         if self._game_type == self.TYPE_HOLDEM:
-            self.steps.append(self._step_factory(self.STEP_COMMUNITY_CARDS))
+            self.steps.append(self._step_factory(self.STEP_REVEAL_FLOP))
+            self.steps.append(self._step_factory(self.STEP_BETTING))
+            self.steps.append(self._step_factory(self.STEP_REVEAL_TURN))
             self.steps.append(self._step_factory(self.STEP_BETTING))
 
     def _distribute_chips(
@@ -310,10 +323,11 @@ class Poker:
                 self.end_step()
             except EmptyDeck as e:
                 raise TooManyPlayers()
-        if current_step.get("name") == self.STEP_COMMUNITY_CARDS:
+        if current_step.get("name") == self.STEP_REVEAL_FLOP or current_step.get("name") == self.STEP_REVEAL_TURN:
             self.current_player = None
             self.deal_community_cards(self._deck, **current_step.get("config", {}))
             self.end_step()
+     
         else:
             self.current_player = self._round_players[0]
 
@@ -364,16 +378,16 @@ class Poker:
         if self.pot.player_owed(player) != 0:
             raise IllegalActionException()
 
-        with StepManager(self, player, self.ACTION_CHECK):
+        with TurnManager(self, player, self.ACTION_CHECK):
             self.action_count += 1
 
     def all_in(self, player: AbstractPokerPlayer) -> None:
-        with StepManager(self, player, self.ACTION_ALLIN):
+        with TurnManager(self, player, self.ACTION_ALLIN):
             self.action_count += 1
             self._transfer_to_pot(player, player.purse)
 
     def fold(self, player: AbstractPokerPlayer) -> None:
-        with StepManager(self, player, self.ACTION_FOLD):
+        with TurnManager(self, player, self.ACTION_FOLD):
             self.action_count += 1
             self._round_players.remove(player)
 
@@ -381,18 +395,18 @@ class Poker:
         if bet_amount < self.pot.player_owed(player):
             raise IllegalBetException()
 
-        with StepManager(self, player, self.ACTION_BET):
+        with TurnManager(self, player, self.ACTION_BET):
             self.action_count += 1
             self._transfer_to_pot(player, bet_amount)
 
     def call(self, player: AbstractPokerPlayer) -> None:
-        with StepManager(self, player, self.ACTION_CALL):
+        with TurnManager(self, player, self.ACTION_CALL):
             self.action_count += 1
             bet_amount = self.pot.player_owed(player)
             self._transfer_to_pot(player, bet_amount)
 
     def raise_bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
-        with StepManager(self, player, self.ACTION_RAISE):
+        with TurnManager(self, player, self.ACTION_RAISE):
             self.action_count += 1
             self._transfer_to_pot(player, self.pot.player_owed(player) + bet_amount)
 
@@ -411,7 +425,7 @@ class Poker:
         return True
 
     def switch_cards(self, player: Player, cards_to_switch: list) -> None:
-        with StepManager(self, player, self.ACTION_SWITCH):
+        with TurnManager(self, player, self.ACTION_SWITCH):
             if not self._can_switch_cards(player.hand, cards_to_switch):
                 raise IllegalCardSwitch()
 

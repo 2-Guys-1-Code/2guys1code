@@ -1,11 +1,13 @@
 from functools import partial
-
+from hand import Hand
 from conftest import (
     game_factory as default_game_factory,
     shuffler_factory as _shuffler_factory,
 )
 from player import Player
 from poker import Poker
+from hand_finder import BestHandFinder
+import pytest
 
 game_factory = partial(default_game_factory, game_type=Poker.TYPE_HOLDEM)
 shuffler_factory = partial(_shuffler_factory, cards_per_hand=2)
@@ -68,7 +70,23 @@ def test_reveal_turn():
     assert len(game._deck) == 42
 
     assert game.current_player == player1
+ 
+def test_find_winner_after_reveals():
+    pass
+
+
+@pytest.mark.parametrize(
+    "hand_1, flop, expectation",
+    [
+        [["13C", "8D"],  ["13D", "12C", "3C", "5D", "10S"], ["13C", "8D", "13D", "10S", "5D"]],
+    ],
+    ids = ["Find Pair of Kings"]
     
+    )
+def test_find_best_hands(hand_1, flop, expectation):
+    best_hand_finder = BestHandFinder()
+    best_hand = best_hand_finder.find(Hand(hand_1), Hand(flop))
+    assert best_hand == Hand(expectation)
 
 # steps
 # 1. deal 2 cards per player
