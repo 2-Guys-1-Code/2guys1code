@@ -1,5 +1,6 @@
 from functools import partial
 from hand import Hand
+from card import Card
 from conftest import (
     game_factory as default_game_factory,
     shuffler_factory as _shuffler_factory,
@@ -75,19 +76,70 @@ def test_find_winner_after_reveals():
     pass
 
 
+def compare_test_card(actual: Card, expected: str) -> bool:
+    print(actual)
+    print(expected)
+    print("------")
+    if expected[-1] == "*":
+        print(expected[0:-2]+"D")
+        return actual == Card(expected[0:-2]+"D")
+    return actual == Card(expected)
+
+
+
+
+
+def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
+    sorter = lambda x: f"{x.rank}{x.suit}"
+    print(sorted(hand_1._cards, key=sorter))
+    print(sorted(hand_2._cards, key=sorter))
+    if sorted(hand_1._cards, key=sorter) == sorted(hand_2._cards, key=sorter):
+        return 0
+    return 1
+
 @pytest.mark.parametrize(
     "hand_1, flop, expectation",
     [
-        [["13C", "8D"],  ["13D", "12C", "3C", "5D", "10S"], ["13C", "8D", "13D", "10S", "5D"]],
+        [
+            ["13C", "8D"], 
+            ["13D", "12C", "3C", "5D", "10S"],
+            ["13C", "13D", "12C", "10S", "8D"],
+        ],
+        [
+            ["2S", "1D"], 
+            ["4S", "6S", "8S", "10C", "9C"],
+            ["1D", "10C", "9C", "8S", "6S"],
+        ],
+        [
+            ["2S", "1D"], 
+            ["2C", "1S", "8S", "10C", "9C"],
+            ["1D", "1S", "2C", "2S", "10C"],
+        ],
+        # [
+        #     ["2S", "1D"], 
+        #     ["2C", "2D", "8S", "8C", "8D"],
+        #     ["8D", "8C", "8S", "1D", "2*"],
+        # ],
     ],
-    ids = ["Find Pair of Kings"]
-    
-    )
+    ids = [
+        "Find Pair of Kings",
+        "Find all high cards",
+        "find 2 pairs",
+        # "find best 3 of a kind",
+    ]
+)
 def test_find_best_hands(hand_1, flop, expectation):
     best_hand_finder = BestHandFinder()
     best_hand = best_hand_finder.find(Hand(hand_1), Hand(flop))
-    assert best_hand == Hand(expectation)
 
+    best_hand._cmp = beats_for_test
+
+    assert best_hand == Hand(expectation, _cmp=beats_for_test)
+
+    # for i in range(0, 5):
+
+    #     compare_test_card(best_hand[i], expectation[i])
+    # assert  1 == 0
 # steps
 # 1. deal 2 cards per player
 #   cards per hand must be configurable in game and in shuffler factory DONE

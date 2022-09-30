@@ -1,26 +1,62 @@
+from collections import Counter
+from typing import Union
 from hand import Hand
 from card import Card
 
 
+class AbstractHandBuilder:
+    def _extract(self):
+        raise NotImplementedError
+
+    def build(self, hand: Hand, leftovers: Hand):
+        if len(hand) > 4:
+            return Hand
+
+        extracted, leftovers = self._extract(leftovers)
+
+        hand = self._add(hand, extracted)
+            
+        return hand, leftovers
+
+    def _add(self, hand: Hand, other: Hand) -> Hand:
+        space_left = 5-len(hand)
+        if len(other) <= space_left:
+            return hand + other
+
+        return hand
+
+
 class BestHandFinder():
     def find(self, hand: Hand, flop: Hand) -> Hand:
+        print("here")
         combined = hand + flop
+        # combined  = self._parse_to_cards( hand + flop).copy()
+        # two_pairs = self._find_two_pair(combined)
+        # print(two_pairs)
 
         cards_by_rank = self._find_sets(combined)
 
-        ordered_keys = sorted(list(cards_by_rank.keys()), key=lambda x: len(cards_by_rank[x]))
-        pair_key = ordered_keys[0]
-
-        rv = Hand(cards_by_rank[pair_key])
-        self._remove_cards_by_rank(combined, rv[0])
-
-        for i in range(0, 5-len(rv)):
-            rv.insert_at_end(max(combined))
-
+        two_pairs = [_set for _, _set in cards_by_rank.items() if len(_set) == 2]
+        # [
+            # ["1S", "1D"],
+            # ["2C", "2S"],
+        # ]
+        print(combined)
+        rv = Hand()
+        for pair in two_pairs:
+            rv += Hand(pair)
+            print(pair[0])
+            self._remove_cards_by_rank(combined, pair[0])
+        
+        print(combined)
+        for _ in range(0, 5-len(rv)):
+            highest = max(combined)
+            combined.pull_card(highest)
+            rv.insert_at_end(highest)
         return rv
 
         # score = {
-        #     type: 9
+        #     type: 9P
         #     strength: 
         # }
 
@@ -64,10 +100,42 @@ class BestHandFinder():
         return cards_by_rank
 
     @staticmethod
-    def _remove_cards_by_rank(hand: list, rank_card: Card) -> list:
+    def _remove_cards_by_rank(hand: Hand, rank_card: Card) -> list:
         removed = []
+        to_remove = []
         for c in hand:
             if c.rank == rank_card.rank:
-                removed.append(hand.pull_card(c))
+                to_remove.append(c)
+
+        for d in to_remove:
+            removed.append(hand.pull_card(d))
 
         return removed
+
+    def _find_two_pair(self, hand: list) -> Union[list, None]:
+        print("In find two pairs")
+        print(hand)
+
+        cards_by_rank = self._find_sets(hand)
+        print(cards_by_rank )
+        pairs = [_set[0] for rank, _set in cards_by_rank.items() if len(_set) == 2]
+
+        # pairs = [k for k, v in Counter(hand).items() if v == 2]
+        print(pairs)
+        if len(pairs) < 2:
+            return None
+
+        pairs.sort(reverse=True)
+        for x in range(len(hand) - 1, -1, -1):
+            if hand[x].rank == pairs[0].rank or hand[x].rank == pairs[1].rank:
+                # hand.pop(x)
+                print(hand[x])
+                print(type(hand[x]))
+                hand.pull_card(hand[x])
+        return [pairs[0], pairs[1]]
+
+    @staticmethod
+    def _parse_to_cards(hand) -> list:
+        _eq = lambda s, b: s.rank == b.rank
+        _hash = lambda s: s.rank
+        return [Card(c, _eq=_eq, _hash=_hash) for c in hand]
