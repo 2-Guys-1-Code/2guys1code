@@ -16,7 +16,7 @@ def test_shuffler_shuffles():
     test_shuffler = Shuffler()
     test_shuffler.shuffle(test_deck)
     assert len(test_deck) == 54
-    print(test_deck)
+
 
 
 def test_shuffle_deck_override():

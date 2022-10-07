@@ -77,11 +77,7 @@ def test_find_winner_after_reveals():
 
 
 def compare_test_card(actual: Card, expected: str) -> bool:
-    print(actual)
-    print(expected)
-    print("------")
     if expected[-1] == "*":
-        print(expected[0:-2]+"D")
         return actual == Card(expected[0:-2]+"D")
     return actual == Card(expected)
 
@@ -91,8 +87,6 @@ def compare_test_card(actual: Card, expected: str) -> bool:
 
 def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
     sorter = lambda x: f"{x.rank}{x.suit}"
-    print(sorted(hand_1._cards, key=sorter))
-    print(sorted(hand_2._cards, key=sorter))
     if sorted(hand_1._cards, key=sorter) == sorted(hand_2._cards, key=sorter):
         return 0
     return 1

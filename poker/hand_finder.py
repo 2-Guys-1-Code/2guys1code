@@ -2,37 +2,110 @@ from collections import Counter
 from typing import Union
 from hand import Hand
 from card import Card
+import math
 
+
+def _find_sets(hand: Hand) -> dict:
+    cards_by_rank = {}
+
+    for c in hand:
+        if c.rank not in cards_by_rank:
+            cards_by_rank[c.rank] = Hand()
+
+        cards_by_rank[c.rank] += c
+    
+    return cards_by_rank
 
 class AbstractHandBuilder:
-    def _extract(self):
+    def __init__(self, hand: Hand) -> None:
+        self.hand = hand
+
+    def _extract(self, leftovers: Hand) -> tuple:
         raise NotImplementedError
 
-    def build(self, hand: Hand, leftovers: Hand):
-        if len(hand) > 4:
-            return Hand
+    def build(self, leftovers: Hand) -> Hand:
+        if len(self.hand) > 4:
+            return self.hand
 
         extracted, leftovers = self._extract(leftovers)
 
-        hand = self._add(hand, extracted)
-            
-        return hand, leftovers
+        return self._add(extracted), leftovers
 
-    def _add(self, hand: Hand, other: Hand) -> Hand:
-        space_left = 5-len(hand)
+    def _add(self, other: Hand) -> Hand:
+        space_left = 5-len(self.hand)
         if len(other) <= space_left:
-            return hand + other
+            return self.hand + other
 
-        return hand
+        return self.hand
+
+
+class HighCardHandBuilder(AbstractHandBuilder):
+    def _extract(self, leftovers: Hand):
+        extracted = Hand()
+        space_left = 5-len(self.hand)
+        for i in range(0, space_left):
+            highest = max(leftovers, default=None)
+
+            if highest is None:
+                break
+
+            leftovers.pull_card(highest)
+            extracted += highest
+        
+        return extracted, leftovers
+
+
+class PairHandBuilder(AbstractHandBuilder):
+    def _extract(self, leftovers: Hand):
+        extracted = Hand()
+        space_left = 5-len(self.hand)
+        sets = _find_sets(leftovers)
+        pairs = {rank: _set for rank, _set in sets.items() if len(_set) == 2}
+
+        nb_pairs = math.floor(space_left/2)
+
+        for idx, rank in enumerate(sorted(pairs.keys(), reverse=True)):
+            if idx == nb_pairs:
+                break
+
+            pair = pairs[rank]
+            extracted += pair
+            for c in pair:
+                leftovers.pull_card(c)
+
+        return extracted, leftovers
+
+        # for i in range(0, nb_pairs):
+        #     highest = max(leftovers, default=None)
+        #     leftovers.remove(highest)
+        #     extracted.append(highest)
+        
+        # return extracted, leftovers
+
 
 
 class BestHandFinder():
     def find(self, hand: Hand, flop: Hand) -> Hand:
-        print("here")
+        leftovers = hand + flop
+
+        builders = [
+            PairHandBuilder,
+            HighCardHandBuilder,
+        ]
+
+        _hand = Hand()
+        for cls in builders:
+            builder = cls(_hand)
+            _hand, leftovers = builder.build(leftovers)
+    
+
+        return _hand
+
+
+
+    def _find(self, hand: Hand, flop: Hand) -> Hand:
+   
         combined = hand + flop
-        # combined  = self._parse_to_cards( hand + flop).copy()
-        # two_pairs = self._find_two_pair(combined)
-        # print(two_pairs)
 
         cards_by_rank = self._find_sets(combined)
 
@@ -41,14 +114,12 @@ class BestHandFinder():
             # ["1S", "1D"],
             # ["2C", "2S"],
         # ]
-        print(combined)
+
         rv = Hand()
         for pair in two_pairs:
             rv += Hand(pair)
-            print(pair[0])
             self._remove_cards_by_rank(combined, pair[0])
-        
-        print(combined)
+
         for _ in range(0, 5-len(rv)):
             highest = max(combined)
             combined.pull_card(highest)
@@ -113,15 +184,12 @@ class BestHandFinder():
         return removed
 
     def _find_two_pair(self, hand: list) -> Union[list, None]:
-        print("In find two pairs")
-        print(hand)
 
         cards_by_rank = self._find_sets(hand)
-        print(cards_by_rank )
+
         pairs = [_set[0] for rank, _set in cards_by_rank.items() if len(_set) == 2]
 
         # pairs = [k for k, v in Counter(hand).items() if v == 2]
-        print(pairs)
         if len(pairs) < 2:
             return None
 
@@ -129,8 +197,6 @@ class BestHandFinder():
         for x in range(len(hand) - 1, -1, -1):
             if hand[x].rank == pairs[0].rank or hand[x].rank == pairs[1].rank:
                 # hand.pop(x)
-                print(hand[x])
-                print(type(hand[x]))
                 hand.pull_card(hand[x])
         return [pairs[0], pairs[1]]
 

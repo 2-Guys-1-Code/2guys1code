@@ -5,7 +5,8 @@ import pytest
 from card import Card
 from conftest import make_pot, shuffler_factory
 from hand import Hand
-from deck import Deck, EmptyDeck
+from card_collection import EmptyDeck
+from deck import Deck
 from player import AbstractPokerPlayer, Player
 from poker import Poker, Pot
 from poker_errors import (

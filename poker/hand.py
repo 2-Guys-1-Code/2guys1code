@@ -1,10 +1,11 @@
 from typing import Iterable, Union
 from card import Card
+from card_collection import CardCollection
 from deck import Deck
 from shuffler import AbstractShuffler, Shuffler
 
 
-class Hand(Deck):
+class Hand(CardCollection):
     def __init__(
         self,
         cards: list = None,
@@ -18,19 +19,3 @@ class Hand(Deck):
 
         self._shuffler = shuffler
         self._cmp = _cmp or self.cmp
-
-    def cmp(self, a, b) -> int:
-        return 0
-
-    def __lt__(self, b):
-        return self._cmp(self, b) < 0
-
-    def __eq__(self, b):
-        return self._cmp(self, b) == 0
-
-    def __add__(self, other: "Hand") -> "Hand":
-        new = Hand(self._cards)
-        for c in other:
-            new.insert_at_end(c)
-
-        return new

@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 import random
+from card_collection import CardCollection
+from constants import ALL_CARDS
 
-from deck import Deck
+# from deck import Deck
 
 
 class AbstractShuffler(ABC):
@@ -10,7 +12,7 @@ class AbstractShuffler(ABC):
         return NotImplemented
 
     @abstractmethod
-    def shuffle(self, deck: Deck) -> None:
+    def shuffle(self, deck: CardCollection) -> None:
         pass
 
 def build_list_of_cards_from_mapping(mapping: list, all_cards) -> list:
@@ -20,13 +22,13 @@ def build_list_of_cards_from_mapping(mapping: list, all_cards) -> list:
 class FakeShufflerByPosition():
     
     def __init__(self, mapping: list, all_cards=None) -> None:
-        all_cards = all_cards or Deck.ALL_CARDS
+        all_cards = all_cards or ALL_CARDS
         self.mapping = build_list_of_cards_from_mapping(mapping, all_cards)
     
     def get_mapping(self, cards: list) -> list:
         return self.mapping
 
-    def shuffle(self, deck: Deck) -> None:
+    def shuffle(self, deck: CardCollection) -> None:
         deck._cards = self.mapping.copy()
 
 
@@ -51,7 +53,7 @@ class FakeShuffler(AbstractShuffler):
 
         return self.mapping
 
-    def shuffle(self, deck: Deck) -> None:
+    def shuffle(self, deck: CardCollection) -> None:
         if self.multi_round:
             self.call_count += 1
             if len(self.mapping) >= self.call_count:
@@ -72,7 +74,7 @@ class Shuffler(AbstractShuffler):
         random.shuffle(mapping)
         return mapping
 
-    def shuffle(self, deck: Deck) -> None:
+    def shuffle(self, deck: CardCollection) -> None:
         mapping = self.get_mapping(deck._cards)
         deck._cards = list(
             map(

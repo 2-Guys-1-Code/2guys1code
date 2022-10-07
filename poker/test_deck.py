@@ -1,5 +1,6 @@
 import pytest
-from deck import Deck, InvalidCardPosition, MissingCard
+from deck import Deck
+from card_collection import InvalidCardPosition, MissingCard
 from poker import Card
 from shuffler import FakeShuffler
 
@@ -116,6 +117,7 @@ def test_pull_card(card):
 )
 def test_pull_card_missing_card(card):
     deck = Deck()
+
     deck.pull_card(card)
 
     assert len(deck) == 53

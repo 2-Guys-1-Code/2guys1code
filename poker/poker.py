@@ -6,7 +6,8 @@ from math import floor
 from typing import Callable, Union
 
 from card import Card
-from deck import Deck, EmptyDeck, MissingCard
+from deck import Deck
+from card_collection import EmptyDeck, MissingCard
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
@@ -151,10 +152,7 @@ class Poker:
         self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
 
     def _set_deck(self) -> None:
-        if self._shuffler is not None:
-            self._deck = Deck(shuffler=self._shuffler)
-        else:
-            self._deck = Deck()
+        self._deck = Deck()
 
         self._deck.pull_card("RJ")
         self._deck.pull_card("BJ")
