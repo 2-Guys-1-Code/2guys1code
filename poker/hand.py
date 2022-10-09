@@ -6,6 +6,8 @@ from shuffler import AbstractShuffler, Shuffler
 
 
 class Hand(CardCollection):
+    max_length: int = 5
+
     def __init__(
         self,
         cards: list = None,

@@ -1,7 +1,5 @@
-
 from typing import Callable, Union
 from card import Card
-
 
 
 class InvalidCardPosition(Exception):
@@ -20,14 +18,23 @@ class EmptyDeck(Exception):
     pass
 
 
+class NotEnoughSpace(Exception):
+    pass
+
+
+class NotASubSet(Exception):
+    pass
+
+
 class CardCollection:
 
     _cards: list
+    max_length: int = None
 
     def __init__(
         self,
         cards: list = None,
-        _cmp: Callable=None,
+        _cmp: Callable = None,
     ) -> None:
         if cards is None:
             self._cards = []
@@ -35,19 +42,42 @@ class CardCollection:
             self._cards = [Card(c) for c in cards]
 
         self._cmp = _cmp or self.cmp
-    
+
     def cmp(self, a, b) -> int:
         return 0
 
-    def __add__(self, other: Union["CardCollection" , Card]) -> "CardCollection":
+    def _can_add(self, other: Union["CardCollection", Card]) -> bool:
+        other_length = 1 if isinstance(other, Card) else len(other)
+        return self.max_length is None or len(self) + other_length <= self.max_length
+
+    def __add__(self, other: Union["CardCollection", Card]) -> "CardCollection":
+        if not self._can_add(other):
+            raise NotEnoughSpace()
+
         # TODO: Adding from extending classes will create the wrong class
         new = CardCollection(self._cards)
 
-        if isinstance(other, CardCollection):
-            for c in other:
-                new.insert_at_end(c)
-        elif isinstance(other, Card):
-            new.insert_at_end(other)
+        if isinstance(other, Card):
+            other = [other]
+
+        for c in other:
+            new.insert_at_end(c)
+
+        return new
+
+    def __sub__(self, other: Union["CardCollection", Card]) -> "CardCollection":
+
+        # TODO: Adding from extending classes will create the wrong class
+        new = CardCollection(self._cards)
+
+        if isinstance(other, Card):
+            other = [other]
+
+        for c in other:
+            try:
+                new.pull_card(c)
+            except MissingCard:
+                raise NotASubSet()
 
         return new
 
@@ -59,10 +89,10 @@ class CardCollection:
 
     def __len__(self) -> int:
         return len(self._cards)
-    
+
     def __repr__(self) -> str:
         return " ".join([str(c) for c in self._cards])
-    
+
     def __getitem__(self, index: int | slice) -> Card | None:
         if isinstance(index, slice):
             _slice = []
@@ -70,7 +100,7 @@ class CardCollection:
                 _slice.append(self._cards[i])
             return _slice
         return self.peek(index + 1)
-    
+
     def __iter__(self):
         for c in self._cards:
             yield c
@@ -100,21 +130,21 @@ class CardCollection:
     def pull_card(self, card: Card | str) -> Card | None:
         if card is None:
             raise CannotPullNone()
-        
+
         needle = Card(card)
-   
+
         try:
             self._cards.remove(needle)
         except ValueError:
             raise MissingCard()
 
         return needle
-    
+
     def insert_at(self, position: int, card: Card | str) -> None:
         self._validate_insert_position(position)
         needle = Card(card)
         self._cards.insert(position - 1, needle)
-    
+
     def _validate_insert_position(self, position: int) -> None:
         if not (0 < position <= len(self._cards) + 1):
             raise InvalidCardPosition()
@@ -130,7 +160,7 @@ class CardCollection:
     def insert_at_end(self, card: Card | str) -> None:
         needle = Card(card)
         self._cards.insert(len(self._cards), needle)
-        
+
     def get_position(self, card: Card | str) -> int:
         try:
             return self._cards.index(Card(card)) + 1

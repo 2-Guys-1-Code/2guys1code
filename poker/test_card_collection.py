@@ -1,6 +1,6 @@
 import pytest
 from card import Card
-from card_collection import CardCollection, InvalidCardPosition, MissingCard
+from card_collection import CardCollection, InvalidCardPosition, MissingCard, NotASubSet
 
 
 def test_can_init_with_cards():
@@ -35,6 +35,7 @@ def test_can_add_card_collections():
         Card("5C"),
         Card("10C"),
     ]
+
 
 def test_can_add_card():
     card_collection = CardCollection(cards=["9C", "9S", "7C", "8C", "5D"])
@@ -255,3 +256,38 @@ def test_get_invalid_card():
     with pytest.raises(MissingCard):
         card_collection.get_position(test_card)
     assert len(card_collection) == 5
+
+
+def test_can_sub_card_collections():
+    card_collection_1 = CardCollection(cards=["9C", "9S", "7C", "8C", "5D"])
+    card_collection_2 = CardCollection(cards=["9C", "9S"])
+    card_collection_3 = CardCollection(cards=["7C"])
+
+    combined = card_collection_1 - card_collection_2 - card_collection_3
+
+    assert isinstance(combined, CardCollection)
+    assert combined._cards == [
+        Card("8C"),
+        Card("5D"),
+    ]
+
+
+def test_can_sub_card():
+    card_collection_1 = CardCollection(cards=["9C", "9S", "7C", "8C", "5D"])
+
+    combined = card_collection_1 - Card("9S")
+
+    assert isinstance(combined, CardCollection)
+    assert combined._cards == [
+        Card("9C"),
+        Card("7C"),
+        Card("8C"),
+        Card("5D"),
+    ]
+
+
+def test_can_sub_card_collections__not_a_subset():
+    card_collection_1 = CardCollection(cards=["9C", "9S", "7C", "8C", "5D"])
+    card_collection_2 = CardCollection(cards=["9C", "9S"])
+    with pytest.raises(NotASubSet):
+        _ = card_collection_2 - card_collection_1

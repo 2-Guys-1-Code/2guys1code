@@ -16,7 +16,6 @@ class Card:
         self._equal_method = _eq if _eq is not None else self._equal
         self._hash_method = _hash if _hash is not None else self._hash
 
-        
         if _card is None:
             john = 2
 
