@@ -1,17 +1,15 @@
 from collections import Counter
-import copy
+
 from functools import partial
-from itertools import groupby
 from math import floor
-from typing import Callable, Union
+from typing import Union
 
 from card import Card
 from deck import Deck
-from card_collection import EmptyDeck, MissingCard
+from card_collection import EmptyDeck
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
-    EndOfRound,
     EndOfStep,
     IllegalActionException,
     IllegalBetException,
@@ -20,87 +18,12 @@ from poker_errors import (
     InvalidAmountNotAnInteger,
     TooManyPlayers,
 )
+from pot import Pot
 from shuffler import AbstractShuffler, Shuffler
 from turn import TurnManager
 
 
-class Pot:
-    bets: dict
-
-    def __init__(self) -> None:
-        self.bets = {}
-
-    def add_bet(self, player: AbstractPokerPlayer, amount: int) -> None:
-        if player not in self.bets:
-            self.bets[player] = []
-
-        self.bets[player].append(amount)
-
-    def player_total(self, player: AbstractPokerPlayer) -> int:
-        if player not in self.bets:
-            return 0
-
-        return sum(self.bets[player])
-
-    def player_owed(self, player: AbstractPokerPlayer) -> int:
-        if player not in self.bets:
-            return self.max_player_total
-
-        return self.max_player_total - self.player_total(player)
-
-    def get_side_pots(self):
-        players_per_total = {}
-        for p in self.bets.keys():
-            total = self.player_total(p)
-            if total not in players_per_total:
-                players_per_total[total] = []
-            players_per_total[total].append(p)
-
-        # {
-        #     100: [p1],
-        #     300: [p4],
-        #     200: [p2, p3],
-        # }
-
-        totals = sorted(
-            [(t, p) for t, p in players_per_total.items()], key=lambda x: x[0]
-        )
-
-        # [
-        #     (100, [p1]),
-        #     (200, [p2, p3]),
-        #     (300, [p4]),
-        # ]
-
-        side_pots = []
-        for i, (total, players) in enumerate(totals):
-            all_players = players
-            for j in range(i + 1, len(totals)):
-                all_players.extend(totals[j][1])
-            amount = total
-            if i > 0:
-                amount -= totals[i - 1][0]
-            side_pots.append((amount, all_players))
-
-        # [
-        #     (100, [p1, p2, p3, p4]),
-        #     (100, [p2, p3, p4]),
-        #     (100, [p4]),
-        # ]
-
-        return side_pots
-
-    @property
-    def total(self) -> int:
-        return sum([self.player_total(p) for p in self.bets.keys()])
-
-    @property
-    def max_player_total(self) -> int:
-        return max([self.player_total(p) for p in self.bets.keys()], default=0)
-
-
 class Poker:
-    TYPE_BASIC: str = "BASIC"  # This should not be a thing anymore
     TYPE_STUD: str = "STUD"
     TYPE_DRAW: str = "DRAW"
     TYPE_HOLDEM: str = "HOLDEM"
@@ -118,7 +41,6 @@ class Poker:
     STEP_SWITCH: str = "SWITCH"
     STEP_REVEAL_FLOP: str = "REVEAL_FLOP"
     STEP_REVEAL_TURN: str = "REVEAL_TURN"
-
 
     _hands: list
     _deck: Deck
@@ -201,16 +123,16 @@ class Poker:
             return {
                 "name": self.STEP_REVEAL_FLOP,
                 "config": {
-                    "cards_to_burn": 1, 
+                    "cards_to_burn": 1,
                     "cards_to_reveal": 3,
                 },
             }
-        
+
         if step == self.STEP_REVEAL_TURN:
             return {
                 "name": self.STEP_REVEAL_TURN,
                 "config": {
-                    "cards_to_burn": 1, 
+                    "cards_to_burn": 1,
                     "cards_to_reveal": 1,
                 },
             }
@@ -321,11 +243,14 @@ class Poker:
                 self.end_step()
             except EmptyDeck as e:
                 raise TooManyPlayers()
-        if current_step.get("name") == self.STEP_REVEAL_FLOP or current_step.get("name") == self.STEP_REVEAL_TURN:
+        if (
+            current_step.get("name") == self.STEP_REVEAL_FLOP
+            or current_step.get("name") == self.STEP_REVEAL_TURN
+        ):
             self.current_player = None
             self.deal_community_cards(self._deck, **current_step.get("config", {}))
             self.end_step()
-     
+
         else:
             self.current_player = self._round_players[0]
 
@@ -435,9 +360,11 @@ class Poker:
     def _distribute_pot(self) -> None:
         side_pots = self.pot.get_side_pots()
         for side_pot in side_pots:
-            elligible = list(set(side_pot[1]).intersection(self._round_players))
+            elligible = list(
+                set(side_pot.get_players()).intersection(self._round_players)
+            )
             winners = self.find_winnner(elligible)
-            amount = side_pot[0] * len(side_pot[1])
+            amount = side_pot.get_total_chips()
             chips_per_winner = floor(amount / len(winners))
             for p in winners:
                 p.add_to_purse(chips_per_winner)
@@ -694,7 +621,7 @@ class Poker:
             if len(hand) - x < 5:
                 # Not enough cards left to build a straight flush
                 return None
-            
+
             new_hand.append(hand[x])
 
         if len(new_hand) == 5:

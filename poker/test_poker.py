@@ -141,7 +141,7 @@ def test_game_can_set_chips_per_player():
 
 
 def test_start_round__initial_state():
-    game = game_factory(game_type=Poker.TYPE_BASIC)
+    game = game_factory()
 
     game.start_round()
 
@@ -164,7 +164,7 @@ def test_start_round_shuffles_deck_and_deals():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ])
     # fmt: on
-    game = game_factory(shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC, players=1)
+    game = game_factory(shuffler=fake_shuffler, players=1)
     game.start_round()
     assert str(game._players[0].hand) == "1H RJ 2H BJ 3H"
 
@@ -181,9 +181,7 @@ def test_deal_cycles_hands():
     fake_shuffler.shuffle(deck)
 
     players = [Player() for _ in range(4)]
-    game = game_factory(
-        shuffler=fake_shuffler, game_type=Poker.TYPE_BASIC, players=players
-    )
+    game = game_factory(shuffler=fake_shuffler, players=players)
 
     game.deal(players, deck)
 
@@ -197,7 +195,7 @@ def test_deal_cycles_hands():
 def test_deal__cards_are_removed_from_deck():
     deck = Deck()
 
-    game = Poker(game_type=Poker.TYPE_BASIC)
+    game = Poker()
 
     player = Player()
     game.deal([player], deck)
@@ -207,7 +205,7 @@ def test_deal__cards_are_removed_from_deck():
 
 
 def test_game_fails_when_too_many_players():
-    game = game_factory(game_type=Poker.TYPE_BASIC, players=11)
+    game = game_factory(players=11)
 
     with pytest.raises(TooManyPlayers):
         game.start_round()
@@ -846,104 +844,6 @@ def test_transfer_to_pot__invalid_amout():
 
     with pytest.raises(InvalidAmountNotAnInteger):
         game._transfer_to_pot(player1, -600.66)
-
-
-def test_pot__add_bet():
-    test_pot = Pot()
-
-    player1 = Player()
-    player2 = Player()
-
-    test_pot.add_bet(player1, 250)
-    assert test_pot.bets[player1][0] == 250
-    assert test_pot.total == 250
-
-    test_pot.add_bet(player2, 250)
-    assert test_pot.bets[player2][0] == 250
-    assert test_pot.total == 500
-
-
-def test_pot__max_player_total():
-    test_pot = Pot()
-
-    player1 = Player()
-    player2 = Player()
-
-    test_pot.add_bet(player1, 50)
-    assert test_pot.max_player_total == 50
-
-    test_pot.add_bet(player1, 100)
-    assert test_pot.max_player_total == 150
-
-    test_pot.add_bet(player2, 350)
-    assert test_pot.max_player_total == 350
-
-
-def test_pot__player_total():
-    test_pot = Pot()
-
-    player1 = Player()
-    player2 = Player()
-
-    test_pot.add_bet(player1, 50)
-    test_pot.add_bet(player1, 150)
-    test_pot.add_bet(player1, 200)
-
-    test_pot.add_bet(player2, 120)
-    test_pot.add_bet(player2, 130)
-    test_pot.add_bet(player2, 200)
-
-    assert test_pot.player_total(player1) == 400
-    assert test_pot.player_total(player2) == 450
-
-
-def test_pot__player_owed():
-    test_pot = Pot()
-
-    player1 = Player()
-    player2 = Player()
-
-    test_pot.add_bet(player1, 200)
-
-    assert test_pot.player_owed(player1) == 0
-    assert test_pot.player_owed(player2) == 200
-
-    test_pot.add_bet(player2, 100)
-
-    assert test_pot.player_owed(player1) == 0
-    assert test_pot.player_owed(player2) == 100
-
-    test_pot.add_bet(player2, 200)
-
-    assert test_pot.player_owed(player1) == 100
-    assert test_pot.player_owed(player2) == 0
-
-    test_pot.add_bet(player1, 150)
-
-    assert test_pot.player_owed(player1) == 0
-    assert test_pot.player_owed(player2) == 50
-
-    test_pot.add_bet(player2, 50)
-
-    assert test_pot.player_owed(player1) == 0
-    assert test_pot.player_owed(player2) == 0
-
-
-def test_pot__get_side_pots():
-    pot = Pot()
-
-    player1 = Player(name="Mr. Pink")
-    player2 = Player(name="Mr. White")
-    player3 = Player(name="Mr. Black")
-
-    pot.add_bet(player1, 200)
-    pot.add_bet(player2, 300)
-    pot.add_bet(player3, 400)
-
-    side_pots = pot.get_side_pots()
-    assert side_pots[0] == (200, [player1, player2, player3])
-    assert side_pots[1] == (100, [player2, player3])
-    assert side_pots[2] == (100, [player3])
 
 
 # Rule sets
