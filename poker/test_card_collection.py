@@ -1,6 +1,27 @@
 import pytest
 from card import Card
-from card_collection import CardCollection, InvalidCardPosition, MissingCard, NotASubSet
+from card_collection import (
+    CardCollection,
+    InvalidCardPosition,
+    MissingCard,
+    NotASubSet,
+    NotEnoughSpace,
+)
+
+
+def test_card_collections_are_equal():
+    assert CardCollection(cards=["9C", "9S"]) == CardCollection(cards=["9C", "9S"])
+
+
+def test_card_collections_are_equal_when_cards_are_same_in_different_order():
+    assert CardCollection(cards=["9C", "9S"]) == CardCollection(cards=["9S", "9C"])
+
+
+def test_card_collections_are_not_equal_when_cards_different():
+    assert CardCollection(cards=["10C", "9S"]) != CardCollection(cards=["9C", "9S"])
+    assert CardCollection(cards=["10C", "9S"]) != CardCollection(
+        cards=["9C", "9S", "10C"]
+    )
 
 
 def test_can_init_with_cards():
@@ -291,3 +312,21 @@ def test_can_sub_card_collections__not_a_subset():
     card_collection_2 = CardCollection(cards=["9C", "9S"])
     with pytest.raises(NotASubSet):
         _ = card_collection_2 - card_collection_1
+
+
+def test_cannot_instantiate_with_more_cards_than_max():
+    with pytest.raises(NotEnoughSpace):
+        CardCollection(cards=["9C", "9S"], max_length=1)
+
+
+def test_is_full_when_max_length_is_reached():
+    cards = CardCollection(cards=["9C"], max_length=1)
+
+    with pytest.raises(NotEnoughSpace):
+        cards.insert_at_end(Card("4C"))
+
+    with pytest.raises(NotEnoughSpace):
+        cards.insert_at_start(Card("4C"))
+
+    with pytest.raises(NotEnoughSpace):
+        cards.insert_at(1, Card("4C"))

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import random
+from card import Card
 from card_collection import CardCollection
 from constants import ALL_CARDS
 
@@ -15,16 +16,16 @@ class AbstractShuffler(ABC):
     def shuffle(self, deck: CardCollection) -> None:
         pass
 
+
 def build_list_of_cards_from_mapping(mapping: list, all_cards) -> list:
-    return [all_cards[i - 1] for i in mapping]
+    return [Card(all_cards[i - 1]) for i in mapping]
 
 
-class FakeShufflerByPosition():
-    
+class FakeShufflerByPosition:
     def __init__(self, mapping: list, all_cards=None) -> None:
         all_cards = all_cards or ALL_CARDS
         self.mapping = build_list_of_cards_from_mapping(mapping, all_cards)
-    
+
     def get_mapping(self, cards: list) -> list:
         return self.mapping
 
@@ -62,9 +63,8 @@ class FakeShuffler(AbstractShuffler):
 
             deck._cards = self.mapping[0].copy()
             return
-            
+
         deck._cards = self.mapping.copy()
-        
 
 
 class Shuffler(AbstractShuffler):

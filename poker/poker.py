@@ -4,7 +4,7 @@ from functools import partial
 from math import floor
 from typing import Union
 
-from card import Card
+from card import Card, CardComparator
 from deck import Deck
 from card_collection import EmptyDeck
 from hand import Hand
@@ -21,6 +21,11 @@ from poker_errors import (
 from pot import Pot
 from shuffler import AbstractShuffler, Shuffler
 from turn import TurnManager
+
+
+class PokerCardComparator(CardComparator):
+    def eq(self, a, b):
+        return a.rank == b.rank
 
 
 class Poker:
@@ -420,9 +425,9 @@ class Poker:
 
     @staticmethod
     def _parse_to_cards(hand) -> list:
-        _eq = lambda s, b: s.rank == b.rank
+        comparator = PokerCardComparator()
         _hash = lambda s: s.rank
-        return [Card(c, _eq=_eq, _hash=_hash) for c in hand]
+        return [Card(c, _hash=_hash, comparator=comparator) for c in hand]
 
     @staticmethod
     def _straight_flush_test(hand_1: list, hand_2: list) -> int:

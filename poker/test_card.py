@@ -1,13 +1,18 @@
 from collections import Counter
 import pytest
 
-from card import BadCardError, Card
+from card import BadCardError, Card, CardComparator
 
 
 @pytest.mark.parametrize(
     "card_str",
-    ["42H", "1CC", "9RJ"],
-    ids=["rank too high", "suit incorrect", "joker does not have a rank"],
+    ["14H", "0H", "1CC", "9RJ"],
+    ids=[
+        "rank too high",
+        "rank too low",
+        "suit incorrect",
+        "joker does not have a rank",
+    ],
 )
 def test_card_is_not_valid(card_str):
     with pytest.raises(BadCardError):
@@ -49,10 +54,15 @@ def test_default_eq():
 
 
 def test_override_equal():
-    test_eq = lambda s, b: s.rank == b.rank
-    card_1 = Card("1H", _eq=test_eq)
-    card_2 = Card("1S", _eq=test_eq)
-    card_3 = Card("2S", _eq=test_eq)
+    class TestComparator(CardComparator):
+        def eq(self, a, b):
+            return a.rank == b.rank
+
+    comparator = TestComparator()
+
+    card_1 = Card("1H", comparator=comparator)
+    card_2 = Card("1S", comparator=comparator)
+    card_3 = Card("2S", comparator=comparator)
 
     assert card_1 == card_2
     assert card_2 == card_1

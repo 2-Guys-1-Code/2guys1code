@@ -1,6 +1,7 @@
 from functools import partial
 from typing import Union
 import pytest
+from card import Card
 
 from player import AbstractPokerPlayer, Player
 from poker import Poker, Pot
@@ -158,7 +159,7 @@ def shuffler_factory(
         # Build the deck for this round with the actual card symbols
         new_deck = []
         for j in shuffler_list + left_overs:
-            new_deck.append(all_cards[j - 1])
+            new_deck.append(Card(all_cards[j - 1]))
 
         rounds.append(new_deck)
 

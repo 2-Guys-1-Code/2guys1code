@@ -1,3 +1,4 @@
+import collections
 from typing import Callable, Union
 from card import Card
 
@@ -28,23 +29,52 @@ class NotASubSet(Exception):
 
 class CardCollection:
 
-    _cards: list
-    max_length: int = None
+    DEFAULT_MAX_LENGTH: int = None
 
     def __init__(
         self,
         cards: list = None,
+        max_length: int = None,
         _cmp: Callable = None,
     ) -> None:
+        self.max_length = (
+            max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
+        )
+
         if cards is None:
             self._cards = []
         else:
             self._cards = [Card(c) for c in cards]
 
-        self._cmp = _cmp or self.cmp
+        if self._has_too_many_cards():
+            raise NotEnoughSpace()
+
+        def eq(a, b):
+            return _cmp(a, b) == 0
+
+        self._eq = eq if _cmp else self.cmp
+        self._cmp = _cmp or (lambda a, b: 0)
+
+    def _has_too_many_cards(self) -> bool:
+        return self.max_length is not None and len(self._cards) > self.max_length
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
 
     def cmp(self, a, b) -> int:
-        return 0
+        if type(a) != type(b):
+            return False
+
+        if len(a) != len(b):
+            return False
+
+        if collections.Counter(a) != collections.Counter(b):
+            return False
+
+        return True
+
+    def is_full(self) -> bool:
+        return self.max_length is not None and len(self) >= self.max_length
 
     def _can_add(self, other: Union["CardCollection", Card]) -> bool:
         other_length = 1 if isinstance(other, Card) else len(other)
@@ -54,8 +84,7 @@ class CardCollection:
         if not self._can_add(other):
             raise NotEnoughSpace()
 
-        # TODO: Adding from extending classes will create the wrong class
-        new = CardCollection(self._cards)
+        new = self.__class__(self._cards)
 
         if isinstance(other, Card):
             other = [other]
@@ -85,7 +114,7 @@ class CardCollection:
         return self._cmp(self, b) < 0
 
     def __eq__(self, b):
-        return self._cmp(self, b) == 0
+        return self._eq(self, b)
 
     def __len__(self) -> int:
         return len(self._cards)
@@ -105,10 +134,10 @@ class CardCollection:
         for c in self._cards:
             yield c
 
-    def __contains__(self, card: Card | str):
-        needle = Card(card)
+    def __contains__(self, card: Card):
+        # needle = Card(card)
         try:
-            self.get_position(needle)
+            self.get_position(card)
             return True
         except MissingCard:
             return False
@@ -127,42 +156,43 @@ class CardCollection:
         if not (0 < position < len(self._cards) + 1):
             raise InvalidCardPosition()
 
-    def pull_card(self, card: Card | str) -> Card | None:
+    def pull_card(self, card: Card) -> Card | None:
         if card is None:
             raise CannotPullNone()
 
-        needle = Card(card)
-
         try:
-            self._cards.remove(needle)
+            self._cards.remove(card)
         except ValueError:
             raise MissingCard()
 
-        return needle
+        return card
 
-    def insert_at(self, position: int, card: Card | str) -> None:
+    def insert_at(self, position: int, card: Card) -> None:
         self._validate_insert_position(position)
-        needle = Card(card)
-        self._cards.insert(position - 1, needle)
+        self._insert(position - 1, card)
+
+    def insert_at_start(self, card: Card) -> None:
+        self._insert(0, card)
+
+    def insert_at_end(self, card: Card) -> None:
+        self._insert(len(self._cards), card)
 
     def _validate_insert_position(self, position: int) -> None:
         if not (0 < position <= len(self._cards) + 1):
             raise InvalidCardPosition()
 
-    def insert_at_start(self, card: Card | str) -> None:
-        needle = Card(card)
-        self._cards.insert(0, needle)
+    def _insert(self, position: int, card: Card) -> None:
+        if not self._can_add(card):
+            raise NotEnoughSpace()
+
+        self._cards.insert(position, card)
 
     def peek(self, position: int) -> Card | None:
         self._validate_read_position(position)
         return self._cards[position - 1]
 
-    def insert_at_end(self, card: Card | str) -> None:
-        needle = Card(card)
-        self._cards.insert(len(self._cards), needle)
-
-    def get_position(self, card: Card | str) -> int:
+    def get_position(self, card: Card) -> int:
         try:
-            return self._cards.index(Card(card)) + 1
+            return self._cards.index(card) + 1
         except ValueError:
             raise MissingCard()
