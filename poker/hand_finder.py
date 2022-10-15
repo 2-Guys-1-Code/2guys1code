@@ -23,35 +23,37 @@ class AbstractHandBuilder:
     def __init__(self, hand: CardCollection) -> None:
         self.hand = hand
 
-    def _get_ordered_candidates(self, leftovers: CardCollection) -> CardCollection:
+    def _extract(self, leftovers: CardCollection) -> Iterable:
         raise NotImplementedError
 
-    def _extract(self, leftovers: CardCollection) -> tuple:
-        raise NotImplementedError
-
-    def build(self, leftovers: CardCollection) -> Hand:
+    def build(self, leftovers: CardCollection) -> tuple:
         if len(self.hand) > 4:
-            return self.hand
+            return self.hand, leftovers
 
-        # TODO: _extract is now a glorified "find candidates"; it caps the candidates at the space left.
-        # Let _add add as much as it can and remove from the leftover what it added.
-        extracted, leftovers = self._extract(leftovers)
+        extracted = self._extract(leftovers)
+        new_hand = self._add(extracted)
+        leftovers = self._update_leftovers(leftovers, new_hand)
+        self.hand = new_hand
 
-        # old_hand = hand
-        # new_hand = self._add
-        # added = new_hand - old_hand
-        # leftovers -= added
+        return new_hand, leftovers
 
-        return self._add(extracted), leftovers
+    def _update_leftovers(
+        self, leftovers: CardCollection, new_hand: CardCollection
+    ) -> CardCollection:
+        added = new_hand - self.hand
+        leftovers -= added
+
+        return leftovers
 
     def _add(self, other: Iterable) -> Hand:
+        hand = self.hand
         for unit in other:
             try:
-                self.hand += unit
+                hand += unit
             except NotEnoughSpace:
                 break
 
-        return self.hand
+        return hand
 
 
 class HighCardHandBuilder(AbstractHandBuilder):
@@ -59,18 +61,7 @@ class HighCardHandBuilder(AbstractHandBuilder):
         return CardCollection(sorted(leftovers._cards, reverse=True))
 
     def _extract(self, leftovers: CardCollection):
-        extracted = Hand()
-        space_left = 5 - len(self.hand)
-        candidates = self._get_ordered_candidates(leftovers)
-
-        for highest in candidates:
-            if len(extracted) == space_left:
-                break
-
-            leftovers -= highest
-            extracted += highest
-
-        return extracted, leftovers
+        return self._get_ordered_candidates(leftovers)
 
 
 class SetBuilder:
@@ -87,21 +78,7 @@ class SetBuilder:
         return candidates
 
     def _extract(self, leftovers: Hand):
-        extracted = Hand()
-
-        candidates = self._get_ordered_candidates(leftovers)
-
-        space_left = 5 - len(self.hand)
-        nb_pairs = math.floor(space_left / self.set_size)
-
-        for idx, _set in enumerate(candidates):
-            if idx == nb_pairs:
-                break
-
-            extracted += _set
-            leftovers -= _set
-
-        return extracted, leftovers
+        return self._get_ordered_candidates(leftovers)
 
 
 class PairHandBuilder(SetBuilder, AbstractHandBuilder):
@@ -118,11 +95,56 @@ class ThreeOfKindHandBuilder(SetBuilder, AbstractHandBuilder):
         return super(ThreeOfKindHandBuilder, self)._extract(leftovers)
 
 
+class StraightHandBuilder(AbstractHandBuilder):
+    set_size: int = 5
+
+    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
+        return CardCollection(cards[len(cards) - self.set_size : len(cards) - 1])
+
+    def _extract(self, leftovers: Hand):
+        straights = self._find_straights(leftovers)
+
+        straights = [
+            self._get_top_5_cards(s) for s in straights if len(s) >= self.set_size
+        ]
+
+        # only return the best straight
+
+        return straights
+
+    def _find_straights(self, leftovers: CardCollection) -> list:
+        sorted_leftovers = sorted(leftovers)
+
+        straights = []
+        straight = CardCollection([sorted_leftovers[0]])
+
+        for x in range(1, len(sorted_leftovers)):
+            if sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank - 1:
+                straight += sorted_leftovers[x]
+            elif sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank:
+                # This will lose some cards;
+                continue
+            else:
+                straights.append(straight)
+                straight = CardCollection([sorted_leftovers[x]])
+
+        straights.append(straight)
+
+        used = CardCollection([c for s in straights for c in s])
+        leftovers -= used
+
+        if len(leftovers):
+            straights.extend(self._find_straights(leftovers))
+
+        return straights
+
+
 class BestHandFinder:
     def find(self, cards: CardCollection) -> Hand:
         leftovers = cards
 
         builders = [
+            StraightHandBuilder,
             ThreeOfKindHandBuilder,
             PairHandBuilder,
             HighCardHandBuilder,
@@ -131,7 +153,8 @@ class BestHandFinder:
         _hand = Hand()
         for cls in builders:
             builder = cls(_hand)
-            _hand, leftovers = builder.build(leftovers)
+            result = builder.build(leftovers)
+            _hand, leftovers = result
 
         return _hand
 

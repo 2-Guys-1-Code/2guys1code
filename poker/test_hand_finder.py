@@ -1,8 +1,9 @@
+import collections
 import pytest
 
 from card_collection import CardCollection
 from hand import Hand
-from hand_finder import BestHandFinder
+from hand_finder import BestHandFinder, StraightHandBuilder
 from card import Card
 
 
@@ -19,16 +20,35 @@ def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
     return 1
 
 
+def test_find_straights():
+    builder = StraightHandBuilder(Hand())
+
+    leftovers = CardCollection(["2S", "3D", "2C", "3S", "4S", "7C", "8D", "10C"])
+    result = builder._find_straights(leftovers)
+
+    result = collections.Counter(result)
+    expected = collections.Counter(
+        [
+            CardCollection(["2S", "3D", "4S"]),
+            CardCollection(["2C", "3S"]),
+            CardCollection(["7C", "8D"]),
+            CardCollection(["10C"]),
+        ]
+    )
+
+    assert result == expected
+
+
 @pytest.mark.parametrize(
     "cards, expectation",
     [
         [
-            ["13C", "8D", "13D", "12C", "3C", "5D", "10S"],
-            ["13C", "13D", "12C", "10S", "8D"],
-        ],
-        [
             ["2S", "1D", "4S", "6S", "8S", "10C", "9C"],
             ["1D", "10C", "9C", "8S", "6S"],
+        ],
+        [
+            ["13C", "8D", "13D", "12C", "3C", "5D", "10S"],
+            ["13C", "13D", "12C", "10S", "8D"],
         ],
         [
             ["2S", "1D", "2C", "1S", "8S", "10C", "9C"],
@@ -38,12 +58,17 @@ def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
             ["11S", "1D", "13C", "12D", "8S", "8C", "8D"],
             ["8D", "8C", "8S", "1D", "13C"],
         ],
+        [
+            ["1S", "12D", "11C", "10D", "9S", "8C", "7D"],
+            ["12D", "11C", "10D", "9S", "8C"],
+        ],
     ],
     ids=[
-        "Find Pair of Kings",
         "Find all high cards",
-        "find 2 pairs",
+        "Find Pair of Kings",
+        "Find 2 pairs",
         "find best 3 of a kind",
+        "find best straight",
     ],
 )
 def test_find_best_hands(cards, expectation):
