@@ -116,9 +116,11 @@ class StraightHandBuilder(AbstractHandBuilder):
         straight = CardCollection([sorted_leftovers[0]])
 
         for x in range(1, len(sorted_leftovers)):
-            if sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank - 1:
+            if sorted_leftovers[x - 1].get_difference(sorted_leftovers[x]) == 1:
+                # if sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank - 1:
                 straight += sorted_leftovers[x]
-            elif sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank:
+            elif sorted_leftovers[x - 1].get_difference(sorted_leftovers[x]) == 0:
+                # elif sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank:
                 # This will lose some cards;
                 continue
             else:
@@ -137,6 +139,9 @@ class StraightHandBuilder(AbstractHandBuilder):
 
 
 class BestHandFinder:
+    def __init__(self, hand_factory: Hand = None) -> None:
+        self.hand_factory = hand_factory or Hand
+
     def find(self, cards: CardCollection) -> Hand:
         leftovers = cards
 
@@ -147,7 +152,7 @@ class BestHandFinder:
             HighCardHandBuilder,
         ]
 
-        _hand = Hand()
+        _hand = self.hand_factory()
         for cls in builders:
             builder = cls(_hand)
             result = builder.build(leftovers)

@@ -2,8 +2,8 @@ import collections
 import pytest
 
 from card_collection import CardCollection
-from conftest import make_poker_cards
-from hand import Hand
+from conftest import make_cards, make_poker_cards, make_poker_hand
+from hand import Hand, PokerHand
 from hand_finder import BestHandFinder, StraightHandBuilder
 
 
@@ -11,17 +11,17 @@ def test_find_straights():
     builder = StraightHandBuilder(Hand())
 
     leftovers = CardCollection(
-        make_poker_cards(["2S", "3D", "2C", "3S", "4S", "7C", "8D", "10C"])
+        make_cards(["2S", "3D", "2C", "3S", "4S", "7C", "8D", "10C"])
     )
     result = builder._find_straights(leftovers)
 
     result = collections.Counter(result)
     expected = collections.Counter(
         [
-            CardCollection(make_poker_cards(["2S", "3D", "4S"])),
-            CardCollection(make_poker_cards(["2C", "3S"])),
-            CardCollection(make_poker_cards(["7C", "8D"])),
-            CardCollection(make_poker_cards(["10C"])),
+            CardCollection(make_cards(["2S", "3D", "4S"])),
+            CardCollection(make_cards(["2C", "3S"])),
+            CardCollection(make_cards(["7C", "8D"])),
+            CardCollection(make_cards(["10C"])),
         ]
     )
 
@@ -63,7 +63,7 @@ def test_find_straights():
 def test_find_best_hands(cards, expectation):
     card_collection = CardCollection(make_poker_cards(cards))
 
-    best_hand_finder = BestHandFinder()
+    best_hand_finder = BestHandFinder(hand_factory=PokerHand)
     best_hand = best_hand_finder.find(card_collection)
 
-    assert best_hand == Hand(make_poker_cards(expectation))
+    assert best_hand == make_poker_hand(expectation)

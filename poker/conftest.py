@@ -2,9 +2,9 @@ from typing import Iterable, Union
 import pytest
 
 from card import Card
-from hand import Hand
+from hand import PokerCardComparator, PokerHand
 from player import Player
-from poker import Poker, PokerCardComparator, Pot
+from poker import Poker, Pot
 from poker_errors import DuplicateCardException
 from shuffler import AbstractShuffler, FakeShuffler
 
@@ -32,7 +32,7 @@ def make_poker_cards(cards: Iterable) -> list:
 
 
 def make_poker_hand(cards: Iterable) -> list:
-    return Hand(make_poker_cards(cards))
+    return PokerHand(make_poker_cards(cards))
 
 
 @pytest.fixture()
