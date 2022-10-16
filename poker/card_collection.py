@@ -33,18 +33,14 @@ class CardCollection:
 
     def __init__(
         self,
-        cards: list = None,
+        cards: list[Card] = None,
         max_length: int = None,
         _cmp: Callable = None,
     ) -> None:
         self.max_length = (
             max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
         )
-
-        if cards is None:
-            self._cards = []
-        else:
-            self._cards = [Card(c) for c in cards]
+        self._cards = [] if cards is None else [c for c in cards]
 
         if self._has_too_many_cards():
             raise NotEnoughSpace()

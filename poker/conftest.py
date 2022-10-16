@@ -1,10 +1,11 @@
 from functools import partial
-from typing import Union
+from typing import Iterable, Union
 import pytest
 from card import Card
+from hand import Hand
 
 from player import AbstractPokerPlayer, Player
-from poker import Poker, Pot
+from poker import Poker, PokerCardComparator, Pot
 from poker_errors import DuplicateCardException
 from shuffler import AbstractShuffler, FakeShuffler
 
@@ -18,6 +19,17 @@ CARDS_NO_JOKERS = [
     '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
 ]
 # fmt: on
+
+
+comparator = PokerCardComparator()
+
+
+def make_poker_cards(cards: Iterable) -> list:
+    return [Card(c, comparator=comparator) for c in cards]
+
+
+def make_poker_hand(cards: Iterable) -> list:
+    return Hand(make_poker_cards(cards))
 
 
 @pytest.fixture()

@@ -9,42 +9,44 @@ class BadCardError(Exception):
 
 
 class AbstractComparator(ABC):
-    def gt(self, a, b):
+    def gt(self, a, b) -> bool:
         raise NotImplementedError
 
-    def lt(self, b):
+    def lt(self, b) -> bool:
         raise NotImplementedError
 
-    def eq(self, a, b):
+    def eq(self, a, b) -> bool:
         raise NotImplementedError
 
-    def ne(self, a, b):
+    def ne(self, a, b) -> bool:
+        raise NotImplementedError
+
+    def get_difference(self, a, b) -> int:
         raise NotImplementedError
 
 
 class CardComparator(AbstractComparator):
-    def gt(self, a, b):
+    def gt(self, a, b) -> bool:
         if b is None:
             return True
         return a.rank > b.rank
 
-    def lt(self, a, b):
+    def lt(self, a, b) -> bool:
         if b is None:
             return False
         return a.rank < b.rank
 
-    def eq(self, a, b):
+    def eq(self, a, b) -> bool:
         return a.rank == b.rank and a.suit == b.suit
 
-    def ne(self, a, b):
+    def ne(self, a, b) -> bool:
         return not self.eq(a, b)
+
+    def get_difference(self, a, b) -> int:
+        return b.rank - a.rank
 
 
 class Card:
-
-    suit = None
-    rank: Union[int, None] = 0
-
     def __init__(
         self,
         _card: Union[str, int, "Card"],
@@ -53,28 +55,17 @@ class Card:
         comparator: AbstractComparator = None,
     ) -> None:
         self._comparator = comparator or CardComparator()
-
-        # self._equal_method = _eq if _eq is not None else self._equal
         self._hash_method = _hash if _hash is not None else self._hash
 
-        if isinstance(_card, Card):
-            self.rank = _card.rank
-            self.suit = _card.suit
-            return
+        rank, suit = self._get_rank_and_suit(_card)
 
-        result = re.search(r"^(\d{0,2})(['C','H','S','D'])$", _card)
-        if result is None:
-            result = re.search(r"^()(BJ|RJ)$", _card)
-
-        if result is None:
-            raise BadCardError()
-
-        suit = result.group(2)
-        rank = result.group(1)
+        # if rank is None:
+        #     # We probably want a more explicit way to deal with "suit-less" cards and jokers
+        #     raise BadCardError()
 
         self.suit = suit
 
-        if rank == "":
+        if rank == "" or rank is None:
             self.rank = None
         else:
             self.rank = int(rank)
@@ -82,13 +73,21 @@ class Card:
             if not 0 < self.rank < 14:
                 raise BadCardError()
 
-            # This no longer belongs here, call in poker
-            self._reindex_card()
+    def _get_rank_and_suit(self, card: Union[str, int, "Card"]) -> tuple:
+        if isinstance(card, Card):
+            return card.rank, card.suit
 
-    def _reindex_card(self):
-        if self.rank == 0:
-            return
-        self.rank = ((self.rank - 2 + 13) % 13) + 2
+        return self._parse_representation(card)
+
+    def _parse_representation(self, representation: Union[str, int]) -> tuple:
+        result = re.search(r"^(\d{0,2})(['C','H','S','D'])$", representation)
+        if result is None:
+            result = re.search(r"^()(BJ|RJ)$", representation)
+
+        if result is None:
+            raise BadCardError()
+
+        return result.group(1), result.group(2)
 
     def __gt__(self, b):
         return self._comparator.gt(self, b)
@@ -104,15 +103,24 @@ class Card:
         b = self.__class__(b)
         return self._comparator.ne(self, b)
 
+    def get_difference(self, b: "Card") -> int:
+        return self._comparator.get_difference(self, b)
+
     def __sub__(self, b):
-        rank = self.rank - b
-        return Card(f"{rank}{self.suit}")
+        try:
+            rank = self.rank - b
+        except BadCardError:
+            pass
+
+        return Card(
+            f"{rank}{self.suit}",
+            _hash=self._hash_method,
+            comparator=self._comparator,
+        )
 
     def __repr__(self) -> str:
         if self.rank is None:
             return self.suit
-        if self.rank == 14:
-            return f"1{self.suit}"
 
         return f"{self.rank}{self.suit}"
 

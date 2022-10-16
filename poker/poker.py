@@ -6,7 +6,7 @@ from typing import Union
 
 from card import Card, CardComparator
 from deck import Deck
-from card_collection import EmptyDeck
+from card_collection import CardCollection, EmptyDeck
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
@@ -24,8 +24,27 @@ from turn import TurnManager
 
 
 class PokerCardComparator(CardComparator):
+    def gt(self, a, b):
+        if b is None:
+            return True
+        return self._reindex_rank(a.rank) > self._reindex_rank(b.rank)
+
+    def lt(self, a, b):
+        if b is None:
+            return False
+        return self._reindex_rank(a.rank) < self._reindex_rank(b.rank)
+
     def eq(self, a, b):
-        return a.rank == b.rank
+        return self._reindex_rank(a.rank) == self._reindex_rank(b.rank)
+
+    def get_difference(self, a, b) -> int:
+        return self._reindex_rank(b.rank) - self._reindex_rank(a.rank)
+
+    def _reindex_rank(self, rank: int):
+        if rank is None:
+            return None
+
+        return ((rank - 2 + 13) % 13) + 2
 
 
 class Poker:
@@ -400,7 +419,7 @@ class Poker:
         return winners
 
     @staticmethod
-    def beats(hand_1: list, hand_2: list) -> int:
+    def beats(hand_1: Hand, hand_2: Hand) -> int:
         hand_1 = Poker._parse_to_cards(hand_1).copy()
         hand_2 = Poker._parse_to_cards(hand_2).copy()
 
@@ -604,7 +623,8 @@ class Poker:
     def _extract_straight_flush(hand: list) -> Union[Card, None]:
         hand.sort()
         for x in range(1, len(hand)):
-            if hand[x - 1].rank != hand[x].rank - 1:
+            if hand[x - 1].get_difference(hand[x]) != 1:
+                # if hand[x - 1] != hand[x] - 1:
                 return None
             if hand[x - 1].suit != hand[x].suit:
                 return None
@@ -616,7 +636,8 @@ class Poker:
         hand.sort()
         new_hand = []
         for x in range(1, len(hand)):
-            if hand[x - 1].rank != hand[x].rank - 1:
+            if hand[x - 1].get_difference(hand[x]) != 1:
+                # if hand[x - 1] != hand[x] - 1:
                 new_hand = []
                 continue
             if hand[x - 1].suit != hand[x].suit:
@@ -656,7 +677,8 @@ class Poker:
     def _extract_straight(hand: list) -> Union[Card, None]:
         hand.sort()
         for x in range(1, len(hand)):
-            if hand[x - 1].rank != hand[x].rank - 1:
+            if hand[x - 1].get_difference(hand[x]) != 1:
+                # if hand[x - 1] != hand[x] - 1:
                 return None
 
         return hand[0]
@@ -672,7 +694,7 @@ class Poker:
     @staticmethod
     def _remove_cards_by_rank(hand: list, rank_card: Card) -> None:
         for x in range(len(hand) - 1, -1, -1):
-            if hand[x].rank == rank_card.rank:
+            if hand[x] == rank_card:
                 hand.pop(x)
 
     @staticmethod
@@ -683,7 +705,7 @@ class Poker:
 
         pairs.sort(reverse=True)
         for x in range(len(hand) - 1, -1, -1):
-            if hand[x].rank == pairs[0].rank or hand[x].rank == pairs[1].rank:
+            if hand[x] == pairs[0] or hand[x] == pairs[1]:
                 hand.pop(x)
         return [pairs[0], pairs[1]]
 

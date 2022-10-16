@@ -7,12 +7,12 @@ from card import Card
 import math
 
 
-def _find_sets(hand: Hand) -> dict:
+def _find_sets(cards: CardCollection) -> dict:
     cards_by_rank = {}
 
-    for c in hand:
+    for c in cards:
         if c.rank not in cards_by_rank:
-            cards_by_rank[c.rank] = Hand()
+            cards_by_rank[c.rank] = CardCollection()
 
         cards_by_rank[c.rank] += c
 

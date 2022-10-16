@@ -1,14 +1,12 @@
-from typing import Union
 from unittest import mock
 import pytest
 
 from card import Card
-from conftest import make_pot, shuffler_factory
+from conftest import make_poker_hand, make_pot, shuffler_factory
 from hand import Hand
-from card_collection import EmptyDeck
 from deck import Deck
-from player import AbstractPokerPlayer, Player
-from poker import Poker, Pot
+from player import Player
+from poker import Poker
 from poker_errors import (
     IllegalActionException,
     IllegalBetException,
@@ -18,7 +16,7 @@ from poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from shuffler import AbstractShuffler, FakeShuffler, FakeShufflerByPosition
+from shuffler import FakeShufflerByPosition
 from conftest import game_factory, CARDS_NO_JOKERS
 
 
@@ -104,7 +102,7 @@ from conftest import game_factory, CARDS_NO_JOKERS
     ],
 )
 def test_compare_hands(hand_1, hand_2, expectation):
-    assert Poker.beats(hand_1, hand_2) == expectation
+    assert Poker.beats(make_poker_hand(hand_1), make_poker_hand(hand_2)) == expectation
 
 
 @pytest.mark.parametrize(

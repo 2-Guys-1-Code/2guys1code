@@ -2,6 +2,7 @@ import collections
 import pytest
 
 from card_collection import CardCollection
+from conftest import make_poker_cards
 from hand import Hand
 from hand_finder import BestHandFinder, StraightHandBuilder
 from card import Card
@@ -23,16 +24,18 @@ def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
 def test_find_straights():
     builder = StraightHandBuilder(Hand())
 
-    leftovers = CardCollection(["2S", "3D", "2C", "3S", "4S", "7C", "8D", "10C"])
+    leftovers = CardCollection(
+        make_poker_cards(["2S", "3D", "2C", "3S", "4S", "7C", "8D", "10C"])
+    )
     result = builder._find_straights(leftovers)
 
     result = collections.Counter(result)
     expected = collections.Counter(
         [
-            CardCollection(["2S", "3D", "4S"]),
-            CardCollection(["2C", "3S"]),
-            CardCollection(["7C", "8D"]),
-            CardCollection(["10C"]),
+            CardCollection(make_poker_cards(["2S", "3D", "4S"])),
+            CardCollection(make_poker_cards(["2C", "3S"])),
+            CardCollection(make_poker_cards(["7C", "8D"])),
+            CardCollection(make_poker_cards(["10C"])),
         ]
     )
 
@@ -72,8 +75,10 @@ def test_find_straights():
     ],
 )
 def test_find_best_hands(cards, expectation):
+    card_collection = CardCollection(make_poker_cards(cards))
+
     best_hand_finder = BestHandFinder()
-    best_hand = best_hand_finder.find(CardCollection(cards))
+    best_hand = best_hand_finder.find(card_collection)
 
     best_hand._cmp = beats_for_test
 
