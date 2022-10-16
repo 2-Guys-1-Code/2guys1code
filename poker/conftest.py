@@ -1,10 +1,9 @@
-from functools import partial
 from typing import Iterable, Union
 import pytest
+
 from card import Card
 from hand import Hand
-
-from player import AbstractPokerPlayer, Player
+from player import Player
 from poker import Poker, PokerCardComparator, Pot
 from poker_errors import DuplicateCardException
 from shuffler import AbstractShuffler, FakeShuffler

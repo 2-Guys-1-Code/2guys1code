@@ -1,4 +1,3 @@
-from card import Card
 from conftest import make_cards
 from deck import Deck
 from shuffler import FakeShuffler, Shuffler

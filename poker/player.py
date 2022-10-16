@@ -1,18 +1,11 @@
-from abc import ABC, abstractmethod
-
-from typing import TYPE_CHECKING, Union
+from abc import ABC
+from typing import Union
 
 from hand import Hand
 from poker_errors import InvalidAmountTooMuch
 
-if TYPE_CHECKING:
-    from poker import Poker
-
 
 class AbstractPokerPlayer(ABC):
-    purse: int
-    _hand: Hand
-
     def __init__(
         self, purse: int = 0, name: str = "John", hand_factory: Hand = Hand
     ) -> None:

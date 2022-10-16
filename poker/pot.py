@@ -3,10 +3,6 @@ from player import AbstractPokerPlayer
 
 
 class SidePot:
-    total_contribution: int
-    value: int
-    players: list[AbstractPokerPlayer]
-
     def __init__(self, value, total_contribution) -> None:
         self.value = value
         self.total_contribution = total_contribution
@@ -29,8 +25,6 @@ class SidePot:
 
 
 class Pot:
-    bets: dict
-
     def __init__(self) -> None:
         self.bets = defaultdict(list)
 

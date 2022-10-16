@@ -2,7 +2,7 @@ from unittest import mock
 import pytest
 
 from card import Card
-from conftest import make_poker_hand, make_pot, shuffler_factory
+from conftest import make_cards, make_poker_hand, make_pot, shuffler_factory
 from hand import Hand
 from deck import Deck
 from player import Player
@@ -323,9 +323,9 @@ def test_fold(pot_factory_factory):
 def test_find_winner():
     game = Poker()
 
-    hand1 = Hand(cards=["13C", "13H", "4S", "7D", "8D"], _cmp=Poker.beats)
-    hand2 = Hand(cards=["12C", "12S", "6C", "2D", "3H"], _cmp=Poker.beats)
-    hand3 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
+    hand1 = Hand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]), _cmp=Poker.beats)
+    hand2 = Hand(cards=make_cards(["12C", "12S", "6C", "2D", "3H"]), _cmp=Poker.beats)
+    hand3 = Hand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]), _cmp=Poker.beats)
 
     player1 = Player()
     player2 = Player()
@@ -342,9 +342,9 @@ def test_find_winner():
 def test_find_winner__tied_hands():
     game = Poker()
 
-    hand1 = Hand(cards=["13C", "13H", "4S", "7D", "8D"], _cmp=Poker.beats)
-    hand2 = Hand(cards=["9C", "9S", "7C", "8C", "5D"], _cmp=Poker.beats)
-    hand3 = Hand(cards=["13S", "13D", "4C", "8H", "7D"], _cmp=Poker.beats)
+    hand1 = Hand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]), _cmp=Poker.beats)
+    hand2 = Hand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]), _cmp=Poker.beats)
+    hand3 = Hand(cards=make_cards(["13S", "13D", "4C", "8H", "7D"]), _cmp=Poker.beats)
 
     player1 = Player()
     player2 = Player()

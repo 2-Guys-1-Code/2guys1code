@@ -4,8 +4,6 @@ from card import Card
 from card_collection import CardCollection
 from constants import ALL_CARDS
 
-# from deck import Deck
-
 
 class AbstractShuffler(ABC):
     @abstractmethod
@@ -27,8 +25,6 @@ class FakeShufflerByPosition:
 
 
 class FakeShuffler(AbstractShuffler):
-    mapping: list
-
     def __init__(self, mapping: list) -> None:
         self.call_count = 0
         if type(mapping[0]) == list:

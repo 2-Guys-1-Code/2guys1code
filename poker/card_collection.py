@@ -1,5 +1,6 @@
 import collections
-from typing import Callable, Union
+from typing import Union
+
 from card import Card
 
 
@@ -35,7 +36,6 @@ class CardCollection:
         self,
         cards: list[Card] = None,
         max_length: int = None,
-        _cmp: Callable = None,
     ) -> None:
         self.max_length = (
             max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
@@ -45,29 +45,11 @@ class CardCollection:
         if self._has_too_many_cards():
             raise NotEnoughSpace()
 
-        def eq(a, b):
-            return _cmp(a, b) == 0
-
-        self._eq = eq if _cmp else self.cmp
-        self._cmp = _cmp or (lambda a, b: 0)
-
     def _has_too_many_cards(self) -> bool:
         return self.max_length is not None and len(self._cards) > self.max_length
 
     def __hash__(self) -> int:
         return hash(repr(self))
-
-    def cmp(self, a, b) -> int:
-        if type(a) != type(b):
-            return False
-
-        if len(a) != len(b):
-            return False
-
-        if collections.Counter(a) != collections.Counter(b):
-            return False
-
-        return True
 
     def is_full(self) -> bool:
         return self.max_length is not None and len(self) >= self.max_length
@@ -76,11 +58,11 @@ class CardCollection:
         other_length = 1 if isinstance(other, Card) else len(other)
         return self.max_length is None or len(self) + other_length <= self.max_length
 
-    def __add__(self, other: Union["CardCollection", Card]) -> "CardCollection":
-        if not self._can_add(other):
-            raise NotEnoughSpace()
+    def clone(self) -> "CardCollection":
+        return self.__class__(cards=self._cards, max_length=self.max_length)
 
-        new = self.__class__(self._cards)
+    def __add__(self, other: Union["CardCollection", Card]) -> "CardCollection":
+        new = self.clone()
 
         if isinstance(other, Card):
             other = [other]
@@ -91,7 +73,7 @@ class CardCollection:
         return new
 
     def __sub__(self, other: Union["CardCollection", Card]) -> "CardCollection":
-        new = self.__class__(self._cards)
+        new = self.clone()
 
         if isinstance(other, Card):
             other = [other]
@@ -104,11 +86,17 @@ class CardCollection:
 
         return new
 
-    def __lt__(self, b):
-        return self._cmp(self, b) < 0
-
     def __eq__(self, b):
-        return self._eq(self, b)
+        if type(self) != type(b):
+            return False
+
+        if len(self) != len(b):
+            return False
+
+        if collections.Counter(self) != collections.Counter(b):
+            return False
+
+        return True
 
     def __len__(self) -> int:
         return len(self._cards)
@@ -116,12 +104,17 @@ class CardCollection:
     def __repr__(self) -> str:
         return " ".join([str(c) for c in self._cards])
 
-    def __getitem__(self, index: int | slice) -> Card | None:
+    def _slice(self, slice: slice) -> list:
+        return CardCollection(
+            cards=[
+                self._cards[i]
+                for i in range(slice.start, slice.stop + 1, slice.step or 1)
+            ]
+        )
+
+    def __getitem__(self, index: int | slice) -> Card | list:
         if isinstance(index, slice):
-            _slice = []
-            for i in range(index.start, index.stop + 1, index.step or 1):
-                _slice.append(self._cards[i])
-            return _slice
+            return self._slice(index)
         return self.peek(index + 1)
 
     def __iter__(self):
@@ -129,12 +122,12 @@ class CardCollection:
             yield c
 
     def __contains__(self, card: Card):
-        # needle = Card(card)
         try:
             self.get_position(card)
-            return True
         except MissingCard:
             return False
+
+        return True
 
     def pull_from_start(self) -> Card | None:
         return self.pull_from_position(1)

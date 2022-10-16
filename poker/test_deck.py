@@ -1,8 +1,8 @@
 import pytest
+
 from deck import Deck
-from card_collection import InvalidCardPosition, MissingCard
+from card_collection import InvalidCardPosition
 from poker import Card
-from shuffler import FakeShuffler
 
 
 def test_create_deck():

@@ -1,4 +1,3 @@
-from collections import Counter
 import pytest
 
 from card import BadCardError, Card, CardComparator
@@ -72,30 +71,6 @@ def test_override_equal():
 
     assert card_3 != card_1
     assert card_1 != card_3
-
-
-# def test_count_cards():
-#     cards = [
-#         Card("1H"),
-#         Card("1H"),
-#         Card("1S"),
-#     ]
-
-#     result = Counter(cards).items()
-#     assert list(result) == [(Card("1H"), 2), (Card("1S"), 1)]
-
-
-# def test_count_cards_override_hash():
-#     _hash = lambda s: hash((s.rank, s.suit))
-#     cards = [
-#         Card("1H", _hash=_hash),
-#         Card("1H", _hash=_hash),
-#         Card("1S", _hash=_hash),
-#         Card("1D", _hash=_hash),
-#     ]
-
-#     result = Counter(cards).items()
-#     assert list(result) == [(Card("1H"), 2), (Card("1S"), 1)]
 
 
 @pytest.mark.parametrize(

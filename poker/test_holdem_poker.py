@@ -1,15 +1,11 @@
 from functools import partial
-from card_collection import CardCollection
-from hand import Hand
-from card import Card
+
 from conftest import (
     game_factory as default_game_factory,
     shuffler_factory as _shuffler_factory,
 )
 from player import Player
 from poker import Poker
-from hand_finder import BestHandFinder
-import pytest
 
 game_factory = partial(default_game_factory, game_type=Poker.TYPE_HOLDEM)
 shuffler_factory = partial(_shuffler_factory, cards_per_hand=2)

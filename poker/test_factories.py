@@ -1,5 +1,6 @@
 import pytest
-from conftest import make_cards, shuffler_factory
+
+from conftest import shuffler_factory
 from deck import Deck, DeckWithoutJokers
 from hand import Hand
 from poker_errors import DuplicateCardException
@@ -134,7 +135,7 @@ def test_shuffler_factory__can_handle_padding():
     shuffler.shuffle(deck)
 
     first_cards = deck[0:6]
-    assert first_cards == make_cards(["1H", "3C", "4C", "5C", "6C", "7S", "10H"])
+    assert str(first_cards) == "1H 3C 4C 5C 6C 7S 10H"
 
 
 def test_shuffler_factory__configure_hand_size():

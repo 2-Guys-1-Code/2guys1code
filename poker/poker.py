@@ -6,7 +6,7 @@ from typing import Union
 
 from card import Card, CardComparator
 from deck import Deck, DeckWithoutJokers
-from card_collection import EmptyDeck
+from card_collection import CardCollection, EmptyDeck
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
@@ -66,20 +66,6 @@ class Poker:
     STEP_REVEAL_FLOP: str = "REVEAL_FLOP"
     STEP_REVEAL_TURN: str = "REVEAL_TURN"
 
-    _hands: list
-    _deck: Deck
-    _discard_pile: Hand
-
-    _game_type: str
-    _players: list[AbstractPokerPlayer]
-    _round_players: list[AbstractPokerPlayer]
-    kitty: int
-    game_winner: Union[None, AbstractPokerPlayer]
-    round_count: int
-    step_count: int
-    _shuffler: AbstractShuffler
-    current_player: Union[None, AbstractPokerPlayer]
-
     def __init__(
         self,
         shuffler: AbstractShuffler = None,
@@ -92,8 +78,8 @@ class Poker:
 
         self._set_deck()
         self._set_round_steps()
-        self._discard_pile = Hand()
-        self._community_pile = Hand()
+        self._discard_pile = CardCollection()
+        self._community_pile = CardCollection()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
 

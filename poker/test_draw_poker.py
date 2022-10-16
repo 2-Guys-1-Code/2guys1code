@@ -1,6 +1,6 @@
 from functools import partial
-
 import pytest
+
 from card import Card
 from conftest import (
     game_factory as default_game_factory,

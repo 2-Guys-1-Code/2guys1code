@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Union
 
 from card import Card
 from card_collection import CardCollection
@@ -23,13 +23,9 @@ def make_all_standard_cards():
 
 
 class Deck(CardCollection):
-    def __init__(
-        self,
-        cards: list = None,
-        _cmp: Callable = None,
-    ) -> None:
+    def __init__(self) -> None:
         cards = [Card("RJ"), Card("BJ")] + make_all_standard_cards()
-        super(Deck, self).__init__(cards=cards, _cmp=_cmp)
+        super(Deck, self).__init__(cards=cards)
 
     def pull_from_top(self) -> Union[Card, None]:
         return self.pull_from_position(1)
@@ -42,10 +38,6 @@ class Deck(CardCollection):
 
 
 class DeckWithoutJokers(Deck):
-    def __init__(
-        self,
-        cards: list = None,
-        _cmp: Callable = None,
-    ) -> None:
+    def __init__(self) -> None:
         cards = make_all_standard_cards()
-        super(Deck, self).__init__(cards=cards, _cmp=_cmp)
+        super(Deck, self).__init__(cards=cards)

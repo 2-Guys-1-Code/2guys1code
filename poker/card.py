@@ -1,6 +1,5 @@
 from abc import ABC
 import re
-
 from typing import Union
 
 
@@ -46,7 +45,6 @@ class Card:
     def __init__(
         self,
         _card: Union[str, int, "Card"],
-        _eq=None,
         _hash=None,
         comparator: AbstractComparator = None,
     ) -> None:
