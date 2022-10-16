@@ -24,6 +24,10 @@ CARDS_NO_JOKERS = [
 comparator = PokerCardComparator()
 
 
+def make_cards(cards: Iterable) -> list:
+    return [Card(c) for c in cards]
+
+
 def make_poker_cards(cards: Iterable) -> list:
     return [Card(c, comparator=comparator) for c in cards]
 
@@ -62,7 +66,7 @@ def pot_factory_factory():
 def game_factory(
     players: Union[int, list] = 3,
     game_type: str = Poker.TYPE_STUD,
-    chips_per_player: int = 500,
+    chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
     pot_factory=None,
 ) -> Poker:

@@ -5,8 +5,8 @@ from math import floor
 from typing import Union
 
 from card import Card, CardComparator
-from deck import Deck
-from card_collection import CardCollection, EmptyDeck
+from deck import Deck, DeckWithoutJokers
+from card_collection import EmptyDeck
 from hand import Hand
 from player import AbstractPokerPlayer, Player
 from poker_errors import (
@@ -98,10 +98,7 @@ class Poker:
         self.hand_factory = partial(hand_factory, _cmp=Poker.beats)
 
     def _set_deck(self) -> None:
-        self._deck = Deck()
-
-        self._deck.pull_card("RJ")
-        self._deck.pull_card("BJ")
+        self._deck = DeckWithoutJokers()
 
     # We should have a steps factory per game type that
     # returns the whole list of steps with their config

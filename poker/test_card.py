@@ -113,21 +113,25 @@ def test_card_is_valid(card, expected):
     assert str(card) == expected
 
 
-@pytest.mark.parametrize(
-    "operand, expected",
-    [
-        [1, "4D"],
-        [3, "2D"],
-    ],
-)
-def test_sub_dunder(operand, expected):
-    test_card = Card("5D") - operand
-    assert str(test_card) == expected
+def test_card_is_greater_when_rank_is_higher():
+    assert Card("5D") > Card("4D")
 
 
-def test_invalid_sub_dunder():
-    with pytest.raises(BadCardError):
-        Card("5D") - 6
+def test_card_is_not_greater_when_rank_is_same():
+    assert not Card("5D") > Card("5D")
+
+
+def test_card_is_lesser_when_rank_is_lower():
+    assert Card("4D") < Card("5D")
+
+
+def test_card_is_not_lesser_when_rank_is_same():
+    assert not Card("5D") < Card("5D")
+
+
+def test_get_difference():
+    assert Card("5D").get_difference(Card("3D")) == -2
+    assert Card("3D").get_difference(Card("5D")) == 2
 
 
 # test dunders (gt, lt)

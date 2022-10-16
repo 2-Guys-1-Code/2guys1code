@@ -27,13 +27,9 @@ class AbstractComparator(ABC):
 
 class CardComparator(AbstractComparator):
     def gt(self, a, b) -> bool:
-        if b is None:
-            return True
         return a.rank > b.rank
 
     def lt(self, a, b) -> bool:
-        if b is None:
-            return False
         return a.rank < b.rank
 
     def eq(self, a, b) -> bool:
@@ -58,10 +54,6 @@ class Card:
         self._hash_method = _hash if _hash is not None else self._hash
 
         rank, suit = self._get_rank_and_suit(_card)
-
-        # if rank is None:
-        #     # We probably want a more explicit way to deal with "suit-less" cards and jokers
-        #     raise BadCardError()
 
         self.suit = suit
 
@@ -96,27 +88,13 @@ class Card:
         return self._comparator.lt(self, b)
 
     def __eq__(self, b):
-        b = self.__class__(b)
         return self._comparator.eq(self, b)
 
     def __ne__(self, b):
-        b = self.__class__(b)
         return self._comparator.ne(self, b)
 
     def get_difference(self, b: "Card") -> int:
         return self._comparator.get_difference(self, b)
-
-    def __sub__(self, b):
-        try:
-            rank = self.rank - b
-        except BadCardError:
-            pass
-
-        return Card(
-            f"{rank}{self.suit}",
-            _hash=self._hash_method,
-            comparator=self._comparator,
-        )
 
     def __repr__(self) -> str:
         if self.rank is None:

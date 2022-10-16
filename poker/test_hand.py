@@ -1,12 +1,13 @@
 import pytest
 from card import Card
 from card_collection import NotEnoughSpace
+from conftest import make_cards
 from hand import Hand
 from poker import Poker
 
 
 def test_init_with_list():
-    test_hand = Hand(cards=["9C", "9S", "7C", "8C", "5D"])
+    test_hand = Hand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     assert test_hand._cards == [
         Card("9C"),
         Card("9S"),

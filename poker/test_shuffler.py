@@ -1,11 +1,12 @@
 from card import Card
+from conftest import make_cards
 from deck import Deck
 from shuffler import FakeShuffler, Shuffler
 
 
 def test_mapping_contains_1_to_54():
     shuffler = Shuffler()
-    mapping = shuffler.get_mapping([0] * 54)
+    mapping = shuffler._get_mapping([0] * 54)
 
     mapping.sort()
     assert mapping == list(range(1, 55))
@@ -18,11 +19,10 @@ def test_shuffler_shuffles():
     assert len(test_deck) == 54
 
 
-
 def test_shuffle_deck_override():
     # fmt: off
     deck = Deck()
-    expected_cards = [
+    expected_cards = make_cards([
         "1H",
         "RJ",
         "2H",
@@ -77,12 +77,12 @@ def test_shuffle_deck_override():
         "11D",
         "13D",
         "12D",
-    ]
+    ])
 
     test_shuffler = FakeShuffler(expected_cards)
     
     test_shuffler.shuffle(deck)
-    assert deck._cards == [Card(c) for c in expected_cards]
+    assert deck._cards == expected_cards
 
     # test shuffle with missing cards
     # implement different "types" of shuffling

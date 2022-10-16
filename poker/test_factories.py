@@ -1,6 +1,6 @@
 import pytest
-from conftest import shuffler_factory
-from deck import Deck
+from conftest import make_cards, shuffler_factory
+from deck import Deck, DeckWithoutJokers
 from hand import Hand
 from poker_errors import DuplicateCardException
 
@@ -28,9 +28,7 @@ def test_shuffler_factory():
 
     _player_count = 4
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     _hands = deal(_player_count, 5, deck)
@@ -55,9 +53,7 @@ def test_shuffler_factory__can_handle_multiple_rounds():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     _hands = deal(_player_count, 5, deck)
@@ -67,9 +63,7 @@ def test_shuffler_factory__can_handle_multiple_rounds():
     assert str(_hands[2]) == "1S 3D 4D 5D 6D"
     assert str(_hands[3]) == "1C 3S 4S 5S 6S"
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     _hands = [Hand() for _ in range(0, _player_count)]
@@ -117,9 +111,7 @@ def test_shuffler_factory__can_make_up_unspecified_hands():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     _hands = deal(_player_count, 5, deck)
@@ -138,13 +130,11 @@ def test_shuffler_factory__can_handle_padding():
 
     shuffler = shuffler_factory([hand1], ["7S", "10H"])
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     first_cards = deck[0:6]
-    assert first_cards == ["1H", "3C", "4C", "5C", "6C", "7S", "10H"]
+    assert first_cards == make_cards(["1H", "3C", "4C", "5C", "6C", "7S", "10H"])
 
 
 def test_shuffler_factory__configure_hand_size():
@@ -162,9 +152,7 @@ def test_shuffler_factory__configure_hand_size():
 
     # Maybe a Dealer entity instead of duplicating logic?
 
-    deck = Deck()
-    deck.pull_card("RJ")
-    deck.pull_card("BJ")
+    deck = DeckWithoutJokers()
     shuffler.shuffle(deck)
 
     _hands = deal(_player_count, cards_per_hand, deck)

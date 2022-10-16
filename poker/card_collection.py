@@ -11,7 +11,7 @@ class MissingCard(Exception):
     pass
 
 
-class CannotPullNone(Exception):
+class NotACard(Exception):
     pass
 
 
@@ -91,9 +91,7 @@ class CardCollection:
         return new
 
     def __sub__(self, other: Union["CardCollection", Card]) -> "CardCollection":
-
-        # TODO: Adding from extending classes will create the wrong class
-        new = CardCollection(self._cards)
+        new = self.__class__(self._cards)
 
         if isinstance(other, Card):
             other = [other]
@@ -153,8 +151,8 @@ class CardCollection:
             raise InvalidCardPosition()
 
     def pull_card(self, card: Card) -> Card | None:
-        if card is None:
-            raise CannotPullNone()
+        if not isinstance(card, Card):
+            raise NotACard()
 
         try:
             self._cards.remove(card)
@@ -163,6 +161,7 @@ class CardCollection:
 
         return card
 
+    # Add support for inserting multiple
     def insert_at(self, position: int, card: Card) -> None:
         self._validate_insert_position(position)
         self._insert(position - 1, card)
@@ -178,6 +177,9 @@ class CardCollection:
             raise InvalidCardPosition()
 
     def _insert(self, position: int, card: Card) -> None:
+        if not isinstance(card, Card):
+            raise NotACard()
+
         if not self._can_add(card):
             raise NotEnoughSpace()
 

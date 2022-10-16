@@ -5,20 +5,6 @@ from card_collection import CardCollection
 from conftest import make_poker_cards
 from hand import Hand
 from hand_finder import BestHandFinder, StraightHandBuilder
-from card import Card
-
-
-def compare_test_card(actual: Card, expected: str) -> bool:
-    if expected[-1] == "*":
-        return actual == Card(expected[0:-2] + "D")
-    return actual == Card(expected)
-
-
-def beats_for_test(hand_1: Hand, hand_2: Hand) -> int:
-    sorter = lambda x: f"{x.rank}{x.suit}"
-    if sorted(hand_1._cards, key=sorter) == sorted(hand_2._cards, key=sorter):
-        return 0
-    return 1
 
 
 def test_find_straights():
@@ -80,11 +66,4 @@ def test_find_best_hands(cards, expectation):
     best_hand_finder = BestHandFinder()
     best_hand = best_hand_finder.find(card_collection)
 
-    best_hand._cmp = beats_for_test
-
-    assert best_hand == Hand(expectation, _cmp=beats_for_test)
-
-    # for i in range(0, 5):
-
-    #     compare_test_card(best_hand[i], expectation[i])
-    # assert  1 == 0
+    assert best_hand == Hand(make_poker_cards(expectation))

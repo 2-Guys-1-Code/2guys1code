@@ -475,7 +475,6 @@ def test_game__side_pots_are_accounted_for():
     assert game.pot is None
 
 
-@pytest.mark.skip()
 def test_game__first_player_all_in_others_fold():
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
 
@@ -490,9 +489,6 @@ def test_game__first_player_all_in_others_fold():
     game.all_in(player1)
     game.fold(player2)
     game.fold(player3)
-
-    # assert game.winners == [player1]
-    # assert str(game.winners[0].hand) == "1H 3C 4C 5C 6C"
 
     assert player1.purse == 500
     assert player2.purse == 500

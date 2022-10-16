@@ -46,15 +46,6 @@ class Pot:
     def _get_player_totals(self) -> dict:
         return {p: self.player_total(p) for p in self.bets.keys()}
 
-    def _get_players_per_total(self):
-        players_per_total = defaultdict(list)
-
-        for p in self.bets.keys():
-            total = self.player_total(p)
-            players_per_total[total].append(p)
-
-        return players_per_total
-
     def _get_side_pots(self, player_totals: dict) -> list:
         contributions = sorted(set(player_totals.values()))
 

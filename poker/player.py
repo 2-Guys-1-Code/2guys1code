@@ -25,10 +25,6 @@ class AbstractPokerPlayer(ABC):
     def __repr__(self) -> str:
         return self.name
 
-    @abstractmethod
-    def get_action(self, game: "Poker") -> Union[str, None]:
-        raise NotImplementedError()
-
     def add_to_purse(self, amount: int) -> None:
         self.purse += amount
 
@@ -54,5 +50,4 @@ class AbstractPokerPlayer(ABC):
 
 
 class Player(AbstractPokerPlayer):
-    def get_action(self, game: "Poker") -> str:
-        return game.ACTION_CHECK
+    pass
