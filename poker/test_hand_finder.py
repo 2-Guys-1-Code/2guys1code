@@ -31,6 +31,7 @@ def test_find_straights():
 @pytest.mark.parametrize(
     "cards, expectation",
     [
+        # fmt: off
         [
             ["2S", "1D", "4S", "6S", "8S", "10C", "9C"],
             ["1D", "10C", "9C", "8S", "6S"],
@@ -51,13 +52,29 @@ def test_find_straights():
             ["1S", "12D", "11C", "10D", "9S", "8C", "7D"],
             ["12D", "11C", "10D", "9S", "8C"],
         ],
+        [
+            ["4S", "5S", "6S", "7S", "9S", "11S", "12S", "1D", "13H"],
+            ["6S", "7S", "9S", "11S", "12S"],
+        ],
+        [
+            ["4S", "5S", "6S", "7S", "9S", "11S", "12S", "1D", "13H", "5D", "7D", "10D", "11D", "3S"],
+            ["1D", "5D", "7D", "10D", "11D"],
+        ],
+        [
+            ["4S", "5S", "6S", "7S", "9S", "11S", "12S", "2D", "13H", "5D", "7D", "10D", "12D", "3S"],
+            ["6S", "7S", "9S", "11S", "12S"],
+        ],
+        # fmt: on
     ],
     ids=[
         "Find all high cards",
         "Find Pair of Kings",
         "Find 2 pairs",
-        "find best 3 of a kind",
-        "find best straight",
+        "Find best 3 of a kind",
+        "Find best straight",
+        "Find flush",
+        "Best flush is the flush with the highest card",
+        "Find best flush from two flushes with same rank high card",
     ],
 )
 def test_find_best_hands(cards, expectation):

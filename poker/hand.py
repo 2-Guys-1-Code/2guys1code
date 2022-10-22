@@ -60,6 +60,9 @@ class PokerCardComparator(CardComparator):
     def get_difference(self, a, b) -> int:
         return self._reindex_rank(b.rank) - self._reindex_rank(a.rank)
 
+    def get_key(self, a) -> str:
+        return str(self._reindex_rank(a.rank))
+
     @staticmethod
     def _reindex_rank(rank: int):
         if rank is None:

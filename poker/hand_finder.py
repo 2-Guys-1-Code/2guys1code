@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Iterable
 from card_collection import CardCollection, NotEnoughSpace
 
@@ -81,37 +82,27 @@ class SetBuilder:
 class PairHandBuilder(SetBuilder, AbstractHandBuilder):
     set_size: int = 2
 
-    def _extract(self, leftovers: Hand):
+    def _extract(self, leftovers: Hand) -> Iterable:
         return super(PairHandBuilder, self)._extract(leftovers)
 
 
 class ThreeOfKindHandBuilder(SetBuilder, AbstractHandBuilder):
     set_size: int = 3
 
-    def _extract(self, leftovers: Hand):
+    def _extract(self, leftovers: Hand) -> Iterable:
         return super(ThreeOfKindHandBuilder, self)._extract(leftovers)
 
 
 class StraightHandBuilder(AbstractHandBuilder):
     set_size: int = 5
 
-    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
-        return CardCollection(cards[len(cards) - self.set_size : len(cards) - 1])
-
-    def _extract(self, leftovers: Hand):
+    def _extract(self, leftovers: Hand) -> Iterable:
         straights = self._find_straights(leftovers)
 
-        straights = [
-            self._get_top_5_cards(s) for s in straights if len(s) >= self.set_size
-        ]
-
-        # only return the best straight
-
-        return straights
+        return [self._get_top_5_cards(s) for s in straights if len(s) >= self.set_size]
 
     def _find_straights(self, leftovers: CardCollection) -> list:
         sorted_leftovers = sorted(leftovers)
-
         straights = []
         straight = CardCollection([sorted_leftovers[0]])
 
@@ -137,6 +128,37 @@ class StraightHandBuilder(AbstractHandBuilder):
 
         return straights
 
+    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
+        return CardCollection(cards[len(cards) - self.set_size : len(cards) - 1])
+
+
+class FlushHandBuilder(AbstractHandBuilder):
+    set_size: int = 5
+
+    def _extract(self, leftovers: Hand) -> Iterable:
+        flushes = self._find_flushes(leftovers)
+        candidates = [f for f in flushes if len(f) >= self.set_size]
+        candidates = self._sort_flushes(candidates)
+
+        return [self._get_top_5_cards(f) for f in candidates]
+
+    def _find_flushes(self, leftovers: CardCollection) -> list:
+        suits = {"H": [], "C": [], "S": [], "D": []}
+        for card in leftovers:
+            suits[card.suit].append(card)
+
+        return suits.values()
+
+    def _sort_flushes(self, flushes: list) -> list:
+        return sorted(flushes, reverse=True, key=self._make_key)
+
+    def _make_key(self, cards: list) -> str:
+        cards = sorted(cards, reverse=True)
+        return "".join([c.comparison_key.rjust(2, "0") for c in cards])
+
+    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
+        return CardCollection(cards=sorted(cards, reverse=True)[: self.set_size])
+
 
 class BestHandFinder:
     def __init__(self, hand_factory: Hand = None) -> None:
@@ -145,7 +167,8 @@ class BestHandFinder:
     def find(self, cards: CardCollection) -> Hand:
         leftovers = cards
 
-        builders = [
+        builders: list[AbstractHandBuilder] = [
+            FlushHandBuilder,
             StraightHandBuilder,
             ThreeOfKindHandBuilder,
             PairHandBuilder,

@@ -23,6 +23,9 @@ class AbstractComparator(ABC):
     def get_difference(self, a, b) -> int:
         raise NotImplementedError
 
+    def get_key(self, a) -> str:
+        raise NotImplementedError
+
 
 class CardComparator(AbstractComparator):
     def gt(self, a, b) -> bool:
@@ -39,6 +42,9 @@ class CardComparator(AbstractComparator):
 
     def get_difference(self, a, b) -> int:
         return b.rank - a.rank
+
+    def get_key(self, a) -> str:
+        return str(a.rank)
 
 
 class Card:
@@ -106,3 +112,7 @@ class Card:
     @staticmethod
     def _hash(self) -> int:
         return hash(repr(self))
+
+    @property
+    def comparison_key(self) -> str:
+        return self._comparator.get_key(self)

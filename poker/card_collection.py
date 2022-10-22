@@ -187,3 +187,6 @@ class CardCollection:
             return self._cards.index(card) + 1
         except ValueError:
             raise MissingCard()
+
+    def sort(self, reverse: bool = False) -> None:
+        self._cards.sort(reverse=reverse)

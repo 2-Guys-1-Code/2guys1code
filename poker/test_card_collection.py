@@ -394,3 +394,19 @@ def test_cannot_add_past_max(supplement):
     assert cards._cards == [
         Card("9C"),
     ]
+
+
+def test_can_be_sorted():
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
+
+    card_collection.sort()
+
+    assert str(card_collection) == "5D 7C 8C 9C 9S"
+
+
+def test_can_be_sorted_in_reverse_order():
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "5D", "7C", "8C"]))
+
+    card_collection.sort(reverse=True)
+
+    assert str(card_collection) == "9C 9S 8C 7C 5D"
