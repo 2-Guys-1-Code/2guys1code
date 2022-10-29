@@ -58,7 +58,14 @@ class PokerCardComparator(CardComparator):
         return self._reindex_rank(a.rank) == self._reindex_rank(b.rank)
 
     def get_difference(self, a, b) -> int:
+        if type(b) == int:
+            return b - self._reindex_rank(a.rank)
         return self._reindex_rank(b.rank) - self._reindex_rank(a.rank)
+
+    def get_sum(self, a, b) -> int:
+        if type(b) == int:
+            return b + self._reindex_rank(a.rank)
+        return self._reindex_rank(b.rank) + self._reindex_rank(a.rank)
 
     def get_key(self, a) -> str:
         return str(self._reindex_rank(a.rank))

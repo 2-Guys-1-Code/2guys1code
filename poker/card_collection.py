@@ -190,3 +190,8 @@ class CardCollection:
 
     def sort(self, reverse: bool = False) -> None:
         self._cards.sort(reverse=reverse)
+
+    @property
+    def comparison_key(self) -> str:
+        cards = sorted(self, reverse=True)
+        return "".join([c.comparison_key.rjust(2, "0") for c in cards])

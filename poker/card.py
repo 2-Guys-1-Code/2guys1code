@@ -23,6 +23,9 @@ class AbstractComparator(ABC):
     def get_difference(self, a, b) -> int:
         raise NotImplementedError
 
+    def get_sum(self, a, b) -> int:
+        raise NotImplementedError
+
     def get_key(self, a) -> str:
         raise NotImplementedError
 
@@ -41,7 +44,14 @@ class CardComparator(AbstractComparator):
         return not self.eq(a, b)
 
     def get_difference(self, a, b) -> int:
+        if type(b) == int:
+            return b - a.rank
         return b.rank - a.rank
+
+    def get_sum(self, a, b) -> int:
+        if type(b) == int:
+            return b + a.rank
+        return b.rank + a.rank
 
     def get_key(self, a) -> str:
         return str(a.rank)
@@ -96,6 +106,12 @@ class Card:
 
     def __ne__(self, b):
         return self._comparator.ne(self, b)
+
+    def __sub__(self, b):
+        return self._comparator.get_difference(self, b)
+
+    def __add__(self, b):
+        return self._comparator.get_sum(self, b)
 
     def get_difference(self, b: "Card") -> int:
         return self._comparator.get_difference(self, b)

@@ -1,20 +1,84 @@
 from collections import defaultdict
+from itertools import groupby
 from typing import Iterable
 from card_collection import CardCollection, NotEnoughSpace
-
 from hand import Hand
 
 
-def _find_sets(cards: CardCollection) -> dict:
-    cards_by_rank = {}
+class SortByRankDescending:
+    @staticmethod
+    def _sort(cards: CardCollection) -> CardCollection:
+        return CardCollection(cards=sorted(cards, reverse=True))
 
-    for c in cards:
-        if c.rank not in cards_by_rank:
-            cards_by_rank[c.rank] = CardCollection()
 
-        cards_by_rank[c.rank] += c
+class GroupByConsecutive:
+    @staticmethod
+    def _remove_duplicates(cards: CardCollection) -> CardCollection:
+        cards_by_rank = defaultdict(list)
+        for c in cards:
+            cards_by_rank[c.rank].append(c)
 
-    return cards_by_rank
+        return CardCollection(cards=[c[0] for c in cards_by_rank.values()])
+
+    @staticmethod
+    def _group(cards: CardCollection) -> list:
+        unique = GroupByConsecutive._remove_duplicates(cards)
+        return [
+            CardCollection(cards=[c for _, c in g])
+            for k, g in groupby(enumerate(unique), lambda x: x[1] + x[0])
+        ]
+
+
+class GroupBySuit:
+    @staticmethod
+    def _group(cards: CardCollection) -> list:
+        groups = defaultdict(CardCollection)
+        for c in cards:
+            groups[c.suit] += c
+
+        return groups.values()
+
+
+class GroupByRank:
+    @staticmethod
+    def _group(cards: CardCollection) -> list:
+        groups = defaultdict(CardCollection)
+        for c in cards:
+            groups[c.rank] += c
+
+        return groups.values()
+
+
+class GroupBySuitAndConsecutive:
+    @staticmethod
+    def _group(cards: CardCollection) -> list:
+        grouped_by_suit = GroupBySuit._group(cards)
+        print(grouped_by_suit)
+        groups = []
+        for g in grouped_by_suit:
+            groups.extend(GroupByConsecutive._group(g))
+
+        print(groups)
+        return groups
+
+
+class GroupBuilder:
+    set_size: int = 5
+
+    def _extract(self, leftovers: CardCollection) -> Iterable:
+        sorted_cards = self._sort(leftovers)
+        grouped_cards = self._group(sorted_cards)
+        sorted_groups = self._sort_groups(grouped_cards)
+        return [
+            self._get_top_cards(g) for g in sorted_groups if len(g) >= self.set_size
+        ]
+
+    @staticmethod
+    def _sort_groups(groups: CardCollection) -> list:
+        return sorted(groups, reverse=True, key=lambda g: g.comparison_key)
+
+    def _get_top_cards(self, cards: CardCollection) -> CardCollection:
+        return CardCollection(cards[0 : self.set_size - 1])
 
 
 class AbstractHandBuilder:
@@ -55,109 +119,63 @@ class AbstractHandBuilder:
 
 
 class HighCardHandBuilder(AbstractHandBuilder):
-    def _get_ordered_candidates(self, leftovers: CardCollection) -> CardCollection:
+    def _extract(self, leftovers: CardCollection):
         return CardCollection(sorted(leftovers._cards, reverse=True))
 
-    def _extract(self, leftovers: CardCollection):
-        return self._get_ordered_candidates(leftovers)
 
-
-class SetBuilder:
-    def _get_ordered_candidates(self, leftovers: CardCollection) -> list:
-        set_groups = _find_sets(leftovers)
-        sets = {
-            rank: _set
-            for rank, _set in set_groups.items()
-            if len(_set) == self.set_size
-        }
-
-        candidates = [sets[rank] for rank in sorted(sets.keys(), reverse=True)]
-
-        return candidates
-
-    def _extract(self, leftovers: Hand):
-        return self._get_ordered_candidates(leftovers)
-
-
-class PairHandBuilder(SetBuilder, AbstractHandBuilder):
+class PairHandBuilder(
+    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
+):
     set_size: int = 2
 
-    def _extract(self, leftovers: Hand) -> Iterable:
-        return super(PairHandBuilder, self)._extract(leftovers)
 
-
-class ThreeOfKindHandBuilder(SetBuilder, AbstractHandBuilder):
+class ThreeOfKindHandBuilder(
+    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
+):
     set_size: int = 3
 
-    def _extract(self, leftovers: Hand) -> Iterable:
-        return super(ThreeOfKindHandBuilder, self)._extract(leftovers)
+
+class FourOfKindHandBuilder(
+    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
+):
+    set_size: int = 4
 
 
-class StraightHandBuilder(AbstractHandBuilder):
-    set_size: int = 5
+class FullHouseHandBuilder(AbstractHandBuilder):
+    def _extract(self, leftovers: CardCollection) -> Iterable:
+        hand = Hand()
 
-    def _extract(self, leftovers: Hand) -> Iterable:
-        straights = self._find_straights(leftovers)
+        for cls in [
+            ThreeOfKindHandBuilder,
+            PairHandBuilder,
+        ]:
+            builder = cls(hand)
+            hand, new_leftovers = builder.build(leftovers)
 
-        return [self._get_top_5_cards(s) for s in straights if len(s) >= self.set_size]
+            if leftovers == new_leftovers:
+                return []
 
-    def _find_straights(self, leftovers: CardCollection) -> list:
-        sorted_leftovers = sorted(leftovers)
-        straights = []
-        straight = CardCollection([sorted_leftovers[0]])
+            leftovers = new_leftovers
 
-        for x in range(1, len(sorted_leftovers)):
-            if sorted_leftovers[x - 1].get_difference(sorted_leftovers[x]) == 1:
-                # if sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank - 1:
-                straight += sorted_leftovers[x]
-            elif sorted_leftovers[x - 1].get_difference(sorted_leftovers[x]) == 0:
-                # elif sorted_leftovers[x - 1].rank == sorted_leftovers[x].rank:
-                # This will lose some cards;
-                continue
-            else:
-                straights.append(straight)
-                straight = CardCollection([sorted_leftovers[x]])
-
-        straights.append(straight)
-
-        used = CardCollection([c for s in straights for c in s])
-        leftovers -= used
-
-        if len(leftovers):
-            straights.extend(self._find_straights(leftovers))
-
-        return straights
-
-    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
-        return CardCollection(cards[len(cards) - self.set_size : len(cards) - 1])
+        return hand
 
 
-class FlushHandBuilder(AbstractHandBuilder):
-    set_size: int = 5
+class StraightHandBuilder(
+    SortByRankDescending, GroupByConsecutive, GroupBuilder, AbstractHandBuilder
+):
+    pass
 
-    def _extract(self, leftovers: Hand) -> Iterable:
-        flushes = self._find_flushes(leftovers)
-        candidates = [f for f in flushes if len(f) >= self.set_size]
-        candidates = self._sort_flushes(candidates)
 
-        return [self._get_top_5_cards(f) for f in candidates]
+class FlushHandBuilder(
+    SortByRankDescending, GroupBySuit, GroupBuilder, AbstractHandBuilder
+):
+    pass
 
-    def _find_flushes(self, leftovers: CardCollection) -> list:
-        suits = {"H": [], "C": [], "S": [], "D": []}
-        for card in leftovers:
-            suits[card.suit].append(card)
 
-        return suits.values()
-
-    def _sort_flushes(self, flushes: list) -> list:
-        return sorted(flushes, reverse=True, key=self._make_key)
-
-    def _make_key(self, cards: list) -> str:
-        cards = sorted(cards, reverse=True)
-        return "".join([c.comparison_key.rjust(2, "0") for c in cards])
-
-    def _get_top_5_cards(self, cards: CardCollection) -> CardCollection:
-        return CardCollection(cards=sorted(cards, reverse=True)[: self.set_size])
+class StraightFlushHandBuilder(
+    SortByRankDescending, GroupBySuitAndConsecutive, GroupBuilder, AbstractHandBuilder
+):
+    pass
 
 
 class BestHandFinder:
@@ -168,6 +186,9 @@ class BestHandFinder:
         leftovers = cards
 
         builders: list[AbstractHandBuilder] = [
+            StraightFlushHandBuilder,
+            FourOfKindHandBuilder,
+            FullHouseHandBuilder,
             FlushHandBuilder,
             StraightHandBuilder,
             ThreeOfKindHandBuilder,
