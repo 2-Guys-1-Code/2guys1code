@@ -3,10 +3,17 @@ name = "poker"
 version = "0.1.0"
 description = ""
 authors = ["2guys1Code <2guys1code@protonmail.com>"]
+packages = [{include = "poker", from = "src"}, {include = "api", from = "src"} ]
+
+[tool.poetry.scripts]
+poker = "poker.main:main"
+pokerapi = "api.main:start"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 mock = "^4.0.3"
+fastapi = "^0.86.0"
+uvicorn = "^0.19.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"
@@ -21,3 +28,6 @@ pylint = "^2.14.5"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
