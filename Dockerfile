@@ -42,6 +42,8 @@ ARG APP_PATH
 
 # Install project in editable mode and with development dependencies
 WORKDIR $APP_PATH
+COPY ./tests/ ./tests/
+COPY ./pytest.ini ./pytest.ini
 RUN poetry install
 
 
