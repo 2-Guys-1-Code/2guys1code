@@ -2,7 +2,7 @@ import pytest
 
 from deck import Deck
 from card_collection import InvalidCardPosition
-from poker import Card
+from card import Card
 
 
 def test_create_deck():
