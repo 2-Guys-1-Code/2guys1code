@@ -1,7 +1,8 @@
 import pytest
+from conftest import make_cards
 
-from card import Card
-from card_collection import (
+from poker_pkg.card import Card
+from poker_pkg.card_collection import (
     CardCollection,
     InvalidCardPosition,
     MissingCard,
@@ -9,14 +10,11 @@ from card_collection import (
     NotASubSet,
     NotEnoughSpace,
 )
-from conftest import make_cards
-from hand import Hand
+from poker_pkg.hand import Hand
 
 
 def test_eq_is_false_when_types_are_different():
-    assert CardCollection(cards=make_cards(["9C", "9S"])) != Hand(
-        cards=make_cards(["9C", "9S"])
-    )
+    assert CardCollection(cards=make_cards(["9C", "9S"])) != Hand(cards=make_cards(["9C", "9S"]))
 
 
 def test_eq_is_false_when_lengths_are_different():

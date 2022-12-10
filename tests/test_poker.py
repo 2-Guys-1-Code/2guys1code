@@ -1,13 +1,20 @@
 from unittest import mock
-import pytest
 
-from card import Card
-from conftest import make_cards, make_pot, shuffler_factory
-from hand import Hand, PokerHand
-from deck import Deck
-from player import Player
-from poker import Poker
-from poker_errors import (
+import pytest
+from conftest import (
+    CARDS_NO_JOKERS,
+    game_factory,
+    make_cards,
+    make_pot,
+    shuffler_factory,
+)
+
+from poker_pkg.card import Card
+from poker_pkg.deck import Deck
+from poker_pkg.hand import Hand, PokerHand
+from poker_pkg.player import Player
+from poker_pkg.poker import Poker
+from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalBetException,
     InvalidAmountNegative,
@@ -16,8 +23,7 @@ from poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from shuffler import FakeShufflerByPosition
-from conftest import game_factory, CARDS_NO_JOKERS
+from poker_pkg.shuffler import FakeShufflerByPosition
 
 
 def test_start_game__initial_state():
@@ -334,9 +340,7 @@ def test_game__all_players_all_in__three_way_tie():
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
     player4 = Player(purse=500, name="Albert")
-    game = game_factory(
-        shuffler=fake_shuffler, players=[player1, player2, player3, player4]
-    )
+    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3, player4])
 
     game.start_round()
 

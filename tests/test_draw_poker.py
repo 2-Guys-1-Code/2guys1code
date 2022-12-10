@@ -1,14 +1,13 @@
 from functools import partial
-import pytest
 
-from card import Card
-from conftest import (
-    game_factory as default_game_factory,
-    shuffler_factory,
-)
-from player import Player
-from poker import Poker
-from poker_errors import (
+import pytest
+from conftest import game_factory as default_game_factory
+from conftest import shuffler_factory
+
+from poker_pkg.card import Card
+from poker_pkg.player import Player
+from poker_pkg.poker import Poker
+from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalCardSwitch,
     PlayerOutOfOrderException,

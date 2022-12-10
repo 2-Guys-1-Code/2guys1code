@@ -1,5 +1,5 @@
-from player import Player
-from pot import Pot
+from poker_pkg.player import Player
+from poker_pkg.pot import Pot
 
 
 def test_pot__add_bet():
