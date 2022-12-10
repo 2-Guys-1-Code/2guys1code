@@ -1,3 +1,4 @@
+import sys
 from unittest import mock
 
 import pytest
@@ -51,7 +52,9 @@ def test_start_round__initial_state():
     game = game_factory()
 
     game.start_round()
-
+    print(sys.path)
+    print(Hand)
+    print(type(game._round_players[0].hand))
     assert len(game._round_players) == 3
     for x in range(0, 3):
         assert isinstance(game._round_players[x].hand, Hand)

@@ -1,1 +1,1 @@
-DOCKER_BUILDKIT=1 docker build --target $1 -t "poker-$1" .
+DOCKER_BUILDKIT=1 docker build --no-cache --target $1 -t "poker-$1" .
