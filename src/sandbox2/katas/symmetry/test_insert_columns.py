@@ -9,6 +9,50 @@ from katas.symmetry.symmetry import is_symmetrical
 #     print("lr", left_reversed)
 #     return [matrix[0] + left_reversed]
 
+class MakeSymetrical():
+    def __init__(self, matrix) -> None:
+        self.matrix = matrix
+        right_column_ptr =  len(matrix[0]) -1
+        left_column_ptr = 0
+        self.symetricize(left_column_ptr, right_column_ptr)
+
+    
+    def symetricize(self,left_column_ptr, right_column_ptr):
+        if right_column_ptr <= left_column_ptr:
+            return right_column_ptr + 1, left_column_ptr -1
+
+        right_column_ptr, left_column_ptr = self.symetricize(left_column_ptr+1, right_column_ptr-1)
+        right = self.matrix[0][right_column_ptr]
+        left  = self.matrix[0][left_column_ptr]
+        if left == right:
+            return right_column_ptr + 1, left_column_ptr -1
+
+        this_matrix =(self.matrix[0][left_column_ptr:right_column_ptr + 1])
+        len_segment = right_column_ptr - left_column_ptr + 1
+ 
+        right_column_ptr += 1
+        inner_left = self.matrix[0][left_column_ptr +1]
+        if inner_left == right:
+            self.matrix[0].insert(right_column_ptr, left)
+            insert_pos = right_column_ptr
+        else:
+            self.matrix[0].insert(left_column_ptr, right)
+            insert_pos = left_column_ptr
+
+        test_matrix = []
+        test_matrix.append(self.matrix[0][left_column_ptr:right_column_ptr + 1])
+
+  
+        if not is_symmetrical(test_matrix):
+            del self.matrix[0][insert_pos]
+            self.matrix[0].insert(right_column_ptr, left)
+            self.matrix[0].insert(left_column_ptr + 1, right)
+            right_column_ptr += 1
+
+  
+
+        print(self.matrix)
+        return right_column_ptr + 1, left_column_ptr -1
 
 def make_symmetrical(matrix):
     # if is_symmetrical(matrix):
@@ -92,37 +136,49 @@ def make_symmetrical(matrix):
 @pytest.mark.parametrize(
     "test_matrix, expected_nb_insertions",
     [
-        # ([[]], 0),
-        # ([[1]], 0),
-        # ([[1, 0]], 1),
-        # ([[1, 1]], 0),
-        # ([[0, 1, 0]], 0),
+        ([[]], 0),
+        ([[1]], 0),
+        ([[1, 0]], 1),
+        ([[1, 1]], 0),
+        ([[0, 1, 0]], 0),
         ([[0, 1, 1]], 1),  # expecting [0, 1, 1, 0]
         ([[0, 0, 1]], 1),  # expecting [1, 0, 0, 1]
-        # ([[0, 1, 0, 0]], 1),
-        # not implemented
-        # ([[0, 0, 0, 1]], 0),
+        ([[0, 1, 0, 0]], 1),
+        ([[0, 0, 0, 1]], 1),
+        ([[0, 0, 0, 1, 0 ]], 1),
+        ([[0, 0, 0, 1, 0, 1]], 3),
+        ([[0, 0, 0, 1, 0, 1, 1 ,1, 0, 1 ]], 5),
+        ([[1, 0, 1, 1, 0, 1, 1 ,1, 0, 1 ,0, 0, 0, 0, 0, 1, 1]], 10),
+        ([[0, 0, 0, 1, 0, 0, 1]], 2),
         # ([[1, 1], [1, 0]], False),
     ],
     ids=[
-        # "0x1; needs 0",
-        # "1x1; needs 0",
-        # "2x1 different values; needs one",
-        # "2x1 is symmetrical; needs 0",
-        # "3x1 starts and ends with same values; needs 0",
+        "0x1; needs 0",
+        "1x1; needs 0",
+        "2x1 different values; needs one",
+        "2x1 is symmetrical; needs 0",
+        "3x1 starts and ends with same values; needs 0",
         "3x1 start is different from the rest; needs 1",
         "3x1 end is different from the rest; needs 1",
-        # "4x1 is not symmetrical; needs one",
-        # not implemented
-        # "4x1 middle is not symmetrical",
+        "4x1 is not symmetrical; needs one",
+        "4x1 ends not symmetrical",
+        "5x1 middle not symmetrical",
+        "6x1 not symmetrical",
+        "10x1 not symmetrical",
+        "alot",
+        "what",
+
         # "2x2 first row is symmetrical, second row is not",
     ],
 )
 def test_insert_minimum_rows(test_matrix, expected_nb_insertions):
-    result_matrix = make_symmetrical(test_matrix)
+    #  result_matrix = make_symmetrical(test_matrix)
     #
     print("tm", test_matrix)
-    print("rm", result_matrix)
-    width_diff = len(result_matrix[0]) - len(test_matrix[0])
-    assert is_symmetrical(result_matrix) == True
+    len_width_before =  len(test_matrix[0])
+    ms = MakeSymetrical(test_matrix).matrix
+    len_width_after = len(test_matrix[0])
+    print("rm", test_matrix)
+    width_diff = len_width_after - len_width_before
+    assert is_symmetrical(test_matrix) == True
     assert width_diff == expected_nb_insertions
