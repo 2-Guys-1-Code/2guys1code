@@ -1,8 +1,8 @@
 import pytest
 
-from player import AbstractPokerPlayer
-from poker_errors import IllegalActionException, PlayerOutOfOrderException
-from turn import TurnManager
+from poker_pkg.player import AbstractPokerPlayer
+from poker_pkg.poker_errors import IllegalActionException, PlayerOutOfOrderException
+from poker_pkg.turn import TurnManager
 
 
 class FakeGame:

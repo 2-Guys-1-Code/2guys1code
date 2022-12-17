@@ -1,9 +1,9 @@
 import pytest
-
-from card import Card
-from card_collection import NotEnoughSpace
 from conftest import make_cards, make_poker_hand
-from hand import Hand, PokerCardComparator, PokerHand
+
+from poker_pkg.card import Card
+from poker_pkg.card_collection import NotEnoughSpace
+from poker_pkg.hand import Hand, PokerCardComparator, PokerHand
 
 
 def test_init_with_list():

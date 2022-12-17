@@ -1,6 +1,6 @@
 import pytest
 
-from card import BadCardError, Card, CardComparator
+from poker_pkg.card import BadCardError, Card, CardComparator
 
 
 @pytest.mark.parametrize(

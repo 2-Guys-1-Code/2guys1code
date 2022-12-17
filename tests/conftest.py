@@ -1,13 +1,13 @@
 from typing import Iterable, Union
+
 import pytest
 
-from card import Card
-from hand import PokerCardComparator, PokerHand
-from player import Player
-from poker import Poker, Pot
-from poker_errors import DuplicateCardException
-from shuffler import AbstractShuffler, FakeShuffler
-
+from poker_pkg.card import Card
+from poker_pkg.hand import PokerCardComparator, PokerHand
+from poker_pkg.player import Player
+from poker_pkg.poker import Poker, Pot
+from poker_pkg.poker_errors import DuplicateCardException
+from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
 # fmt: off
 CARDS_NO_JOKERS = [
@@ -94,9 +94,7 @@ def game_factory(
     return game
 
 
-def shuffler_factory(
-    hands: list, padding: list = None, cards_per_hand: int = 5
-) -> FakeShuffler:
+def shuffler_factory(hands: list, padding: list = None, cards_per_hand: int = 5) -> FakeShuffler:
     all_round_hands = hands
     if type(all_round_hands[0][0]) != list:
         all_round_hands = [all_round_hands]

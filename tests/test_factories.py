@@ -1,9 +1,9 @@
 import pytest
-
 from conftest import shuffler_factory
-from deck import Deck, DeckWithoutJokers
-from hand import Hand
-from poker_errors import DuplicateCardException
+
+from poker_pkg.deck import Deck, DeckWithoutJokers
+from poker_pkg.hand import Hand
+from poker_pkg.poker_errors import DuplicateCardException
 
 
 # Maybe a Dealer entity instead of duplicating logic?

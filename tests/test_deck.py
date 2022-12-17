@@ -1,8 +1,8 @@
 import pytest
 
-from deck import Deck
-from card_collection import InvalidCardPosition
-from card import Card
+from poker_pkg.card import Card
+from poker_pkg.card_collection import InvalidCardPosition
+from poker_pkg.deck import Deck
 
 
 def test_create_deck():
