@@ -309,7 +309,9 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -341,7 +343,9 @@ def test_game__all_players_all_in__three_way_tie():
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
     player4 = Player(purse=500, name="Albert")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3, player4])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3, player4]
+    )
 
     game.start_round()
 
@@ -369,7 +373,9 @@ def test_game__side_pots_are_accounted_for():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=1000, name="Geordie")
     player3 = Player(purse=1000, name="Eugene")
-    game = game_factory(players=[player1, player2, player3], shuffler=fake_shuffler)
+    game = game_factory(
+        players=[player1, player2, player3], shuffler=fake_shuffler
+    )
 
     game.start_round()
 
@@ -390,7 +396,9 @@ def test_game__first_player_all_in_others_fold():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -411,7 +419,9 @@ def test_game__two_rounds():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -458,7 +468,9 @@ def test_game__two_rounds__more_coverage():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -486,11 +498,15 @@ def test_game__two_rounds__more_coverage_v2():
     hand2 = ["1C", "13C", "12C", "11C", "10C"]
     hand3 = ["7D", "7S", "4H", "5C", "3S"]
 
-    fake_shuffler = shuffler_factory([[hand1, hand2, hand3], [hand1, hand3, hand2]])
+    fake_shuffler = shuffler_factory(
+        [[hand1, hand2, hand3], [hand1, hand3, hand2]]
+    )
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -522,7 +538,9 @@ def test_game__players_without_money_are_out_of_the_game():
     player1 = Player(purse=500, name="Michael")
     player2 = Player(purse=500, name="Geordie")
     player3 = Player(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start_round()
 
@@ -653,7 +671,9 @@ def test_call():
 
     game.bet(player1, 200)
 
-    with mock.patch.object(game.pot, "add_bet", wraps=game.pot.add_bet) as wrapped:
+    with mock.patch.object(
+        game.pot, "add_bet", wraps=game.pot.add_bet
+    ) as wrapped:
         game.call(player2)
 
         wrapped.assert_called_with(player2, 200)
@@ -673,7 +693,9 @@ def test_raise():
 
     game.bet(player1, 200)
 
-    with mock.patch.object(game.pot, "add_bet", wraps=game.pot.add_bet) as wrapped:
+    with mock.patch.object(
+        game.pot, "add_bet", wraps=game.pot.add_bet
+    ) as wrapped:
         game.raise_bet(player2, 100)
 
         wrapped.assert_called_with(player2, 300)

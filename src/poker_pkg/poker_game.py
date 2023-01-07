@@ -158,12 +158,17 @@ class PokerGame:
             self.steps.append(self._step_factory(self.STEP_REVEAL_TURN))
             self.steps.append(self._step_factory(self.STEP_BETTING))
 
-    def _distribute_chips(self, players: list[AbstractPokerPlayer], chips_per_player: int) -> None:
+    def _distribute_chips(
+        self, players: list[AbstractPokerPlayer], chips_per_player: int
+    ) -> None:
         for p in players:
             p.add_to_purse(chips_per_player)
 
     def deal(
-        self, players: list[AbstractPokerPlayer], deck: Deck, cards_per_player: int = 5
+        self,
+        players: list[AbstractPokerPlayer],
+        deck: Deck,
+        cards_per_player: int = 5,
     ) -> None:
         self._shuffler.shuffle(self._deck)
         for _ in range(0, cards_per_player):
@@ -240,7 +245,11 @@ class PokerGame:
         if current_step.get("name") == self.STEP_DEAL:
             self.current_player = None
             try:
-                self.deal(self._round_players, self._deck, **current_step.get("config", {}))
+                self.deal(
+                    self._round_players,
+                    self._deck,
+                    **current_step.get("config", {})
+                )
                 self.end_step()
             except EmptyDeck as e:
                 raise TooManyPlayers()
@@ -249,7 +258,9 @@ class PokerGame:
             or current_step.get("name") == self.STEP_REVEAL_TURN
         ):
             self.current_player = None
-            self.deal_community_cards(self._deck, **current_step.get("config", {}))
+            self.deal_community_cards(
+                self._deck, **current_step.get("config", {})
+            )
             self.end_step()
 
         else:
@@ -268,10 +279,14 @@ class PokerGame:
             raise EndOfStep()
 
         players_left = [
-            p for p in self._round_players if self.pot.player_owed(p) != 0 and p.purse != 0
+            p
+            for p in self._round_players
+            if self.pot.player_owed(p) != 0 and p.purse != 0
         ]
 
-        if self.action_count >= self.nb_players_in_round and not len(players_left):
+        if self.action_count >= self.nb_players_in_round and not len(
+            players_left
+        ):
             raise EndOfStep()
 
     def maybe_end_step(self) -> None:
@@ -285,7 +300,9 @@ class PokerGame:
         self._distribute_pot()
         self.current_player = None
 
-    def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
+    def _transfer_to_pot(
+        self, player: AbstractPokerPlayer, amount: int
+    ) -> None:
         if type(amount) is not int:
             raise InvalidAmountNotAnInteger()
 
@@ -330,11 +347,20 @@ class PokerGame:
     def raise_bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
         with TurnManager(self, player, self.ACTION_RAISE):
             self.action_count += 1
-            self._transfer_to_pot(player, self.pot.player_owed(player) + bet_amount)
+            self._transfer_to_pot(
+                player, self.pot.player_owed(player) + bet_amount
+            )
 
     def _can_switch_cards(self, hand: Hand, cards_to_switch: list) -> bool:
-        has_ace = {Card("1H"), Card("1D"), Card("1S"), Card("1C")}.intersection({c for c in hand})
-        if (not has_ace and len(cards_to_switch) > 3) or len(cards_to_switch) > 4:
+        has_ace = {
+            Card("1H"),
+            Card("1D"),
+            Card("1S"),
+            Card("1C"),
+        }.intersection({c for c in hand})
+        if (not has_ace and len(cards_to_switch) > 3) or len(
+            cards_to_switch
+        ) > 4:
             return False
 
         for card in cards_to_switch:
@@ -357,7 +383,9 @@ class PokerGame:
     def _distribute_pot(self) -> None:
         side_pots = self.pot.get_side_pots()
         for side_pot in side_pots:
-            elligible = list(set(side_pot.get_players()).intersection(self._round_players))
+            elligible = list(
+                set(side_pot.get_players()).intersection(self._round_players)
+            )
             winners = self.find_winnner(elligible)
             amount = side_pot.get_total_chips()
             chips_per_winner = floor(amount / len(winners))
@@ -374,7 +402,9 @@ class PokerGame:
                 card = p.hand.pull_from_position(i)
                 self._deck.insert_at_end(card)
 
-    def find_winnner(self, players: list[AbstractPokerPlayer]) -> list[AbstractPokerPlayer]:
+    def find_winnner(
+        self, players: list[AbstractPokerPlayer]
+    ) -> list[AbstractPokerPlayer]:
         p1 = players[0]
         winners = [p1]
 

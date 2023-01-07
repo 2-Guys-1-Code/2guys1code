@@ -90,7 +90,12 @@ def test_game__player_cannot_switch_more_than_3_cards():
     with pytest.raises(IllegalCardSwitch):
         game.switch_cards(
             player1,
-            [player1.hand[0], player1.hand[1], player1.hand[2], player1.hand[3]],
+            [
+                player1.hand[0],
+                player1.hand[1],
+                player1.hand[2],
+                player1.hand[3],
+            ],
         )
 
     assert str(player1.hand) == "13H 3C 4C 5C 6C"
@@ -106,7 +111,9 @@ def test_game__player_can_switch_4_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
+    shuffler = shuffler_factory(
+        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
+    )
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
@@ -116,7 +123,8 @@ def test_game__player_can_switch_4_cards_if_has_ace():
     game.call(player2)
 
     game.switch_cards(
-        player1, [player1.hand[1], player1.hand[2], player1.hand[3], player1.hand[4]]
+        player1,
+        [player1.hand[1], player1.hand[2], player1.hand[3], player1.hand[4]],
     )
 
     assert str(player1.hand) == "1S 7S 10H 4D 8H"
@@ -132,7 +140,9 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
+    shuffler = shuffler_factory(
+        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
+    )
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 

@@ -1,14 +1,20 @@
 from typing import TYPE_CHECKING
 
 from .player import AbstractPokerPlayer
-from .poker_errors import EndOfStep, IllegalActionException, PlayerOutOfOrderException
+from .poker_errors import (
+    EndOfStep,
+    IllegalActionException,
+    PlayerOutOfOrderException,
+)
 
 if TYPE_CHECKING:
     from poker import Poker
 
 
 class TurnManager:
-    def __init__(self, game: "Poker", player: AbstractPokerPlayer, action: str) -> None:
+    def __init__(
+        self, game: "Poker", player: AbstractPokerPlayer, action: str
+    ) -> None:
         self.game = game
         self.player = player
         self.action = action

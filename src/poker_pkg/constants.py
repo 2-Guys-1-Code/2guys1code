@@ -1,4 +1,3 @@
-
 # fmt: off
 ALL_CARDS = [
     'RJ', 'BJ',

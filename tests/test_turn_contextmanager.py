@@ -1,7 +1,10 @@
 import pytest
 
 from poker_pkg.player import AbstractPokerPlayer
-from poker_pkg.poker_errors import IllegalActionException, PlayerOutOfOrderException
+from poker_pkg.poker_errors import (
+    IllegalActionException,
+    PlayerOutOfOrderException,
+)
 from poker_pkg.turn import TurnManager
 
 
@@ -45,7 +48,9 @@ def test_turn_context_manager__sets_next_player(player_list):
     assert test_game.current_player == player_list[1]
 
 
-def test_turn_context_manager__wraps_around_when_setting_next_player(player_list):
+def test_turn_context_manager__wraps_around_when_setting_next_player(
+    player_list,
+):
     test_game = FakeGame(player_list)
     test_game.current_player = player_list[2]
 
@@ -62,7 +67,9 @@ def test_turn_context_manager__next_player_when_player_is_removed(player_list):
     assert test_game.current_player == player_list[1]
 
 
-def test_turn_context_manager__next_player_when_last_player_is_removed(player_list):
+def test_turn_context_manager__next_player_when_last_player_is_removed(
+    player_list,
+):
     test_game = FakeGame(player_list)
     test_game.current_player = player_list[2]
     test_game.test_action_with_remove(player_list[2])

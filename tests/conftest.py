@@ -91,7 +91,9 @@ def game_factory(
     return game
 
 
-def shuffler_factory(hands: list, padding: list = None, cards_per_hand: int = 5) -> FakeShuffler:
+def shuffler_factory(
+    hands: list, padding: list = None, cards_per_hand: int = 5
+) -> FakeShuffler:
     all_round_hands = hands
     if type(all_round_hands[0][0]) != list:
         all_round_hands = [all_round_hands]

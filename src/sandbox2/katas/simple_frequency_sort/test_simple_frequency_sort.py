@@ -52,7 +52,9 @@ def solution_2(input):
     for x in input:
         frequencies[x] += 1
 
-    sorted_frequencies = sorted(frequencies.items(), key=lambda x: x[1], reverse=True)
+    sorted_frequencies = sorted(
+        frequencies.items(), key=lambda x: x[1], reverse=True
+    )
 
     result = []
     for v, f in sorted_frequencies:

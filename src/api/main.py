@@ -39,7 +39,9 @@ class Game(BaseModel):
 
 @app.get("/games")
 def get_all_games() -> List[Game]:
-    return [{"number_of_players": len(g._players)} for g in poker_app.get_games()]
+    return [
+        {"number_of_players": len(g._players)} for g in poker_app.get_games()
+    ]
 
 
 class NewGameData(BaseModel):
@@ -53,7 +55,9 @@ def create_game(game_data: NewGameData, response: Response):
         return {"message": "A game is already running"}
 
     poker_app.start_game(500, number_of_players=game_data.number_of_players)
-    return {"message": f"Game created for {game_data.number_of_players} players"}
+    return {
+        "message": f"Game created for {game_data.number_of_players} players"
+    }
 
 
 def start():
