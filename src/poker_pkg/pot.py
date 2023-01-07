@@ -1,5 +1,6 @@
 from collections import defaultdict
-from player import AbstractPokerPlayer
+
+from .player import AbstractPokerPlayer
 
 
 class SidePot:
@@ -9,9 +10,7 @@ class SidePot:
         self.players = []
 
     def add_elligible_players(self, players_totals: dict) -> None:
-        ellibigle = [
-            p for p, t in players_totals.items() if t >= self.total_contribution
-        ]
+        ellibigle = [p for p, t in players_totals.items() if t >= self.total_contribution]
         self.players.extend(ellibigle)
 
     def get_value(self) -> int:
@@ -50,9 +49,7 @@ class Pot:
 
         return side_pots
 
-    def _assign_players_to_side_pots(
-        self, side_pots: list[SidePot], player_totals: dict
-    ) -> list:
+    def _assign_players_to_side_pots(self, side_pots: list[SidePot], player_totals: dict) -> list:
         for p in side_pots:
             p.add_elligible_players(player_totals)
 

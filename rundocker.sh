@@ -8,5 +8,5 @@ for container in $(docker ps --filter "status=exited" --format '{{.Names}}' | gr
 done
 
 docker run -p 8000:8000 -it \
+    --mount type=bind,source="$(pwd)"/src,target=/opt/poker/src \
     --name "$CONTAINER_NAME" "$IMAGE_NAME"
-    #    --mount type=bind,source="$(pwd)"/src,target=/opt/poker/src \

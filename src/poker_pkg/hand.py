@@ -1,8 +1,8 @@
 from collections import Counter
 from typing import Callable
 
-from card import Card, CardComparator
-from card_collection import CardCollection
+from .card import Card, CardComparator
+from .card_collection import CardCollection
 
 
 class Hand(CardCollection):

@@ -1,7 +1,7 @@
 import collections
 from typing import Union
 
-from card import Card
+from .card import Card
 
 
 class InvalidCardPosition(Exception):
@@ -37,9 +37,7 @@ class CardCollection:
         cards: list[Card] = None,
         max_length: int = None,
     ) -> None:
-        self.max_length = (
-            max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
-        )
+        self.max_length = max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
         self._cards = [] if cards is None else [c for c in cards]
 
         if self._has_too_many_cards():
@@ -106,10 +104,7 @@ class CardCollection:
 
     def _slice(self, slice: slice) -> list:
         return CardCollection(
-            cards=[
-                self._cards[i]
-                for i in range(slice.start, slice.stop + 1, slice.step or 1)
-            ]
+            cards=[self._cards[i] for i in range(slice.start, slice.stop + 1, slice.step or 1)]
         )
 
     def __getitem__(self, index: int | slice) -> Card | list:

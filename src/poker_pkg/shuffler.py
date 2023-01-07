@@ -1,8 +1,9 @@
-from abc import ABC, abstractmethod
 import random
-from card import Card
-from card_collection import CardCollection
-from constants import ALL_CARDS
+from abc import ABC, abstractmethod
+
+from .card import Card
+from .card_collection import CardCollection
+from .constants import ALL_CARDS
 
 
 class AbstractShuffler(ABC):

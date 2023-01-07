@@ -14,7 +14,6 @@ from poker_pkg.card import Card
 from poker_pkg.deck import Deck
 from poker_pkg.hand import Hand, PokerHand
 from poker_pkg.player import Player
-from poker_pkg.poker import Poker
 from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalBetException,
@@ -24,6 +23,7 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
+from poker_pkg.poker_game import PokerGame as Poker
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 
@@ -105,7 +105,7 @@ def test_deal_cycles_hands():
 def test_deal__cards_are_removed_from_deck():
     deck = Deck()
 
-    game = Poker()
+    game = game_factory()
 
     player = Player()
     game.deal([player], deck)
@@ -233,7 +233,7 @@ def test_fold(pot_factory_factory):
 
 
 def test_find_winner():
-    game = Poker()
+    game = game_factory()
 
     hand1 = PokerHand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]))
     hand2 = PokerHand(cards=make_cards(["12C", "12S", "6C", "2D", "3H"]))
@@ -247,12 +247,11 @@ def test_find_winner():
     player2.hand = hand2
     player3.hand = hand3
 
-    # game._round_players = [player1, player2, player3]
     assert game.find_winnner([player1, player2, player3]) == [player1]
 
 
 def test_find_winner__tied_hands():
-    game = Poker()
+    game = game_factory()
 
     hand1 = PokerHand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]))
     hand2 = PokerHand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
@@ -266,7 +265,6 @@ def test_find_winner__tied_hands():
     player2.hand = hand2
     player3.hand = hand3
 
-    # game._round_players = [player1, player2, player3]
     assert game.find_winnner([player1, player2, player3]) == [player1, player3]
 
 

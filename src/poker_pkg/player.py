@@ -1,14 +1,12 @@
 from abc import ABC
 from typing import Union
 
-from hand import Hand
-from poker_errors import InvalidAmountTooMuch
+from .hand import Hand
+from .poker_errors import InvalidAmountTooMuch
 
 
 class AbstractPokerPlayer(ABC):
-    def __init__(
-        self, purse: int = 0, name: str = "John", hand_factory: Hand = Hand
-    ) -> None:
+    def __init__(self, purse: int = 0, name: str = "John", hand_factory: Hand = Hand) -> None:
         self.hand_factory = hand_factory
 
         self.purse = purse

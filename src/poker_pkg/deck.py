@@ -1,7 +1,7 @@
 from typing import Union
 
-from card import Card
-from card_collection import CardCollection
+from .card import Card
+from .card_collection import CardCollection
 
 
 def make_all_standard_cards():

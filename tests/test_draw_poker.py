@@ -6,12 +6,12 @@ from conftest import shuffler_factory
 
 from poker_pkg.card import Card
 from poker_pkg.player import Player
-from poker_pkg.poker import Poker
 from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalCardSwitch,
     PlayerOutOfOrderException,
 )
+from poker_pkg.poker_game import PokerGame as Poker
 
 game_factory = partial(default_game_factory, game_type=Poker.TYPE_DRAW)
 

@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING
 
-from player import AbstractPokerPlayer
-from poker_errors import EndOfStep, IllegalActionException, PlayerOutOfOrderException
-
+from .player import AbstractPokerPlayer
+from .poker_errors import EndOfStep, IllegalActionException, PlayerOutOfOrderException
 
 if TYPE_CHECKING:
     from poker import Poker

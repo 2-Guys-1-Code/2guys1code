@@ -5,8 +5,9 @@ import pytest
 from poker_pkg.card import Card
 from poker_pkg.hand import PokerCardComparator, PokerHand
 from poker_pkg.player import Player
-from poker_pkg.poker import Poker, Pot
 from poker_pkg.poker_errors import DuplicateCardException
+from poker_pkg.poker_game import PokerGame as Poker
+from poker_pkg.pot import Pot
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
 # fmt: off
@@ -80,16 +81,12 @@ def game_factory(
     if pot_factory is not None:
         init_params["pot_factory"] = pot_factory
 
-    game = Poker(**init_params)
-
-    start_params = {}
-
     if type(players) is int:
-        start_params["number_of_players"] = players
+        init_params["number_of_players"] = players
     else:
-        start_params["players"] = players
+        init_params["players"] = players
 
-    game.start(chips_per_player, **start_params)
+    game = Poker(chips_per_player, **init_params)
 
     return game
 

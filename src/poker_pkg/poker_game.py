@@ -1,13 +1,12 @@
-import uuid
 from functools import partial
 from math import floor
 
-from card import Card
-from card_collection import CardCollection, EmptyDeck
-from deck import Deck, DeckWithoutJokers
-from hand import Hand, PokerHand
-from player import AbstractPokerPlayer, Player
-from poker_errors import (
+from .card import Card
+from .card_collection import CardCollection, EmptyDeck
+from .deck import Deck, DeckWithoutJokers
+from .hand import Hand, PokerHand
+from .player import AbstractPokerPlayer, Player
+from .poker_errors import (
     EndOfStep,
     IllegalActionException,
     IllegalBetException,
@@ -16,12 +15,12 @@ from poker_errors import (
     InvalidAmountNotAnInteger,
     TooManyPlayers,
 )
-from pot import Pot
-from shuffler import AbstractShuffler, Shuffler
-from turn import TurnManager
+from .pot import Pot
+from .shuffler import AbstractShuffler, Shuffler
+from .turn import TurnManager
 
 
-class Poker:
+class PokerGame:
     TYPE_STUD: str = "STUD"
     TYPE_DRAW: str = "DRAW"
     TYPE_HOLDEM: str = "HOLDEM"
@@ -42,12 +41,15 @@ class Poker:
 
     def __init__(
         self,
+        chips_per_player: int,
         shuffler: AbstractShuffler = None,
         game_type: str = TYPE_STUD,
         pot_factory: Pot = Pot,
         hand_factory: Hand = PokerHand,
-    ):
-        self.uuid = str(uuid.uuid4())
+        number_of_players: int = 0,
+        players: list = None,
+    ) -> None:
+
         self._game_type = game_type
         self._shuffler = shuffler or Shuffler()
 
@@ -57,6 +59,27 @@ class Poker:
         self._community_pile = CardCollection()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory)
+
+        if chips_per_player is None:
+            chips_per_player = 500
+
+        if players is not None:
+            self._players = players
+        else:
+            self._players = [Player() for _ in range(number_of_players)]
+
+            self._distribute_chips(
+                self._players,
+                chips_per_player,
+            )
+
+        for p in self._players:
+            p.hand_factory = self.hand_factory
+
+        self.kitty = 0
+        self.round_count = 0
+        self.game_winner = None
+        self.current_player = None
 
     def _set_deck(self) -> None:
         self._deck = DeckWithoutJokers()
@@ -156,32 +179,32 @@ class Poker:
         for _ in range(0, cards_to_reveal):
             self._community_pile.insert_at_end(deck.pull_from_top())
 
-    def start(
-        self,
-        chips_per_player: int,
-        number_of_players: int = 0,
-        players: list = None,
-    ) -> None:
-        if chips_per_player is None:
-            chips_per_player = 500
+    # def start(
+    #     self,
+    #     chips_per_player: int,
+    #     number_of_players: int = 0,
+    #     players: list = None,
+    # ) -> None:
+    #     if chips_per_player is None:
+    #         chips_per_player = 500
 
-        if players is not None:
-            self._players = players
-        else:
-            self._players = [Player() for _ in range(number_of_players)]
+    #     if players is not None:
+    #         self._players = players
+    #     else:
+    #         self._players = [Player() for _ in range(number_of_players)]
 
-            self._distribute_chips(
-                self._players,
-                chips_per_player,
-            )
+    #         self._distribute_chips(
+    #             self._players,
+    #             chips_per_player,
+    #         )
 
-        for p in self._players:
-            p.hand_factory = self.hand_factory
+    #     for p in self._players:
+    #         p.hand_factory = self.hand_factory
 
-        self.kitty = 0
-        self.round_count = 0
-        self.game_winner = None
-        self.current_player = None
+    #     self.kitty = 0
+    #     self.round_count = 0
+    #     self.game_winner = None
+    #     self.current_player = None
 
     def _count_players_with_money(self) -> int:
         return len([p for p in self._players if p.purse > 0])
