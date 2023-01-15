@@ -1,6 +1,6 @@
 from functools import partial
 
-from poker_pkg.player import Player
+from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_game import PokerGame as Poker
 
 from .conftest import game_factory as default_game_factory
@@ -11,8 +11,8 @@ shuffler_factory = partial(_shuffler_factory, cards_per_hand=2)
 
 
 def test_game__deals_2_cards():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     # hand1 = ["1H", "3C", "4C", "5C", "6C"]
     # hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -30,8 +30,8 @@ def test_game__deals_2_cards():
 
 
 def test_reveal_flop_after_bet_step():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
     game = game_factory(players=[player1, player2])
 
     game.start_round()
@@ -48,8 +48,8 @@ def test_reveal_flop_after_bet_step():
 
 
 def test_reveal_turn():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
     game = game_factory(players=[player1, player2])
 
     game.start_round()

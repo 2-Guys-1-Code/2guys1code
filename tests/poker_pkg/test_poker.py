@@ -6,7 +6,7 @@ import pytest
 from poker_pkg.card import Card
 from poker_pkg.deck import Deck
 from poker_pkg.hand import Hand, PokerHand
-from poker_pkg.player import Player
+from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalBetException,
@@ -16,7 +16,6 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from poker_pkg.poker_game import PokerGame as Poker
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 from .conftest import (
@@ -91,7 +90,7 @@ def test_deal_cycles_hands():
     deck = Deck()
     fake_shuffler.shuffle(deck)
 
-    players = [Player() for _ in range(4)]
+    players = [PokerPlayer() for _ in range(4)]
     game = game_factory(shuffler=fake_shuffler, players=players)
 
     game.deal(players, deck)
@@ -108,7 +107,7 @@ def test_deal__cards_are_removed_from_deck():
 
     game = game_factory()
 
-    player = Player()
+    player = PokerPlayer()
     game.deal([player], deck)
 
     for c in player.hand:
@@ -145,8 +144,8 @@ def test_all_in(pot_factory_factory):
     ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
 
-    player1 = Player(purse=300, name="Jack")
-    player2 = Player(purse=228, name="Paul")
+    player1 = PokerPlayer(purse=300, name="Jack")
+    player2 = PokerPlayer(purse=228, name="Paul")
 
     game = game_factory(
         shuffler=fake_shuffler,
@@ -180,8 +179,8 @@ def test_all_in(pot_factory_factory):
     ],
 )
 def test_action__not_the_players_turn(action, args):
-    player1 = Player(purse=300)
-    player2 = Player(purse=228)
+    player1 = PokerPlayer(purse=300)
+    player2 = PokerPlayer(purse=228)
     game = game_factory(players=[player1, player2])
 
     game.start_round()
@@ -199,9 +198,9 @@ def test_action__not_the_players_turn(action, args):
 
 
 def test_fold(pot_factory_factory):
-    player1 = Player(purse=300)
-    player2 = Player(purse=228)
-    player3 = Player(purse=100)
+    player1 = PokerPlayer(purse=300)
+    player2 = PokerPlayer(purse=228)
+    player3 = PokerPlayer(purse=100)
     game = game_factory(
         players=[player1, player2, player3],
     )
@@ -240,9 +239,9 @@ def test_find_winner():
     hand2 = PokerHand(cards=make_cards(["12C", "12S", "6C", "2D", "3H"]))
     hand3 = PokerHand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
-    player1 = Player()
-    player2 = Player()
-    player3 = Player()
+    player1 = PokerPlayer()
+    player2 = PokerPlayer()
+    player3 = PokerPlayer()
 
     player1.hand = hand1
     player2.hand = hand2
@@ -258,9 +257,9 @@ def test_find_winner__tied_hands():
     hand2 = PokerHand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     hand3 = PokerHand(cards=make_cards(["13S", "13D", "4C", "8H", "7D"]))
 
-    player1 = Player()
-    player2 = Player()
-    player3 = Player()
+    player1 = PokerPlayer()
+    player2 = PokerPlayer()
+    player3 = PokerPlayer()
 
     player1.hand = hand1
     player2.hand = hand2
@@ -307,9 +306,9 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ], all_cards=CARDS_NO_JOKERS)
     # fmt: on
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -338,10 +337,10 @@ def test_game__all_players_all_in__three_way_tie():
     hand4 = ["8C", "3S", "4S", "5S", "6S"]
 
     fake_shuffler = shuffler_factory([hand1, hand2, hand3, hand4])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
-    player4 = Player(purse=500, name="Albert")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
+    player4 = PokerPlayer(purse=500, name="Albert")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3, player4])
 
     game.start_round()
@@ -367,9 +366,9 @@ def test_game__side_pots_are_accounted_for():
 
     fake_shuffler = shuffler_factory([hand1, hand2, hand3])
 
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=1000, name="Geordie")
-    player3 = Player(purse=1000, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=1000, name="Geordie")
+    player3 = PokerPlayer(purse=1000, name="Eugene")
     game = game_factory(players=[player1, player2, player3], shuffler=fake_shuffler)
 
     game.start_round()
@@ -388,9 +387,9 @@ def test_game__first_player_all_in_others_fold():
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
 
     fake_shuffler = shuffler_factory([hand1, None, None])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -409,9 +408,9 @@ def test_game__two_rounds():
     hand1 = ["1H", "13H", "12H", "11H", "10H"]
 
     fake_shuffler = shuffler_factory([hand1, None, None])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -436,9 +435,9 @@ def test_game__two_rounds():
 
 
 def test_count_players_with_money():
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Jeff")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Jeff")
     game = game_factory(
         players=[
             player1,
@@ -456,9 +455,9 @@ def test_game__two_rounds__more_coverage():
     hand3 = ["7D", "7S", "4H", "5C", "3S"]
 
     fake_shuffler = shuffler_factory([hand1, hand2, hand3])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -488,9 +487,9 @@ def test_game__two_rounds__more_coverage_v2():
     hand3 = ["7D", "7S", "4H", "5C", "3S"]
 
     fake_shuffler = shuffler_factory([[hand1, hand2, hand3], [hand1, hand3, hand2]])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -520,9 +519,9 @@ def test_game__players_without_money_are_out_of_the_game():
     hand3 = ["1D", "3H", "4H", "5H", "6H"]  # High card Ace
 
     fake_shuffler = shuffler_factory([hand1, hand2, hand3])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
     game.start_round()
@@ -541,8 +540,8 @@ def test_bet():
     hand2 = ["7D", "7S", "4H", "5C", "3S"]
 
     fake_shuffler = shuffler_factory([[hand1, hand2], [hand1, hand2]])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
 
     game = game_factory(
         shuffler=fake_shuffler,
@@ -566,9 +565,9 @@ def test_bet__multiple_bets():
     hand2 = ["7D", "7S", "4H", "5C", "3S"]
 
     fake_shuffler = shuffler_factory([[hand1, hand2], [hand1, hand2]])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
 
     game = game_factory(
         shuffler=fake_shuffler,
@@ -589,8 +588,8 @@ def test_bet__multiple_bets():
 
 
 def test_check__cannot_check_if_bet_not_met():
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
     game = game_factory(
         players=[
             player1,
@@ -612,9 +611,9 @@ def test_check__cannot_check_if_bet_not_met():
 
 
 def test_bet__next_player_must_meet_bet():
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="John")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="John")
     game = game_factory(
         players=[
             player1,
@@ -641,8 +640,8 @@ def test_bet__next_player_must_meet_bet():
 
 
 def test_call():
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
     game = game_factory(
         players=[
             player1,
@@ -661,8 +660,8 @@ def test_call():
 
 
 def test_raise():
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
     game = game_factory(
         players=[
             player1,
@@ -686,9 +685,9 @@ def test_game__side_pot_participant_cannot_win_when_out():
     hand3 = ["8S", "7C", "4D", "5D", "3D"]
 
     fake_shuffler = shuffler_factory([[hand1, hand2, hand3]])
-    player1 = Player(purse=500, name="Michael")
-    player2 = Player(purse=500, name="Geordie")
-    player3 = Player(purse=500, name="Eugene")
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Geordie")
+    player3 = PokerPlayer(purse=500, name="Eugene")
 
     game = game_factory(
         shuffler=fake_shuffler,
@@ -714,7 +713,7 @@ def test_game__side_pot_participant_cannot_win_when_out():
 
 
 def test_transfer_to_pot():
-    player1 = Player(purse=500, name="Michael")
+    player1 = PokerPlayer(purse=500, name="Michael")
     game = game_factory(
         players=[
             player1,
@@ -732,7 +731,7 @@ def test_transfer_to_pot():
 
 
 def test_transfer_to_pot__invalid_amout():
-    player1 = Player(purse=500, name="Michael")
+    player1 = PokerPlayer(purse=500, name="Michael")
     game = game_factory(
         players=[
             player1,

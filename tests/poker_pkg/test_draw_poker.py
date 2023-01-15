@@ -3,7 +3,7 @@ from functools import partial
 import pytest
 
 from poker_pkg.card import Card
-from poker_pkg.player import Player
+from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_errors import (
     IllegalActionException,
     IllegalCardSwitch,
@@ -18,8 +18,8 @@ game_factory = partial(default_game_factory, game_type=Poker.TYPE_DRAW)
 
 
 def test_game__player_can_switch_cards():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -48,8 +48,8 @@ def test_game__player_can_switch_cards():
 
 
 def test_game__player_cannot_switch_cards_they_dont_have():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -73,8 +73,8 @@ def test_game__player_cannot_switch_cards_they_dont_have():
 
 
 def test_game__player_cannot_switch_more_than_3_cards():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["13H", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
@@ -106,8 +106,8 @@ def test_game__player_cannot_switch_more_than_3_cards():
 
 
 def test_game__player_can_switch_4_cards_if_has_ace():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
@@ -133,8 +133,8 @@ def test_game__player_can_switch_4_cards_if_has_ace():
 
 
 def test_game__player_cannot_switch_5_cards_if_has_ace():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
@@ -167,8 +167,8 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
 
 
 def test_game__player_cannot_switch_cards_our_of_order():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -192,8 +192,8 @@ def test_game__player_cannot_switch_cards_our_of_order():
 
 
 def test_game__player_can_switch_no_cards():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -216,8 +216,8 @@ def test_game__player_can_switch_no_cards():
 
 
 def test_game__players_can_only_switch_cards_during_switch_step():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
@@ -244,8 +244,8 @@ def test_game__players_can_only_switch_cards_during_switch_step():
 
 
 def test_game__betting_resumes_after_switching_cards():
-    player1 = Player(purse=500, name="Jack")
-    player2 = Player(purse=500, name="Paul")
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
 
     hand1 = ["1H", "3C", "4C", "5C", "6C"]
     hand2 = ["1D", "3H", "4H", "5H", "6H"]
