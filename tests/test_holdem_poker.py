@@ -1,10 +1,10 @@
 from functools import partial
 
-from conftest import game_factory as default_game_factory
-from conftest import shuffler_factory as _shuffler_factory
-
 from poker_pkg.player import Player
 from poker_pkg.poker_game import PokerGame as Poker
+
+from .conftest import game_factory as default_game_factory
+from .conftest import shuffler_factory as _shuffler_factory
 
 game_factory = partial(default_game_factory, game_type=Poker.TYPE_HOLDEM)
 shuffler_factory = partial(_shuffler_factory, cards_per_hand=2)

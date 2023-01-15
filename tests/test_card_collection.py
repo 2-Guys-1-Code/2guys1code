@@ -1,5 +1,4 @@
 import pytest
-from conftest import make_cards
 
 from poker_pkg.card import Card
 from poker_pkg.card_collection import (
@@ -12,11 +11,11 @@ from poker_pkg.card_collection import (
 )
 from poker_pkg.hand import Hand
 
+from .conftest import make_cards
+
 
 def test_eq_is_false_when_types_are_different():
-    assert CardCollection(cards=make_cards(["9C", "9S"])) != Hand(
-        cards=make_cards(["9C", "9S"])
-    )
+    assert CardCollection(cards=make_cards(["9C", "9S"])) != Hand(cards=make_cards(["9C", "9S"]))
 
 
 def test_eq_is_false_when_lengths_are_different():
@@ -70,12 +69,8 @@ def test_can_init_with_cards():
 
 
 def test_can_add_card_collections():
-    card_collection_1 = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
-    card_collection_2 = CardCollection(
-        cards=make_cards(["9H", "9D", "7H", "8S", "5C"])
-    )
+    card_collection_1 = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
+    card_collection_2 = CardCollection(cards=make_cards(["9H", "9D", "7H", "8S", "5C"]))
     card_collection_3 = CardCollection(cards=make_cards(["10C"]))
 
     combined = card_collection_1 + card_collection_2 + card_collection_3
@@ -97,9 +92,7 @@ def test_can_add_card_collections():
 
 
 def test_can_add_card():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
     combined = card_collection + Card("6H") + Card("10C")
 
@@ -116,9 +109,7 @@ def test_can_add_card():
 
 
 def test_pull_start():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card = card_collection.pull_from_start()
     assert str(card) == "9C"
     assert len(card_collection) == 4
@@ -133,9 +124,7 @@ def test_pull_start():
     ],
 )
 def test_pull_from_position(position, expected_card):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card = card_collection.pull_from_position(position)
     assert str(card) == expected_card
     assert len(card_collection) == 4
@@ -150,9 +139,7 @@ def test_pull_from_position(position, expected_card):
     ],
 )
 def test_pull_from_position__empty_position(position):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     with pytest.raises(InvalidCardPosition):
         card_collection.pull_from_position(position)
 
@@ -160,9 +147,7 @@ def test_pull_from_position__empty_position(position):
 
 
 def test_pull_from_last_position_twice():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card_collection.pull_from_position(5)
 
     with pytest.raises(InvalidCardPosition):
@@ -172,9 +157,7 @@ def test_pull_from_last_position_twice():
 
 
 def test_pull_from_position_1_twice():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     first_card = card_collection.pull_from_position(1)
     second_card = card_collection.pull_from_position(1)
 
@@ -184,9 +167,7 @@ def test_pull_from_position_1_twice():
 
 
 def test_pull_card():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     result = card_collection.pull_card(Card("5D"))
     assert result == Card("5D")
     assert len(card_collection) == 4
@@ -201,9 +182,7 @@ def test_pull_card():
     ],
 )
 def test_pull_card__card_is_missing(card, expected_error):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
     with pytest.raises(expected_error):
         card_collection.pull_card(card)
@@ -220,9 +199,7 @@ def test_pull_card__card_is_missing(card, expected_error):
     ],
 )
 def test_put_card_back_at_position(position):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     test_card = card_collection.pull_from_start()
     assert len(card_collection) == 4
     card_collection.insert_at(position, test_card)
@@ -231,9 +208,7 @@ def test_put_card_back_at_position(position):
 
 
 def test_insert_none_at_start():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     with pytest.raises(NotACard):
         card_collection.insert_at_start(None)
 
@@ -242,9 +217,7 @@ def test_insert_none_at_start():
 
 
 def test_insert_at_start():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card = Card("1H")
     card_collection.insert_at_start(card)
     assert card_collection.peek(1) == card
@@ -252,9 +225,7 @@ def test_insert_at_start():
 
 
 def test_insert_at_end():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card = Card("5C")
     card_collection.insert_at_end(card)
     assert len(card_collection) == 6
@@ -270,9 +241,7 @@ def test_insert_at_end():
     ],
 )
 def test_insert_card__invalid_position(position):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     test_card = Card("5C")
 
     with pytest.raises(InvalidCardPosition):
@@ -290,9 +259,7 @@ def test_insert_card__invalid_position(position):
     ],
 )
 def test_insert_card__valid_position(position):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     test_card = Card("5C")
 
     card_collection.insert_at(position, test_card)
@@ -309,9 +276,7 @@ def test_insert_card__valid_position(position):
     ],
 )
 def test_peek_card(position, expected):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     assert card_collection.peek(position) == Card(expected)
     assert len(card_collection) == 5
 
@@ -324,25 +289,19 @@ def test_peek_card(position, expected):
     ],
 )
 def test_peek_invalid_position(position):
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     with pytest.raises(InvalidCardPosition):
         card_collection.peek(position)
 
 
 def test_get_card_position():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     assert card_collection.get_position(Card("8C")) == 4
     assert len(card_collection) == 5
 
 
 def test_get_invalid_card():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     test_card = Card("1H")
     with pytest.raises(MissingCard):
         card_collection.get_position(test_card)
@@ -350,9 +309,7 @@ def test_get_invalid_card():
 
 
 def test_can_sub_card_collections():
-    card_collection_1 = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection_1 = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card_collection_2 = CardCollection(cards=make_cards(["9C", "9S"]))
     card_collection_3 = CardCollection(cards=make_cards(["7C"]))
 
@@ -366,9 +323,7 @@ def test_can_sub_card_collections():
 
 
 def test_can_sub_card():
-    card_collection_1 = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection_1 = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
     combined = card_collection_1 - Card("9S")
 
@@ -382,9 +337,7 @@ def test_can_sub_card():
 
 
 def test_can_sub_card_collections__not_a_subset():
-    card_collection_1 = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection_1 = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card_collection_2 = CardCollection(cards=make_cards(["9C", "9S"]))
     with pytest.raises(NotASubSet):
         _ = card_collection_2 - card_collection_1
@@ -443,9 +396,7 @@ def test_cannot_add_past_max(supplement):
 
 
 def test_can_be_sorted():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "7C", "8C", "5D"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
     card_collection.sort()
 
@@ -453,9 +404,7 @@ def test_can_be_sorted():
 
 
 def test_can_be_sorted_in_reverse_order():
-    card_collection = CardCollection(
-        cards=make_cards(["9C", "9S", "5D", "7C", "8C"])
-    )
+    card_collection = CardCollection(cards=make_cards(["9C", "9S", "5D", "7C", "8C"]))
 
     card_collection.sort(reverse=True)
 

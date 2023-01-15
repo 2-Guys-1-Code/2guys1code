@@ -1,9 +1,10 @@
 import pytest
-from conftest import make_poker_cards, make_poker_hand
 
 from poker_pkg.card_collection import CardCollection
 from poker_pkg.hand import PokerHand
 from poker_pkg.hand_finder import BestHandFinder
+
+from .conftest import make_poker_cards, make_poker_hand
 
 
 @pytest.mark.parametrize(

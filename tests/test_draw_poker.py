@@ -1,8 +1,6 @@
 from functools import partial
 
 import pytest
-from conftest import game_factory as default_game_factory
-from conftest import shuffler_factory
 
 from poker_pkg.card import Card
 from poker_pkg.player import Player
@@ -12,6 +10,9 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
 )
 from poker_pkg.poker_game import PokerGame as Poker
+
+from .conftest import game_factory as default_game_factory
+from .conftest import shuffler_factory
 
 game_factory = partial(default_game_factory, game_type=Poker.TYPE_DRAW)
 
@@ -111,9 +112,7 @@ def test_game__player_can_switch_4_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory(
-        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
-    )
+    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
@@ -140,9 +139,7 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory(
-        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
-    )
+    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 

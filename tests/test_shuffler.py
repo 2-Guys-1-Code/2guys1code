@@ -1,7 +1,7 @@
-from conftest import make_cards
-
 from poker_pkg.deck import Deck
 from poker_pkg.shuffler import FakeShuffler, Shuffler
+
+from .conftest import make_cards
 
 
 def test_mapping_contains_1_to_54():
