@@ -32,10 +32,17 @@ def test_create_game(api_client):
 
     assert response.status_code == 201
     parsed_response = response.json()
-    assert parsed_response["message"] == "Game created for 3 players"
+    assert parsed_response == {"id": 1, "number_of_players": 3}
 
 
-def test_cannot_create_game_when_one_already_running(api_client):
+@mock.patch("api.api.get_poker_config")
+def test_cannot_create_game_when_max_games_reached(patcher):
+    patcher.return_value = {
+        "max_games": 1,
+    }
+
+    api_client = TestClient(create_app())
+
     response = api_client.post("/games", json={"number_of_players": 3})
 
     assert response.status_code == 201
@@ -44,7 +51,7 @@ def test_cannot_create_game_when_one_already_running(api_client):
 
     assert response.status_code == 409
     parsed_response = response.json()
-    assert parsed_response["message"] == "A game is already running"
+    assert parsed_response["detail"] == "The maximum number of games has been reached."
 
 
 def test_get_games(api_client):
@@ -60,4 +67,4 @@ def test_get_games(api_client):
     response = api_client.get("/games")
 
     response.status_code == 200
-    assert response.json() == [{"number_of_players": 3}]
+    assert response.json() == [{"id": 1, "number_of_players": 3}]
