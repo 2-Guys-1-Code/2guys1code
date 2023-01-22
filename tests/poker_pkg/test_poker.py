@@ -13,9 +13,11 @@ from poker_pkg.poker_errors import (
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
+    PlayerCannotJoin,
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
+from poker_pkg.poker_game import PokerGame
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 from .conftest import (
@@ -25,6 +27,86 @@ from .conftest import (
     make_pot,
     shuffler_factory,
 )
+
+
+def test_create_game():
+    game = PokerGame(500, max_players=3)
+
+    assert len(game.get_players()) == 0
+    assert game.get_free_seats() == 3
+
+
+def test_join_game():
+    game = PokerGame(500, max_players=3)
+
+    player = PokerPlayer(name="Jack")
+
+    game.join(player)
+
+    players = game.get_players()
+    assert players == [player]
+    assert players[0].purse == 500
+    assert game.get_free_seats() == 2
+
+
+def test_player_cannot_join_more_than_once():
+    game = PokerGame(500, max_players=3)
+
+    player = PokerPlayer(name="Jack")
+
+    game.join(player)
+
+    with pytest.raises(PlayerCannotJoin) as e:
+        game.join(player)
+
+    assert str(e.value) == 'Player "Jack" is already in the game'
+
+    players = game.get_players()
+    assert players == [player]
+    assert players[0].purse == 500
+    assert game.get_free_seats() == 2
+
+
+def test_player_cannot_join_when_no_free_seat():
+    game = PokerGame(500, max_players=2)
+
+    player1 = PokerPlayer(name="Jack")
+    player2 = PokerPlayer(name="Zack")
+    player3 = PokerPlayer(name="Mack")
+
+    game.join(player1)
+    game.join(player2)
+
+    assert game.get_free_seats() == 0
+
+    with pytest.raises(PlayerCannotJoin) as e:
+        game.join(player3)
+
+    assert str(e.value) == "There are no free seats in the game"
+
+    players = game.get_players()
+    assert players == [player1, player2]
+    assert players[0].purse == 500
+    assert players[1].purse == 500
+    assert game.get_free_seats() == 0
+
+
+def test_player_cannot_join_when_game_has_started():
+    game = PokerGame(500, max_players=3)
+
+    player1 = PokerPlayer(name="Jack")
+    player2 = PokerPlayer(name="Zack")
+    player3 = PokerPlayer(name="Mack")
+
+    game.join(player1)
+    game.join(player2)
+
+    game.start()
+
+    with pytest.raises(PlayerCannotJoin) as e:
+        game.join(player3)
+
+    assert str(e.value) == "The game has started"
 
 
 def test_start_game__initial_state():
@@ -51,10 +133,7 @@ def test_game_can_set_chips_per_player():
 def test_start_round__initial_state():
     game = game_factory()
 
-    game.start_round()
-    print(sys.path)
-    print(Hand)
-    print(type(game._round_players[0].hand))
+    game.start()
     assert len(game._round_players) == 3
     for x in range(0, 3):
         assert isinstance(game._round_players[x].hand, Hand)
@@ -75,7 +154,7 @@ def test_start_round_shuffles_deck_and_deals():
     ])
     # fmt: on
     game = game_factory(shuffler=fake_shuffler, players=1)
-    game.start_round()
+    game.start()
     assert str(game._players[0].hand) == "1H RJ 2H BJ 3H"
 
 
@@ -115,15 +194,13 @@ def test_deal__cards_are_removed_from_deck():
 
 
 def test_game_fails_when_too_many_players():
-    game = game_factory(players=11)
-
     with pytest.raises(TooManyPlayers):
-        game.start_round()
+        game = game_factory(players=11)
 
 
 def test_check():
     game = game_factory(players=2)
-    game.start_round()
+    game.start()
 
     assert game.current_player == game._players[0]
     game.check(game._players[0])
@@ -152,7 +229,7 @@ def test_all_in(pot_factory_factory):
         players=[player1, player2],
     )
 
-    game.start_round()
+    game.start()
 
     assert game.current_player == player1
 
@@ -183,7 +260,7 @@ def test_action__not_the_players_turn(action, args):
     player2 = PokerPlayer(purse=228)
     game = game_factory(players=[player1, player2])
 
-    game.start_round()
+    game.start()
 
     with pytest.raises(PlayerOutOfOrderException):
         getattr(game, action)(player2, *args)
@@ -205,7 +282,7 @@ def test_fold(pot_factory_factory):
         players=[player1, player2, player3],
     )
 
-    game.start_round()
+    game.start()
 
     assert len(game._round_players) == 3
 
@@ -279,7 +356,7 @@ def test_game__all_players_check__best_hand_is_the_winner():
     # fmt: on
     game = game_factory(shuffler=fake_shuffler, players=3)
 
-    game.start_round()
+    game.start()
 
     game.check(game._players[0])
     game.check(game._players[1])
@@ -311,7 +388,7 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -343,7 +420,7 @@ def test_game__all_players_all_in__three_way_tie():
     player4 = PokerPlayer(purse=500, name="Albert")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3, player4])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -371,7 +448,7 @@ def test_game__side_pots_are_accounted_for():
     player3 = PokerPlayer(purse=1000, name="Eugene")
     game = game_factory(players=[player1, player2, player3], shuffler=fake_shuffler)
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -392,7 +469,7 @@ def test_game__first_player_all_in_others_fold():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.fold(player2)
@@ -413,14 +490,14 @@ def test_game__two_rounds():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.check(player1)
     game.check(player2)
     game.check(player3)
 
     # Start the next round automatically?
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -460,14 +537,14 @@ def test_game__two_rounds__more_coverage():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
     game.fold(player3)
 
     # Start the next round automatically?
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.fold(player2)
@@ -492,14 +569,14 @@ def test_game__two_rounds__more_coverage_v2():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
     game.all_in(player3)
 
     # Start the next round automatically?
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -524,13 +601,13 @@ def test_game__players_without_money_are_out_of_the_game():
     player3 = PokerPlayer(purse=500, name="Eugene")
     game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
 
-    game.start_round()
+    game.start()
 
     game.all_in(player1)
     game.all_in(player2)
     game.all_in(player3)
 
-    game.start_round()
+    game.start()
 
     assert game._round_players == [player1, player3]
 
@@ -551,7 +628,7 @@ def test_bet():
         ],
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
 
@@ -578,7 +655,7 @@ def test_bet__multiple_bets():
         ],
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
     game.bet(player2, 200)
@@ -597,7 +674,7 @@ def test_check__cannot_check_if_bet_not_met():
         ]
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
     game.bet(player2, 400)
@@ -622,7 +699,7 @@ def test_bet__next_player_must_meet_bet():
         ]
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
 
@@ -649,7 +726,7 @@ def test_call():
         ]
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
 
@@ -669,7 +746,7 @@ def test_raise():
         ]
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 200)
 
@@ -698,7 +775,7 @@ def test_game__side_pot_participant_cannot_win_when_out():
         ],
     )
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.raise_bet(player2, 100)
@@ -759,3 +836,14 @@ def test_transfer_to_pot__invalid_amout():
 #   players change up to 3 cards (up to four is they have an Ace)
 #   round of betting
 #   find winner
+
+
+# def test_start_game_assigns_player_ids():
+#     player1 = PokerPlayer(purse=500, name="Michael", id=42)
+#     game = game_factory(
+#         players=[
+#             player1,
+#         ]
+#     )
+
+#     assert game.get_player_ids() == [42]

@@ -84,11 +84,20 @@ def game_factory(
         init_params["pot_factory"] = pot_factory
 
     if type(players) is int:
-        init_params["number_of_players"] = players
+        init_params["max_players"] = players
+        players = [PokerPlayer() for _ in range(players)]
     else:
-        init_params["players"] = players
+        # init_params["players"] = players
+        init_params["max_players"] = len(players)
 
     game = Poker(chips_per_player, **init_params)
+
+    # if type(players) is int:
+    # print("creating players")
+
+    for p in players:
+        game.join(p)
+        # p.hand_factory = game.hand_factory
 
     return game
 

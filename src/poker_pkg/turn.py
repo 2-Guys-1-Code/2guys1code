@@ -1,20 +1,14 @@
 from typing import TYPE_CHECKING
 
 from .player import AbstractPokerPlayer
-from .poker_errors import (
-    EndOfStep,
-    IllegalActionException,
-    PlayerOutOfOrderException,
-)
+from .poker_errors import EndOfStep, IllegalActionException, PlayerOutOfOrderException
 
 if TYPE_CHECKING:
-    from poker import Poker
+    from .poker_game import PokerGame
 
 
 class TurnManager:
-    def __init__(
-        self, game: "Poker", player: AbstractPokerPlayer, action: str
-    ) -> None:
+    def __init__(self, game: "PokerGame", player: AbstractPokerPlayer, action: str) -> None:
         self.game = game
         self.player = player
         self.action = action
@@ -26,12 +20,17 @@ class TurnManager:
         self.next_player = self.game._round_players[next_player_index]
 
     def __enter__(self) -> None:
+        if not self.game.started:
+            raise IllegalActionException("The game has not started")
+
         if self.game.current_player != self.player:
             raise PlayerOutOfOrderException()
 
         current_step = self.game.steps[self.game.step_count]
         if self.action not in current_step.get("actions", []):
-            raise IllegalActionException()
+            raise IllegalActionException(
+                f'The action "{self.action}" is not available at the moment'
+            )
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         try:

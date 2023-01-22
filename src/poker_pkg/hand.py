@@ -84,9 +84,7 @@ class PokerHand(Hand):
         cards: list[Card] = None,
         max_length: int = None,
     ) -> None:
-        super().__init__(
-            cards=cards, max_length=max_length, _cmp=PokerHand.beats
-        )
+        super().__init__(cards=cards, max_length=max_length, _cmp=PokerHand.beats)
 
     @staticmethod
     def beats(hand_1: Hand, hand_2: Hand) -> int:

@@ -1,6 +1,6 @@
 import uuid
 
-from .poker_game import PokerGame, PokerPlayer
+from .poker_game import AbstractPokerGame, PokerGame, PokerPlayer
 
 
 class TooManyGames(Exception):
@@ -27,7 +27,7 @@ class PokerApp:
     def get_games(self) -> list:
         return self.games
 
-    def _get_game_by_id(self, id: int) -> PokerGame:
+    def _get_game_by_id(self, id: int) -> AbstractPokerGame:
         game = next((g for g in self.games if g.id == id), None)
 
         if game is None:
@@ -40,7 +40,7 @@ class PokerApp:
         if player is None:
             raise PlayerNotFound()
 
-    def start_game(self, *args, **kwargs) -> None:
+    def start_game(self, *args, **kwargs) -> AbstractPokerGame:
         if len(self.games) >= self.max_games:
             raise TooManyGames("The maximum number of games has been reached.")
 
@@ -50,11 +50,11 @@ class PokerApp:
 
         return game
 
-    def join_game(self, game_id: int, player_id: int) -> None:
-        game = self._get_game_by_id(game_id)
-        player = self._get_player_by_id(player_id)
+    # def join_game(self, game_id: int, player_id: int) -> None:
+    #     game = self._get_game_by_id(game_id)
+    #     player = self._get_player_by_id(player_id)
 
-        game.join(player)
+    #     game.join(player)
 
 
 def create_poker_app(**kwargs):

@@ -6,7 +6,7 @@ from .poker_errors import InvalidAmountTooMuch
 
 
 class AbstractPokerPlayer(ABC):
-    def __init__(self, purse: int = 0, name: str = "John", hand_factory: Hand = Hand) -> None:
+    def __init__(self, purse: int = None, name: str = "John", hand_factory: Hand = Hand) -> None:
         self.hand_factory = hand_factory
 
         self.purse = purse
@@ -17,9 +17,15 @@ class AbstractPokerPlayer(ABC):
         return self.name
 
     def add_to_purse(self, amount: int) -> None:
+        if self.purse is None:
+            self.purse = 0
+
         self.purse += amount
 
     def take_from_purse(self, amount: int) -> None:
+        if self.purse is None:
+            self.purse = 0
+
         if amount > self.purse:
             raise InvalidAmountTooMuch()
 

@@ -22,17 +22,29 @@ def test_get_games_returns_games(poker_app):
         assert games == [mock_game]
 
 
-def test_join_game(poker_app):
-    with mock.patch("poker_pkg.poker_app.PokerGame") as patcher:
-        mock_game = FakePokerGame()
-        patcher.return_value = mock_game
-        game_1 = poker_app.start_game(500)
-        game_2 = poker_app.start_game(500)
+# def test_start_game(poker_app):
+#     with mock.patch("poker_pkg.poker_app.PokerGame") as patcher:
+#         mock_game = FakePokerGame()
+#         patcher.return_value = mock_game
 
-        player = PokerPlayer()
-        player.id = 3
+#         player = PokerPlayer(name="Jack")
 
-        poker_app.join_game(game_2.id, player.id)
+#         poker_app.start_game(player.id, 500)
 
-        assert game_1._players == []
-        assert game_2._players == [player]
+#         mock_game.get_players() == [player]
+
+
+# def test_join_game(poker_app):
+#     with mock.patch("poker_pkg.poker_app.PokerGame") as patcher:
+#         mock_game = FakePokerGame()
+#         patcher.return_value = mock_game
+#         game_1 = poker_app.start_game(500)
+#         game_2 = poker_app.start_game(500)
+
+#         player = PokerPlayer()
+#         player.id = 3
+
+#         poker_app.join_game(game_2.id, player.id)
+
+#         assert game_1._players == []
+#         assert game_2._players == [player]

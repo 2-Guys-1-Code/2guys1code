@@ -14,6 +14,7 @@ from .poker_errors import (
     IllegalCardSwitch,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
+    PlayerCannotJoin,
     TooManyPlayers,
 )
 from .pot import Pot
@@ -52,11 +53,12 @@ class PokerGame(AbstractPokerGame):
         game_type: str = TYPE_STUD,
         pot_factory: Pot = Pot,
         hand_factory: Hand = PokerHand,
-        number_of_players: int = 0,
-        players: list = None,
+        max_players: int = 0,
     ) -> None:
-
         self._game_type = game_type
+
+        self._validate_max_players(max_players)
+
         self._shuffler = shuffler or Shuffler()
 
         self._set_deck()
@@ -65,27 +67,48 @@ class PokerGame(AbstractPokerGame):
         self._community_pile = CardCollection()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory)
+        self.max_players = max_players
 
         if chips_per_player is None:
             chips_per_player = 500
 
-        if players is not None:
-            self._players = players
-        else:
-            self._players = [PokerPlayer() for _ in range(number_of_players)]
+        self._chips_per_player = chips_per_player
 
-            self._distribute_chips(
-                self._players,
-                chips_per_player,
-            )
-
-        for p in self._players:
-            p.hand_factory = self.hand_factory
+        self._players = []
 
         self.kitty = 0
         self.round_count = 0
         self.game_winner = None
         self.current_player = None
+        self.started = False
+
+    def _validate_max_players(self, max_players: int) -> None:
+        if max_players > 9:
+            raise TooManyPlayers()
+
+    def join(self, player: AbstractPokerPlayer) -> None:
+        if player in self.get_players():
+            raise PlayerCannotJoin(f'Player "{player}" is already in the game')
+
+        if self.get_free_seats() <= 0:
+            raise PlayerCannotJoin("There are no free seats in the game")
+
+        if self.started:
+            raise PlayerCannotJoin("The game has started")
+
+        if player.purse is None:
+            self._distribute_chips(
+                [player],
+                self._chips_per_player,
+            )
+
+        player.hand_factory = self.hand_factory
+
+        self._players.append(player)
+
+    def start(self) -> None:
+        self.started = True
+        self.start_round()
 
     def _set_deck(self) -> None:
         self._deck = DeckWithoutJokers()
@@ -260,7 +283,6 @@ class PokerGame(AbstractPokerGame):
             self.current_player = None
             self.deal_community_cards(self._deck, **current_step.get("config", {}))
             self.end_step()
-
         else:
             self.current_player = self._round_players[0]
 
@@ -400,3 +422,10 @@ class PokerGame(AbstractPokerGame):
                 winners = [p2]
 
         return winners
+
+    def get_players(self) -> list[AbstractPokerPlayer]:
+        return self._players
+
+    def get_free_seats(self) -> int:
+        return self.max_players - len(self._players)
+        pass

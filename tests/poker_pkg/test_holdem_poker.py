@@ -21,7 +21,7 @@ def test_game__deals_2_cards():
 
     game = game_factory(players=[player1, player2])
 
-    game.start_round()
+    game.start()
 
     assert len(player1.hand) == 2
     assert len(player2.hand) == 2
@@ -34,7 +34,7 @@ def test_reveal_flop_after_bet_step():
     player2 = PokerPlayer(purse=500, name="Paul")
     game = game_factory(players=[player1, player2])
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.bet(player2, 200)
@@ -52,7 +52,7 @@ def test_reveal_turn():
     player2 = PokerPlayer(purse=500, name="Paul")
     game = game_factory(players=[player1, player2])
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)

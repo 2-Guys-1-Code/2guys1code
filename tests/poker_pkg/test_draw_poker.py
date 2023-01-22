@@ -28,7 +28,7 @@ def test_game__player_can_switch_cards():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -58,7 +58,7 @@ def test_game__player_cannot_switch_cards_they_dont_have():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -83,7 +83,7 @@ def test_game__player_cannot_switch_more_than_3_cards():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -116,7 +116,7 @@ def test_game__player_can_switch_4_cards_if_has_ace():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -143,7 +143,7 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -177,7 +177,7 @@ def test_game__player_cannot_switch_cards_our_of_order():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -202,7 +202,7 @@ def test_game__player_can_switch_no_cards():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)
@@ -226,7 +226,7 @@ def test_game__players_can_only_switch_cards_during_switch_step():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     with pytest.raises(IllegalActionException):
         game.switch_cards(player1, [player1.hand[2], player1.hand[4]])
@@ -254,7 +254,7 @@ def test_game__betting_resumes_after_switching_cards():
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
-    game.start_round()
+    game.start()
 
     game.bet(player1, 100)
     game.call(player2)

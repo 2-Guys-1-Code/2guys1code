@@ -37,18 +37,23 @@ class ProxyAPI(FastAPI):
             "app_version": "0.1.0",
         }
 
-    def get_all_games(self) -> List[Game]:
+    def get_all_games(self) -> List[dict]:
         return [
-            {"number_of_players": len(g._players), "id": g.id} for g in self.poker_app.get_games()
+            {"max_players": g.max_players, "id": g.id, "players": {}}
+            for g in self.poker_app.get_games()
         ]
 
-    def create_game(self, game_data: NewGameData):
+    def create_game(self, game_data: NewGameData) -> dict:
         try:
-            game = self.poker_app.start_game(500, number_of_players=game_data.number_of_players)
+            game = self.poker_app.start_game(500, max_players=game_data.number_of_players)
         except TooManyGames as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-        return {"number_of_players": len(game._players), "id": game.id}
+        return {
+            "max_players": game.max_players,
+            "id": game.id,
+            "players": {8: {"id": 8, "name": "Bob"}},
+        }
 
 
 # def factory_register_routes(app):

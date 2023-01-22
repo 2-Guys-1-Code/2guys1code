@@ -54,12 +54,10 @@ class GroupBySuitAndConsecutive:
     @staticmethod
     def _group(cards: CardCollection) -> list:
         grouped_by_suit = GroupBySuit._group(cards)
-        print(grouped_by_suit)
         groups = []
         for g in grouped_by_suit:
             groups.extend(GroupByConsecutive._group(g))
 
-        print(groups)
         return groups
 
 
@@ -70,11 +68,7 @@ class GroupBuilder:
         sorted_cards = self._sort(leftovers)
         grouped_cards = self._group(sorted_cards)
         sorted_groups = self._sort_groups(grouped_cards)
-        return [
-            self._get_top_cards(g)
-            for g in sorted_groups
-            if len(g) >= self.set_size
-        ]
+        return [self._get_top_cards(g) for g in sorted_groups if len(g) >= self.set_size]
 
     @staticmethod
     def _sort_groups(groups: CardCollection) -> list:
@@ -126,21 +120,15 @@ class HighCardHandBuilder(AbstractHandBuilder):
         return CardCollection(sorted(leftovers._cards, reverse=True))
 
 
-class PairHandBuilder(
-    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
-):
+class PairHandBuilder(SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder):
     set_size: int = 2
 
 
-class ThreeOfKindHandBuilder(
-    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
-):
+class ThreeOfKindHandBuilder(SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder):
     set_size: int = 3
 
 
-class FourOfKindHandBuilder(
-    SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder
-):
+class FourOfKindHandBuilder(SortByRankDescending, GroupByRank, GroupBuilder, AbstractHandBuilder):
     set_size: int = 4
 
 
@@ -169,9 +157,7 @@ class StraightHandBuilder(
     pass
 
 
-class FlushHandBuilder(
-    SortByRankDescending, GroupBySuit, GroupBuilder, AbstractHandBuilder
-):
+class FlushHandBuilder(SortByRankDescending, GroupBySuit, GroupBuilder, AbstractHandBuilder):
     pass
 
 

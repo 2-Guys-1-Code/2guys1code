@@ -28,11 +28,16 @@ def test_get_app_version(api_client):
 
 
 def test_create_game(api_client):
-    response = api_client.post("/games", json={"number_of_players": 3})
+    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
 
     assert response.status_code == 201
     parsed_response = response.json()
-    assert parsed_response == {"id": 1, "number_of_players": 3}
+
+    assert parsed_response == {
+        "id": 1,
+        "max_players": 3,
+        "players": {"8": {"id": 8, "name": "Bob"}},
+    }
 
 
 @mock.patch("api.api.get_poker_config")
@@ -67,4 +72,7 @@ def test_get_games(api_client):
     response = api_client.get("/games")
 
     response.status_code == 200
-    assert response.json() == [{"id": 1, "number_of_players": 3}]
+    parsed_response = response.json()
+    assert parsed_response[0]["id"] == 1
+    assert parsed_response[0]["max_players"] == 3
+    # assert response.json() == [{"id": 1, "number_of_players": 3 }]

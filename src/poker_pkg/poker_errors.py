@@ -1,3 +1,8 @@
+class PokerException(Exception):
+    def __str__(self) -> str:
+        return self.args[0]
+
+
 class NotEnoughChips(Exception):
     pass
 
@@ -47,4 +52,9 @@ class DuplicateCardException(Exception):
 
 
 class IllegalCardSwitch(IllegalActionException):
+    pass
+    pass
+
+
+class PlayerCannotJoin(PokerException):
     pass
