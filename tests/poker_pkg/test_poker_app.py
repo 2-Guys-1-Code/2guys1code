@@ -1,25 +1,40 @@
 from unittest import mock
 
+import pytest
+
+from poker_pkg.poker_app import PlayerNotFound, PokerApp
 from poker_pkg.poker_game import PokerPlayer
 
 from .conftest import FakePokerGame
 
 
-def test_get_games_when_none_started(poker_app):
+def test_get_games_when_none_started(poker_app: PokerApp) -> None:
     games = poker_app.get_games()
 
     assert games == []
 
 
-def test_get_games_returns_games(poker_app):
-    with mock.patch("poker_pkg.poker_app.PokerGame") as patcher:
+@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=PokerPlayer())
+def test_get_games_returns_games(patch, poker_app: PokerApp) -> None:
+    with mock.patch("poker_pkg.poker_app.create_poker_game") as patcher:
         mock_game = FakePokerGame()
         patcher.return_value = mock_game
-        poker_app.start_game(500)
+
+        poker_app.start_game(9)
 
         games = poker_app.get_games()
 
         assert games == [mock_game]
+
+
+@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id")
+def test_cannot_start_game_without_player(patcher, poker_app: PokerApp) -> None:
+    patcher.return_value = None
+    # with mock.patch.object(poker_app, "_get_player_by_id", lambda x: None):
+    with pytest.raises(PlayerNotFound) as e:
+        poker_app.start_game(9)
+
+    assert poker_app.get_games() == []
 
 
 # def test_start_game(poker_app):

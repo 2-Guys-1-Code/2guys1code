@@ -15,4 +15,5 @@ class Game(BaseModel):
 
 
 class NewGameData(BaseModel):
+    current_player_id: int
     number_of_players: int = 2

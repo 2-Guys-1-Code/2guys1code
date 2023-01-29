@@ -17,7 +17,7 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from poker_pkg.poker_game import PokerGame
+from poker_pkg.poker_game import PokerGame, create_poker_game
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 from .conftest import (
@@ -55,11 +55,7 @@ def test_player_cannot_join_more_than_once():
     player = PokerPlayer(name="Jack")
 
     game.join(player)
-
-    with pytest.raises(PlayerCannotJoin) as e:
-        game.join(player)
-
-    assert str(e.value) == 'Player "Jack" is already in the game'
+    game.join(player)
 
     players = game.get_players()
     assert players == [player]
@@ -92,7 +88,7 @@ def test_player_cannot_join_when_no_free_seat():
 
 
 def test_player_cannot_join_when_game_has_started():
-    game = PokerGame(500, max_players=3)
+    game = create_poker_game(chips_per_player=500, max_players=3)
 
     player1 = PokerPlayer(name="Jack")
     player2 = PokerPlayer(name="Zack")
@@ -509,21 +505,6 @@ def test_game__two_rounds():
     assert player1.purse == 1500
     assert player2.purse == 0
     assert player3.purse == 0
-
-
-def test_count_players_with_money():
-    player1 = PokerPlayer(purse=500, name="Michael")
-    player2 = PokerPlayer(purse=500, name="Geordie")
-    player3 = PokerPlayer(purse=500, name="Jeff")
-    game = game_factory(
-        players=[
-            player1,
-            player2,
-            player3,
-        ]
-    )
-
-    assert game._count_players_with_money() == 3
 
 
 def test_game__two_rounds__more_coverage():

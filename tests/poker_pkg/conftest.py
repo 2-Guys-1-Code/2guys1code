@@ -9,6 +9,7 @@ from poker_pkg.poker_app import create_poker_app
 from poker_pkg.poker_errors import DuplicateCardException
 from poker_pkg.poker_game import AbstractPokerGame
 from poker_pkg.poker_game import PokerGame as Poker
+from poker_pkg.poker_game import create_poker_game
 from poker_pkg.pot import Pot
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
@@ -72,7 +73,7 @@ def game_factory(
     shuffler: AbstractShuffler = None,
     pot_factory=None,
 ) -> Poker:
-    init_params = {}
+    init_params = {"chips_per_player": chips_per_player}
 
     if shuffler is not None:
         init_params["shuffler"] = shuffler
@@ -90,7 +91,7 @@ def game_factory(
         # init_params["players"] = players
         init_params["max_players"] = len(players)
 
-    game = Poker(chips_per_player, **init_params)
+    game = create_poker_game(**init_params)
 
     # if type(players) is int:
     # print("creating players")
