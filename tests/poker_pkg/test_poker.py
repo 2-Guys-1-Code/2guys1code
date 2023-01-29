@@ -711,6 +711,8 @@ def test_call():
 
     game.bet(player1, 200)
 
+    # This must currently be done this way because rounds end automatically
+    # and the pot gets distributed before we can check its total
     with mock.patch.object(game.pot, "add_bet", wraps=game.pot.add_bet) as wrapped:
         game.call(player2)
 

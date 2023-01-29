@@ -14,6 +14,7 @@ def test_get_games_when_none_started(poker_app: PokerApp) -> None:
     assert games == []
 
 
+# I don't like all this patching; Add ability to create players, or set default players in the app
 @mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=PokerPlayer())
 def test_get_games_returns_games(patch, poker_app: PokerApp) -> None:
     with mock.patch("poker_pkg.poker_app.create_poker_game") as patcher:
@@ -27,10 +28,8 @@ def test_get_games_returns_games(patch, poker_app: PokerApp) -> None:
         assert games == [mock_game]
 
 
-@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id")
+@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=None)
 def test_cannot_start_game_without_player(patcher, poker_app: PokerApp) -> None:
-    patcher.return_value = None
-    # with mock.patch.object(poker_app, "_get_player_by_id", lambda x: None):
     with pytest.raises(PlayerNotFound) as e:
         poker_app.start_game(9)
 

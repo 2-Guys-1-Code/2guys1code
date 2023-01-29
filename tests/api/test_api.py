@@ -26,6 +26,7 @@ def test_get_app_version(api_client: TestClient) -> None:
     assert parsed_response["app_version"] == "0.1.0"
 
 
+# I don't like all this patching; Add ability to create players, or set default players in the app
 @mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=PokerPlayer())
 def test_create_game(patch, api_client: TestClient) -> None:
     response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
