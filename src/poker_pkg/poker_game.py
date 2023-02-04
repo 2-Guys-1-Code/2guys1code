@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
 from math import floor
@@ -48,8 +48,21 @@ class PokerAction(Enum):
 
 
 class AbstractPokerGame(ABC):
-    def __init__(self) -> None:
-        super().__init__()
+    @abstractmethod
+    def join(self, player: AbstractPokerPlayer) -> None:
+        pass
+
+    @abstractmethod
+    def start(self) -> None:
+        pass
+
+    @abstractmethod
+    def get_players(self) -> List[AbstractPokerPlayer]:
+        pass
+
+    @abstractmethod
+    def get_free_seats(self) -> int:
+        pass
 
 
 class PokerGame(AbstractPokerGame):
@@ -64,7 +77,7 @@ class PokerGame(AbstractPokerGame):
         game_type: str = TYPE_STUD,
         pot_factory: Pot = Pot,
         hand_factory: Hand = PokerHand,
-        max_players: int = 0,
+        max_players: int = 9,
     ) -> None:
         self._game_type = game_type
 

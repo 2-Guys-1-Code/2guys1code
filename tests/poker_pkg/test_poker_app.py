@@ -1,9 +1,10 @@
 from unittest import mock
 
 import pytest
+from repositories import AbstractPlayerRepository
 
+from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.poker_app import PlayerNotFound, PokerApp
-from poker_pkg.poker_game import PokerPlayer
 
 from .conftest import FakePokerGame
 
@@ -14,24 +15,25 @@ def test_get_games_when_none_started(poker_app: PokerApp) -> None:
     assert games == []
 
 
-# I don't like all this patching; Add ability to create players, or set default players in the app
-@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=PokerPlayer())
-def test_get_games_returns_games(patch, poker_app: PokerApp) -> None:
-    with mock.patch("poker_pkg.poker_app.create_poker_game") as patcher:
-        mock_game = FakePokerGame()
-        patcher.return_value = mock_game
+def test_get_games_returns_games(
+    poker_app: PokerApp, memory_player_repository: AbstractPlayerRepository
+) -> None:
+    games = poker_app.get_games()
+    assert games == []
 
-        poker_app.start_game(9)
+    player = PokerPlayer(id=19, name="Tiberius")
+    memory_player_repository.add(player)
 
-        games = poker_app.get_games()
+    poker_app.start_game(player.id)
 
-        assert games == [mock_game]
+    games = poker_app.get_games()
+    assert len(games) == 1
+    assert games[0].get_players() == [player]
 
 
-@mock.patch("poker_pkg.poker_app.PokerApp._get_player_by_id", return_value=None)
-def test_cannot_start_game_without_player(patcher, poker_app: PokerApp) -> None:
+def test_cannot_start_game_without_player(poker_app: PokerApp) -> None:
     with pytest.raises(PlayerNotFound) as e:
-        poker_app.start_game(9)
+        poker_app.start_game(99)
 
     assert poker_app.get_games() == []
 

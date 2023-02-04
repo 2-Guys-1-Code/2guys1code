@@ -3,24 +3,30 @@ from typing import List
 from fastapi import FastAPI, HTTPException, status
 
 from api.models import Game, NewGameData
+from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_app import (
     GameNotFound,
     PlayerNotFound,
+    PokerApp,
     TooManyGames,
     create_poker_app,
     get_poker_config,
 )
 from poker_pkg.poker_errors import PlayerCannotJoin
+from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
+
+
+def get_player_repository() -> AbstractPlayerRepository:
+    return MemoryPlayerRepository()
 
 
 class ProxyAPI(FastAPI):
-    def __init__(self) -> None:
+    def __init__(self, poker_app: PokerApp) -> None:
         super().__init__()
         print("registering routes")
         # self.add_exception_handler(RequestValidationError, self.handle_validation_error)
         self.register_routes()
-        poker_config = get_poker_config()
-        self.poker_app = create_poker_app(**poker_config)
+        self.poker_app = poker_app
 
     # def handle_validation_error(
     #     self, request: Request, exc: RequestValidationError
@@ -62,7 +68,11 @@ class ProxyAPI(FastAPI):
 
     def get_all_games(self) -> List[dict]:
         return [
-            {"max_players": g.max_players, "id": g.id, "players": {}}
+            {
+                "max_players": g.max_players,
+                "id": g.id,
+                "players": {p.id: {"id": p.id, "name": p.name} for p in g.get_players()},
+            }
             for g in self.poker_app.get_games()
         ]
 
@@ -81,7 +91,7 @@ class ProxyAPI(FastAPI):
         return {
             "max_players": game.max_players,
             "id": game.id,
-            "players": {8: {"id": 8, "name": "Bob"}},
+            "players": {p.id: {"id": p.id, "name": p.name} for p in game.get_players()},
         }
 
     def join_game(self, game_id: int, game_data: NewGameData) -> dict:
@@ -109,4 +119,15 @@ def create_app() -> ProxyAPI:
     print("create app")
     # app = FastAPI()
     # factory_register_routes(app)
-    return ProxyAPI()
+
+    player_repository = MemoryPlayerRepository(
+        players=[
+            PokerPlayer(id=3, name="Bob"),
+            PokerPlayer(id=8, name="Steve"),
+            PokerPlayer(id=9, name="Janis"),
+        ]
+    )
+    poker_config = get_poker_config()
+    poker_app = create_poker_app(player_repository=player_repository, **poker_config)
+
+    return ProxyAPI(poker_app)

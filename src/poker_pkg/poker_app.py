@@ -1,6 +1,8 @@
 import uuid
 from typing import List
 
+from repositories import AbstractPlayerRepository
+
 from .poker_game import AbstractPokerGame, PokerGame, PokerPlayer, create_poker_game
 
 
@@ -21,9 +23,10 @@ class PlayerNotFound(Exception):
 
 
 class PokerApp:
-    def __init__(self, max_games: int = 2) -> None:
+    def __init__(self, player_repository: AbstractPlayerRepository, max_games: int = 2) -> None:
         self._id = str(uuid.uuid4())
         self.games = []
+        self.player_repository = player_repository
         self.max_games = max_games
 
     def get_id(self) -> str:
@@ -36,7 +39,7 @@ class PokerApp:
         return next((g for g in self.games if g.id == id), None)
 
     def _get_player_by_id(self, id: int) -> PokerPlayer:
-        return next((iter([])), None)
+        return self.player_repository.get_by_id(id)
 
     def start_game(self, host_id: int, **kwargs) -> AbstractPokerGame:
         host = self._get_player_by_id(host_id)
@@ -48,6 +51,9 @@ class PokerApp:
 
         game = create_poker_game(**kwargs)
         game.id = self.games[-1].id + 1 if len(self.games) else 1
+
+        game.join(host)
+
         self.games.append(game)
 
         return game

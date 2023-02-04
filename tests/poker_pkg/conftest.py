@@ -4,13 +4,14 @@ import pytest
 
 from poker_pkg.card import Card
 from poker_pkg.hand import PokerCardComparator, PokerHand
-from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_app import create_poker_app
+from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
+from poker_pkg.poker_app import PokerApp, create_poker_app
 from poker_pkg.poker_errors import DuplicateCardException
 from poker_pkg.poker_game import AbstractPokerGame
 from poker_pkg.poker_game import PokerGame as Poker
 from poker_pkg.poker_game import create_poker_game
 from poker_pkg.pot import Pot
+from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
 # fmt: off
@@ -192,10 +193,36 @@ class FakePokerGame(AbstractPokerGame):
     pass
 
 
-def poker_app_factory():
-    return create_poker_app()
+@pytest.fixture
+def player9() -> AbstractPokerPlayer:
+    return PokerPlayer(id=9, name="Janis")
+
+
+def poker_app_factory(
+    poker_config: dict = None, player_repository: AbstractPlayerRepository = None
+) -> PokerApp:
+    player_repository = player_repository or player_repository_factory()
+    poker_config = poker_config or {
+        "max_games": 1,
+    }
+    return create_poker_app(player_repository=player_repository, **poker_config)
+
+
+def player_repository_factory() -> AbstractPlayerRepository:
+    return MemoryPlayerRepository(
+        players=[
+            PokerPlayer(id=3, name="Bob"),
+            PokerPlayer(id=8, name="Steve"),
+            PokerPlayer(id=9, name="Janis"),
+        ]
+    )
 
 
 @pytest.fixture
-def poker_app():
-    return poker_app_factory()
+def memory_player_repository() -> AbstractPlayerRepository:
+    return player_repository_factory()
+
+
+@pytest.fixture
+def poker_app(memory_player_repository) -> PokerApp:
+    return poker_app_factory(player_repository=memory_player_repository)

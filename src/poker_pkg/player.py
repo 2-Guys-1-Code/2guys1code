@@ -6,12 +6,15 @@ from .poker_errors import InvalidAmountTooMuch
 
 
 class AbstractPokerPlayer(ABC):
-    def __init__(self, purse: int = None, name: str = "John", hand_factory: Hand = Hand) -> None:
+    def __init__(
+        self, purse: int = None, name: str = "John", hand_factory: Hand = Hand, id=None
+    ) -> None:
         self.hand_factory = hand_factory
 
         self.purse = purse
         self.name = name
         self._hand = None
+        self.id = id
 
     def __repr__(self) -> str:
         return self.name
