@@ -1,4 +1,3 @@
-import sys
 from unittest import mock
 
 import pytest
@@ -17,7 +16,7 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from poker_pkg.poker_game import PokerGame, create_poker_game
+from poker_pkg.poker_game import DealStep, PokerGame, create_poker_game
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 from .conftest import (
@@ -78,7 +77,7 @@ def test_player_cannot_join_when_no_free_seat():
     with pytest.raises(PlayerCannotJoin) as e:
         game.join(player3)
 
-    assert str(e.value) == "There are no free seats in the game"
+    assert str(e.value) == "There are no free seats in the game."
 
     players = game.get_players()
     assert players == [player1, player2]
@@ -102,14 +101,16 @@ def test_player_cannot_join_when_game_has_started():
     with pytest.raises(PlayerCannotJoin) as e:
         game.join(player3)
 
-    assert str(e.value) == "The game has started"
+    assert str(e.value) == "The game has started."
 
 
 def test_start_game__initial_state():
     game = game_factory()
 
+    game.start()
+
     assert len(game._players) == 3
-    assert game.kitty == 0
+    assert game.pot.kitty == 0
 
     assert game._players[0].purse == 500
     assert game._players[1].purse == 500
@@ -166,9 +167,10 @@ def test_deal_cycles_hands():
     fake_shuffler.shuffle(deck)
 
     players = [PokerPlayer() for _ in range(4)]
-    game = game_factory(shuffler=fake_shuffler, players=players)
+    game = game_factory(shuffler=fake_shuffler, players=players, deck_factory=lambda: deck)
 
-    game.deal(players, deck)
+    step = DealStep(game, config={"count": 5})
+    step._deal([p.hand for p in players])
 
     assert players[0].hand[0] == Card("1H")
     assert players[1].hand[0] == Card("RJ")
@@ -178,15 +180,15 @@ def test_deal_cycles_hands():
 
 
 def test_deal__cards_are_removed_from_deck():
-    deck = Deck()
-
-    game = game_factory()
+    game = game_factory(deck_factory=Deck)
 
     player = PokerPlayer()
-    game.deal([player], deck)
+
+    step = DealStep(game, config={"count": 5})
+    step._deal([player.hand])
 
     for c in player.hand:
-        assert c not in deck
+        assert c not in game._deck
 
 
 def test_game_fails_when_too_many_players():
@@ -208,7 +210,7 @@ def test_check():
     assert game._players[1].purse == 500
 
 
-def test_all_in(pot_factory_factory):
+def test_all_in():
     # fmt: off
     fake_shuffler = FakeShufflerByPosition([
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
@@ -237,7 +239,7 @@ def test_all_in(pot_factory_factory):
     game.all_in(player2)
     assert player1.purse == 72
     assert player2.purse == 456
-    assert game.pot is None
+    assert game.pot.total == 0
     assert game.current_player == None
 
 
@@ -270,10 +272,10 @@ def test_action__not_the_players_turn(action, args):
 # What about negative number of chips? we don't want to remvoe anything from the pot, but it's not really a situation you can get in.
 
 
-def test_fold(pot_factory_factory):
-    player1 = PokerPlayer(purse=300)
-    player2 = PokerPlayer(purse=228)
-    player3 = PokerPlayer(purse=100)
+def test_fold():
+    player1 = PokerPlayer(purse=300, name="Jay")
+    player2 = PokerPlayer(purse=228, name="John")
+    player3 = PokerPlayer(purse=100, name="Jonah")
     game = game_factory(
         players=[player1, player2, player3],
     )
@@ -300,45 +302,45 @@ def test_fold(pot_factory_factory):
     assert player3.purse == 100
 
     assert player2.purse == 228
-    assert game.pot is None
+    assert game.pot.total == 0
     assert len(game._round_players) == 1
     assert game.current_player == None
 
 
-def test_find_winner():
+def test_find_winners():
     game = game_factory()
 
     hand1 = PokerHand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]))
     hand2 = PokerHand(cards=make_cards(["12C", "12S", "6C", "2D", "3H"]))
     hand3 = PokerHand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
-    player3 = PokerPlayer()
+    player1 = PokerPlayer(name="Darcy")
+    player2 = PokerPlayer(name="Quincy")
+    player3 = PokerPlayer(name="Hughsy")
 
     player1.hand = hand1
     player2.hand = hand2
     player3.hand = hand3
 
-    assert game.find_winnner([player1, player2, player3]) == [player1]
+    assert game.find_winnners([player1, player2, player3]) == [[player1], [player2], [player3]]
 
 
-def test_find_winner__tied_hands():
+def test_find_winners__tied_hands():
     game = game_factory()
 
     hand1 = PokerHand(cards=make_cards(["13C", "13H", "4S", "7D", "8D"]))
     hand2 = PokerHand(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     hand3 = PokerHand(cards=make_cards(["13S", "13D", "4C", "8H", "7D"]))
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
-    player3 = PokerPlayer()
+    player1 = PokerPlayer(name="Darcy")
+    player2 = PokerPlayer(name="Quincy")
+    player3 = PokerPlayer(name="Hughsy")
 
     player1.hand = hand1
     player2.hand = hand2
     player3.hand = hand3
 
-    assert game.find_winnner([player1, player2, player3]) == [player1, player3]
+    assert game.find_winnners([player1, player2, player3]) == [[player1, player3], [player2]]
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
@@ -428,8 +430,8 @@ def test_game__all_players_all_in__three_way_tie():
     assert player3.purse == 666
     assert player4.purse == 0
 
-    assert game.pot is None
-    assert game.kitty == 2
+    assert game.pot.total == 0
+    assert game.pot.kitty == 2
 
 
 def test_game__side_pots_are_accounted_for():
@@ -453,7 +455,7 @@ def test_game__side_pots_are_accounted_for():
     assert player1.purse == 1500
     assert player2.purse == 0
     assert player3.purse == 1000
-    assert game.pot is None
+    assert game.pot.total == 0
 
 
 def test_game__first_player_all_in_others_fold():
@@ -474,7 +476,7 @@ def test_game__first_player_all_in_others_fold():
     assert player1.purse == 500
     assert player2.purse == 500
     assert player3.purse == 500
-    assert game.pot is None
+    assert game.pot.total == 0
 
 
 def test_game__two_rounds():
@@ -768,7 +770,7 @@ def test_game__side_pot_participant_cannot_win_when_out():
     assert player1.purse == 400
     assert player2.purse == 800
     assert player3.purse == 300
-    assert game.pot is None
+    assert game.pot.total == 0
     assert game.current_player is None
 
 

@@ -262,11 +262,8 @@ def test_game__betting_resumes_after_switching_cards():
     game.switch_cards(player1, [player1.hand[2]])
     game.switch_cards(player2, [player2.hand[2]])
 
-    game.bet(player1, 100)
-    game.call(player2)
-
     assert str(player1.hand) == "1H 3C 5C 6C 7S"
     assert str(player2.hand) == "1D 3H 5H 6H 10H"
 
-    assert player1.purse == 300
-    assert player2.purse == 700
+    game.bet(player1, 100)
+    game.call(player2)

@@ -58,6 +58,17 @@ class PokerApp:
 
         return game
 
+    def update_game(self, game_id: int, started=None, **kwargs) -> AbstractPokerGame:
+        game = self._get_game_by_id(game_id)
+
+        if game is None:
+            raise GameNotFound()
+
+        if started is not None:
+            game.start()
+
+        return game
+
     def join_game(self, game_id: int, player_id: int) -> None:
         game = self._get_game_by_id(game_id)
 
@@ -65,6 +76,9 @@ class PokerApp:
             raise GameNotFound()
 
         player = self._get_player_by_id(player_id)
+
+        if player is None:
+            raise PlayerNotFound()
 
         game.join(player)
 

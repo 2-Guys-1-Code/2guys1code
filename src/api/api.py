@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import FastAPI, HTTPException, status
 
-from api.models import Game, NewGameData
+from api.models import Game, NewGameData, UpdateGameData
 from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_app import (
     GameNotFound,
@@ -13,29 +13,32 @@ from poker_pkg.poker_app import (
     get_poker_config,
 )
 from poker_pkg.poker_errors import PlayerCannotJoin
+from poker_pkg.poker_game import PokerGame
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
 
 
 def get_player_repository() -> AbstractPlayerRepository:
-    return MemoryPlayerRepository()
+    return MemoryPlayerRepository(
+        players=[
+            PokerPlayer(id=13, name="Bobby"),
+            PokerPlayer(id=18, name="Stevie"),
+            PokerPlayer(id=19, name="Janus"),
+        ]
+    )
 
 
 class ProxyAPI(FastAPI):
     def __init__(self, poker_app: PokerApp) -> None:
         super().__init__()
         print("registering routes")
-        # self.add_exception_handler(RequestValidationError, self.handle_validation_error)
+        # self.add_exception_handler(StarletteHTTPException, self.handle_validation_error)
         self.register_routes()
         self.poker_app = poker_app
 
     # def handle_validation_error(
-    #     self, request: Request, exc: RequestValidationError
+    #     self, request: Request, exc: StarletteHTTPException
     # ) -> JSONResponse:
-    #     print(RequestValidationError)
-    #     return JSONResponse(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
-    #     )
+    #     return JSONResponse({"detail:": jsonable_encoder(exc), "message": "endpoint not found"})
 
     def register_routes(self) -> None:
         self.add_api_route(path="/app_id", endpoint=self.get_instance_id, methods=["GET"])
@@ -48,6 +51,12 @@ class ProxyAPI(FastAPI):
             endpoint=self.create_game,
             methods=["POST"],
             status_code=status.HTTP_201_CREATED,
+            response_model=Game,
+        )
+        self.add_api_route(
+            path="/games/{game_id}",
+            endpoint=self.update_game,
+            methods=["PATCH"],
             response_model=Game,
         )
         self.add_api_route(
@@ -66,19 +75,12 @@ class ProxyAPI(FastAPI):
             "app_version": "0.1.0",
         }
 
-    def get_all_games(self) -> List[dict]:
-        return [
-            {
-                "max_players": g.max_players,
-                "id": g.id,
-                "players": {p.id: {"id": p.id, "name": p.name} for p in g.get_players()},
-            }
-            for g in self.poker_app.get_games()
-        ]
+    def get_all_games(self) -> List[PokerGame]:
+        return self.poker_app.get_games()
 
-    def create_game(self, game_data: NewGameData) -> dict:
+    def create_game(self, game_data: NewGameData) -> PokerGame:
         try:
-            game = self.poker_app.start_game(
+            return self.poker_app.start_game(
                 game_data.current_player_id,
                 max_players=game_data.number_of_players,
                 chips_per_player=500,
@@ -88,13 +90,13 @@ class ProxyAPI(FastAPI):
         except TooManyGames as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-        return {
-            "max_players": game.max_players,
-            "id": game.id,
-            "players": {p.id: {"id": p.id, "name": p.name} for p in game.get_players()},
-        }
+    def update_game(self, game_id: int, game_data: UpdateGameData) -> PokerGame:
+        try:
+            return self.poker_app.update_game(game_id, **game_data.dict())
+        except GameNotFound as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
 
-    def join_game(self, game_id: int, game_data: NewGameData) -> dict:
+    def join_game(self, game_id: int, game_data: NewGameData) -> str:
         try:
             self.poker_app.join_game(
                 game_id,
@@ -120,13 +122,7 @@ def create_app() -> ProxyAPI:
     # app = FastAPI()
     # factory_register_routes(app)
 
-    player_repository = MemoryPlayerRepository(
-        players=[
-            PokerPlayer(id=3, name="Bob"),
-            PokerPlayer(id=8, name="Steve"),
-            PokerPlayer(id=9, name="Janis"),
-        ]
-    )
+    player_repository = get_player_repository()
     poker_config = get_poker_config()
     poker_app = create_poker_app(player_repository=player_repository, **poker_config)
 

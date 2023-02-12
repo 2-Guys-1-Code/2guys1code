@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from math import floor
 from typing import List
 
 from .card import Card
-from .card_collection import CardCollection, EmptyDeck
+from .card_collection import CardCollection
 from .deck import Deck, DeckWithoutJokers
 from .hand import Hand, PokerHand
 from .player import AbstractPokerPlayer, PokerPlayer
@@ -65,6 +64,123 @@ class AbstractPokerGame(ABC):
         pass
 
 
+class AbstractPokerStep(ABC):
+    def __init__(self, game: AbstractPokerGame, config: dict = None) -> None:
+        self.game = game
+        self.config = config or {}
+
+    @abstractmethod
+    def start(self) -> None:
+        pass
+
+    @abstractmethod
+    def end(self) -> None:
+        pass
+
+    @abstractmethod
+    def maybe_end(self) -> None:
+        pass
+
+    def get_available_actions(self) -> List[PokerAction]:
+        return []
+
+
+class DealStep(AbstractPokerStep):
+    def start(self) -> None:
+        self.game._shuffler.shuffle(self.game._deck)
+        self._deal([p.hand for p in self.game._round_players], **self.config)
+        self.game.end_step()
+
+    def end(self) -> None:
+        pass
+
+    def maybe_end(self) -> None:
+        pass
+
+    def _deal(self, targets: List[CardCollection], count: int = 5) -> None:
+        for _ in range(0, count):
+            for t in targets:
+                t.insert_at_end(self.game._deck.pull_from_top())
+
+
+class CommunityCardStep(DealStep):
+    def start(self) -> None:
+        self._deal([self.game._discard_pile], count=self.config.get("cards_to_burn", 0))
+        self._deal([self.game._community_pile], count=self.config.get("cards_to_reveal", 0))
+        self.game.end_step()
+
+
+class PlayerStep(AbstractPokerStep):
+    def start(self) -> None:
+        self.game.current_player = self.game._round_players[0]
+        self.game.all_players_played = False
+
+    def end(self) -> None:
+        self.game.current_player = None
+        self.game.end_step()
+        raise EndOfStep()
+
+    # This should be "end", which raises if we cannot end
+    def maybe_end(self) -> None:
+        if len(self.game._round_players) == 1:
+            self.end()
+
+        players_left = [
+            p
+            for p in self.game._round_players
+            if self.game.pot.player_owed(p) != 0 and p.purse != 0
+        ]
+
+        if self.game.all_players_played and not len(players_left):
+            self.end()
+
+    def get_available_actions(self) -> List[PokerAction]:
+        return [
+            PokerAction.ALLIN,
+            PokerAction.BET,
+            PokerAction.CALL,
+            PokerAction.CHECK,
+            PokerAction.FOLD,
+            PokerAction.RAISE,
+        ]
+
+
+class BettingStep(PlayerStep):
+    def get_available_actions(self) -> List[PokerAction]:
+        return [
+            PokerAction.ALLIN,
+            PokerAction.BET,
+            PokerAction.CALL,
+            PokerAction.CHECK,
+            PokerAction.FOLD,
+            PokerAction.RAISE,
+        ]
+
+
+class SwitchingStep(PlayerStep):
+    def get_available_actions(self) -> List[PokerAction]:
+        return [
+            PokerAction.SWITCH,
+        ]
+
+
+class EndRoundStep(PlayerStep):
+    def start(self) -> None:
+        self.game._distribute_pot()
+        self.game._return_cards(
+            [p.hand for p in self.game._players]
+            + [self.game._community_pile, self.game._discard_pile]
+        )
+        self.game._remove_broke_players()
+        self.game.end_step()
+
+    def end(self) -> None:
+        pass
+
+    def maybe_end(self) -> None:
+        pass
+
+
 class PokerGame(AbstractPokerGame):
     TYPE_STUD: str = "STUD"
     TYPE_DRAW: str = "DRAW"
@@ -74,18 +190,15 @@ class PokerGame(AbstractPokerGame):
         self,
         chips_per_player: int = None,
         shuffler: AbstractShuffler = None,
-        game_type: str = TYPE_STUD,
         pot_factory: Pot = Pot,
         hand_factory: Hand = PokerHand,
+        deck_factory: Deck = DeckWithoutJokers,
         max_players: int = 9,
     ) -> None:
-        self._game_type = game_type
-
         self._validate_max_players(max_players)
 
         self._shuffler = shuffler or Shuffler()
 
-        self._set_deck()
         self.steps = []
         self._discard_pile = (
             CardCollection()
@@ -93,6 +206,7 @@ class PokerGame(AbstractPokerGame):
         self._community_pile = CardCollection()
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory)
+        self.deck_factory = deck_factory
         self.max_players = max_players
 
         if chips_per_player is None:
@@ -102,26 +216,35 @@ class PokerGame(AbstractPokerGame):
 
         self._players = []
 
-        self.kitty = 0
         self.round_count = 0
-        self.game_winner = None
         self.current_player = None
+        self.current_step = None
         self.started = False
+        self._set_deck()
+        self.pot = self.pot_factory()
 
     def _validate_max_players(self, max_players: int) -> None:
         if max_players > 9:
             raise TooManyPlayers()
+
+    def _set_deck(self) -> None:
+        self._deck = self.deck_factory()
 
     def join(self, player: AbstractPokerPlayer) -> None:
         if player in self.get_players():
             return
 
         if self.get_free_seats() <= 0:
-            raise PlayerCannotJoin("There are no free seats in the game")
+            raise PlayerCannotJoin("There are no free seats in the game.")
 
         if self.started:
-            raise PlayerCannotJoin("The game has started")
+            raise PlayerCannotJoin("The game has started.")
 
+        self._join(player)
+
+    def _join(self, player: AbstractPokerPlayer) -> None:
+        # This should be a configuration of the game; Do players come in
+        # with their own chips or are they given chips upon joining?
         if player.purse is None:
             self._distribute_chips(
                 [player],
@@ -132,109 +255,47 @@ class PokerGame(AbstractPokerGame):
 
         self._players.append(player)
 
-    def start(self) -> None:
-        self.started = True
-        self.start_round()
-
-    def _set_deck(self) -> None:
-        self._deck = DeckWithoutJokers()
-
     def _distribute_chips(self, players: List[AbstractPokerPlayer], chips_per_player: int) -> None:
         for p in players:
             p.add_to_purse(chips_per_player)
 
-    def deal(
-        self,
-        players: List[AbstractPokerPlayer],
-        deck: Deck,
-        cards_per_player: int = 5,
-    ) -> None:
-        self._shuffler.shuffle(deck)
-        for _ in range(0, cards_per_player):
-            for p in players:
-                p.add_card(deck.pull_from_top())
-
-    def deal_community_cards(
-        self, deck: Deck, cards_to_burn: int = 0, cards_to_reveal: int = 0
-    ) -> None:
-        for _ in range(0, cards_to_burn):
-            self._discard_pile.insert_at_end(deck.pull_from_top())
-
-        for _ in range(0, cards_to_reveal):
-            self._community_pile.insert_at_end(deck.pull_from_top())
+    def start(self) -> None:
+        self.started = True
+        self.start_round()
 
     def start_round(self) -> None:
-        # I moved this here from end_round so we can assert the state at the end of the round;
-        # Maybe it would be better to keep a list of rounds and the results and make
-        # assertions on that instead of the live game state
-        self._return_cards()
-
-        if getattr(self, "_round_players", None):
-            for p in self._round_players:
-                if p.purse == 0:
-                    self._players.remove(p)
-
-        # TODO: Now we can just check the length of self._players
-        if len(self._players) == 1:
-            self.game_winner = self._players[0]
-
         self.round_count += 1
         self._round_players = self._players.copy()
-
-        self.pot = self.pot_factory()
 
         self.step_count = 0
         self.init_step()
 
     def init_step(self) -> None:
-        current_step = self.steps[self.step_count]
-        self.action_count = 0
-        self.nb_players_in_round = len(self._round_players)
-
-        # Make steps classes so we can get rid of all these conditions
-        if current_step.get("name") == PokerStep.DEAL:
-            self.current_player = None
-            try:
-                self.deal(self._round_players, self._deck, **current_step.get("config", {}))
-                self.end_step()
-            except EmptyDeck as e:
-                raise TooManyPlayers()
-        if current_step.get("name") == PokerStep.COMMUNITY_CARD:
-            self.current_player = None
-            self.deal_community_cards(self._deck, **current_step.get("config", {}))
-            self.end_step()
-        else:
-            self.current_player = self._round_players[0]
-
-    def end_step(self) -> None:
-        if self.step_count == len(self.steps) - 1:
-            self.end_round()
+        if self.step_count == len(self.steps):
             return
 
+        self.current_step = self.steps[self.step_count]
+        self.current_step.start()
+
+    def end_step(self) -> None:
         self.step_count += 1
         self.init_step()
 
-    def check_end_step(self) -> None:
-        if len(self._round_players) == 1:
-            raise EndOfStep()
+    def _distribute_pot(self) -> None:
+        winners = self.find_winnners(self._round_players)
+        self.pot.distribute(winners)
 
-        players_left = [
-            p for p in self._round_players if self.pot.player_owed(p) != 0 and p.purse != 0
-        ]
+    def _return_cards(self, collections: List[CardCollection]) -> None:
+        for c in collections:
+            # It would be nice to be able to pull all cards
+            for i in range(len(c), 0, -1):
+                card = c.pull_from_position(i)
+                self._deck.insert_at_end(card)
 
-        if self.action_count >= self.nb_players_in_round and not len(players_left):
-            raise EndOfStep()
-
-    def maybe_end_step(self) -> None:
-        try:
-            self.check_end_step()
-        except EndOfStep as e:
-            self.end_step()
-            raise EndOfStep()
-
-    def end_round(self) -> None:
-        self._distribute_pot()
-        self.current_player = None
+    def _remove_broke_players(self):
+        for p in self._round_players:
+            if p.purse == 0:
+                self._players.remove(p)
 
     def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
         if type(amount) is not int:
@@ -243,8 +304,6 @@ class PokerGame(AbstractPokerGame):
         if amount < 0:
             raise InvalidAmountNegative()
 
-        # TODO: Move take_from_purse inside add_bet?
-        player.take_from_purse(amount)
         self.pot.add_bet(player, amount)
 
     # These actions could be classes as well
@@ -253,16 +312,14 @@ class PokerGame(AbstractPokerGame):
             raise IllegalActionException()
 
         with TurnManager(self, player, PokerAction.CHECK):
-            self.action_count += 1
+            pass
 
     def all_in(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, PokerAction.ALLIN):
-            self.action_count += 1
             self._transfer_to_pot(player, player.purse)
 
     def fold(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, PokerAction.FOLD):
-            self.action_count += 1
             self._round_players.remove(player)
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
@@ -270,18 +327,15 @@ class PokerGame(AbstractPokerGame):
             raise IllegalBetException()
 
         with TurnManager(self, player, PokerAction.BET):
-            self.action_count += 1
             self._transfer_to_pot(player, bet_amount)
 
     def call(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, PokerAction.CALL):
-            self.action_count += 1
             bet_amount = self.pot.player_owed(player)
             self._transfer_to_pot(player, bet_amount)
 
     def raise_bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
         with TurnManager(self, player, PokerAction.RAISE):
-            self.action_count += 1
             self._transfer_to_pot(player, self.pot.player_owed(player) + bet_amount)
 
     def _can_switch_cards(self, hand: Hand, cards_to_switch: list) -> bool:
@@ -306,210 +360,126 @@ class PokerGame(AbstractPokerGame):
             if not self._can_switch_cards(player.hand, cards_to_switch):
                 raise IllegalCardSwitch()
 
-            self.action_count += 1
             for card in cards_to_switch:
                 self._discard_pile.insert_at_end(player.hand.pull_card(card))
                 player.add_card(self._deck.pull_from_top())
 
-    def _distribute_pot(self) -> None:
-        side_pots = self.pot.get_side_pots()
-        for side_pot in side_pots:
-            elligible = list(set(side_pot.get_players()).intersection(self._round_players))
-            winners = self.find_winnner(elligible)
-            amount = side_pot.get_total_chips()
-            chips_per_winner = floor(amount / len(winners))
-            for p in winners:
-                p.add_to_purse(chips_per_winner)
-
-            self.kitty += amount - (chips_per_winner * len(winners))
-
-        self.pot = None
-
-    # This must return ALL cards, including from the discard pile and community pile (or just recreate the deck?)
-    def _return_cards(self):
-        for p in self._players:
-            for i in range(len(p.hand), 0, -1):
-                card = p.hand.pull_from_position(i)
-                self._deck.insert_at_end(card)
-
-    def find_winnner(self, players: List[AbstractPokerPlayer]) -> List[AbstractPokerPlayer]:
-        p1 = players[0]
-        winners = [p1]
+    def find_winnners(self, players: List[AbstractPokerPlayer]) -> List[List[AbstractPokerPlayer]]:
+        winners = [[players[0]]]
 
         for p2 in players[1:]:
-            if p2.hand == p1.hand:
-                winners.append(p2)
-            elif p2.hand > p1.hand:
-                p1 = p2
-                winners = [p2]
+            inserted = False
+            for i, w in enumerate(winners):
+                if p2.hand > w[0].hand:
+                    inserted = True
+                    winners.insert(i, [p2])
+                    break
+
+                if p2.hand == w[0].hand:
+                    inserted = True
+                    w.append(p2)
+                    break
+
+            if not inserted:
+                winners.append([p2])
 
         return winners
 
     def get_players(self) -> List[AbstractPokerPlayer]:
         return self._players
 
+    # I only added this for the Pydantic model; Make the model
+    # call "get_players" and do with it what it needs
+    @property
+    def players(self) -> List[AbstractPokerPlayer]:
+        return {p.id: {"id": p.id, "name": p.name} for p in self.get_players()}
+
     def get_free_seats(self) -> int:
         return self.max_players - len(self._players)
 
 
 # This can be further improved; Steps should become classes
-def get_stud_steps():
+def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
-        {
-            "name": PokerStep.DEAL,
-            "config": {
-                "cards_per_player": 5,
+        DealStep(
+            game,
+            {
+                "count": 5,
             },
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
+        ),
+        BettingStep(game),
+        EndRoundStep(game),
     ]
 
 
 # This can be further improved; Steps should become classes
-def get_holdem_steps():
+def get_holdem_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
-        {
-            "name": PokerStep.DEAL,
-            "config": {
-                "cards_per_player": 2,
+        DealStep(
+            game,
+            config={
+                "count": 2,
             },
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
-        {
-            "name": PokerStep.COMMUNITY_CARD,
-            "config": {
+        ),
+        BettingStep(game),
+        CommunityCardStep(
+            game,
+            config={
                 "cards_to_burn": 1,
                 "cards_to_reveal": 3,
             },
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
-        {
-            "name": PokerStep.COMMUNITY_CARD,
-            "config": {
+        ),
+        BettingStep(game),
+        CommunityCardStep(
+            game,
+            config={
                 "cards_to_burn": 1,
                 "cards_to_reveal": 1,
             },
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
-        # {
-        #     "name": PokerStep.COMMUNITY_CARD,
-        #     "config": {
-        #         "cards_to_burn": 1,
-        #         "cards_to_reveal": 1,
-        #     },
-        # },
-        # {
-        #     "name": PokerStep.BETTING,
-        #     "actions": [
-        #         PokerAction.ALLIN,
-        #         PokerAction.BET,
-        #         PokerAction.CALL,
-        #         PokerAction.CHECK,
-        #         PokerAction.FOLD,
-        #         PokerAction.RAISE,
-        #     ],
-        # },
+        ),
+        BettingStep(game),
+        CommunityCardStep(
+            game,
+            config={
+                "cards_to_burn": 1,
+                "cards_to_reveal": 1,
+            },
+        ),
+        BettingStep(game),
+        EndRoundStep(game),
     ]
 
 
 # This can be further improved; Steps should become classes
-def get_draw_steps():
+def get_draw_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
-        {
-            "name": PokerStep.DEAL,
-            "config": {
-                "cards_per_player": 5,
+        DealStep(
+            game,
+            {
+                "count": 5,
             },
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
-        {
-            "name": PokerStep.SWITCH,
-            # Switch could be configurable
-            # "config": {
-            #     "cards_per_player": 5,
-            # },
-            "actions": [
-                PokerAction.SWITCH,
-            ],
-        },
-        {
-            "name": PokerStep.BETTING,
-            "actions": [
-                PokerAction.ALLIN,
-                PokerAction.BET,
-                PokerAction.CALL,
-                PokerAction.CHECK,
-                PokerAction.FOLD,
-                PokerAction.RAISE,
-            ],
-        },
+        ),
+        BettingStep(game),
+        SwitchingStep(game),
+        BettingStep(game),
+        EndRoundStep(game),
     ]
 
 
-def get_round_steps(game_type: str) -> list:
+def get_round_steps(game_type: str, game: AbstractPokerGame) -> list:
     if game_type == PokerGame.TYPE_STUD:
-        return get_stud_steps()
+        return get_stud_steps(game)
 
     if game_type == PokerGame.TYPE_HOLDEM:
-        return get_holdem_steps()
+        return get_holdem_steps(game)
 
     if game_type == PokerGame.TYPE_DRAW:
-        return get_draw_steps()
+        return get_draw_steps(game)
 
     return []
 
 
 def create_poker_game(game_type: str = PokerGame.TYPE_STUD, **kwargs) -> PokerGame:
-    game = PokerGame(game_type=game_type, **kwargs)
-    game.steps = get_round_steps(game_type)
+    game = PokerGame(**kwargs)
+    game.steps = get_round_steps(game_type, game)
     return game

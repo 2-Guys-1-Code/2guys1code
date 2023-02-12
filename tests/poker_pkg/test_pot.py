@@ -1,12 +1,13 @@
 from poker_pkg.player import PokerPlayer
+from poker_pkg.poker_game import PokerGame
 from poker_pkg.pot import Pot
 
 
 def test_pot__add_bet():
     test_pot = Pot()
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
+    player1 = PokerPlayer(purse=500)
+    player2 = PokerPlayer(purse=500)
 
     test_pot.add_bet(player1, 250)
     assert test_pot.bets[player1][0] == 250
@@ -20,8 +21,8 @@ def test_pot__add_bet():
 def test_pot__max_player_total():
     test_pot = Pot()
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
+    player1 = PokerPlayer(purse=500)
+    player2 = PokerPlayer(purse=500)
 
     test_pot.add_bet(player1, 50)
     assert test_pot.max_player_total == 50
@@ -36,8 +37,8 @@ def test_pot__max_player_total():
 def test_pot__player_total():
     test_pot = Pot()
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
+    player1 = PokerPlayer(purse=500)
+    player2 = PokerPlayer(purse=500)
 
     test_pot.add_bet(player1, 50)
     test_pot.add_bet(player1, 150)
@@ -54,8 +55,8 @@ def test_pot__player_total():
 def test_pot__player_owed():
     test_pot = Pot()
 
-    player1 = PokerPlayer()
-    player2 = PokerPlayer()
+    player1 = PokerPlayer(purse=500)
+    player2 = PokerPlayer(purse=500)
 
     test_pot.add_bet(player1, 200)
 
@@ -86,9 +87,9 @@ def test_pot__player_owed():
 def test_pot__get_side_pots():
     pot = Pot()
 
-    player1 = PokerPlayer(name="Mr. Pink")
-    player2 = PokerPlayer(name="Mr. White")
-    player3 = PokerPlayer(name="Mr. Black")
+    player1 = PokerPlayer(name="Mr. Pink", purse=500)
+    player2 = PokerPlayer(name="Mr. White", purse=500)
+    player3 = PokerPlayer(name="Mr. Black", purse=500)
 
     pot.add_bet(player1, 200)
     pot.add_bet(player2, 300)

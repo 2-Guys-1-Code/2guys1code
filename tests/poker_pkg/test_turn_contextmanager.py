@@ -1,8 +1,28 @@
+from typing import List
+
 import pytest
 
 from poker_pkg.player import AbstractPokerPlayer
 from poker_pkg.poker_errors import IllegalActionException, PlayerOutOfOrderException
+from poker_pkg.poker_game import AbstractPokerStep
 from poker_pkg.turn import TurnManager
+
+
+class FakeStep(AbstractPokerStep):
+    def __init__(self, actions: List) -> None:
+        self.actions = actions
+
+    def start(self) -> None:
+        pass
+
+    def end(self, player: AbstractPokerPlayer) -> None:
+        pass
+
+    def maybe_end(self) -> None:
+        pass
+
+    def get_available_actions(self) -> List:
+        return self.actions
 
 
 class FakeGame:
@@ -11,8 +31,9 @@ class FakeGame:
         self.current_player = player_list[0]
         self._round_players: list[AbstractPokerPlayer] = player_list.copy()
         self.step_count = 0
-        self.steps = steps or [{"actions": ["action"]}]
+        self.steps = steps or [FakeStep(["action"])]
         self.started = False
+        self.all_players_played = False
 
     def start(self) -> None:
         self.started = True
@@ -98,7 +119,7 @@ def test_turn_context_manager__next_player_when_last_player_is_removed(
 
 
 def test_turn_context_manager__handles_illegal_step_action(player_list):
-    test_game = FakeGame(player_list, steps=[{"actions": ["cantdothat"]}])
+    test_game = FakeGame(player_list, steps=[FakeStep(["different"])])
     test_game.start()
 
     with pytest.raises(IllegalActionException):

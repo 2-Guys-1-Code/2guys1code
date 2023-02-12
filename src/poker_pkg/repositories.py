@@ -14,7 +14,11 @@ class AbstractPlayerRepository(ABC):
         pass
 
     @abstractmethod
-    def add(self, player: AbstractPokerPlayer):
+    def add(self, player: AbstractPokerPlayer) -> AbstractPokerPlayer:
+        pass
+
+    @abstractmethod
+    def remove(self, id: int) -> None:
         pass
 
 
@@ -26,8 +30,19 @@ class MemoryPlayerRepository(AbstractPlayerRepository):
         return self._players.get(id)
 
     def get_all(self) -> List[AbstractPokerPlayer]:
-        return self._players.values()
+        return list(self._players.values())
 
-    def add(self, player):
-        # start here write a test
+    def _get_new_id(self):
+        return max(self._players.keys(), default=0) + 1
+
+    def add(self, player: AbstractPokerPlayer) -> None:
+        if player.id is None:
+            player.id = self._get_new_id()
+
         self._players[player.id] = player
+
+        return player
+
+    def remove(self, id: int) -> None:
+        if id in self._players:
+            self._players[id] = None

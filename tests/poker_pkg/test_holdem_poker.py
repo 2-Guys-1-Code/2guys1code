@@ -67,6 +67,58 @@ def test_reveal_turn():
     assert game.current_player == player1
 
 
+def test_reveal_river():
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
+    game = game_factory(players=[player1, player2])
+
+    game.start()
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    assert len(game._community_pile) == 5
+    assert len(game._discard_pile) == 3
+    assert len(game._deck) == 40
+
+    assert game.current_player == player1
+
+
+def test_start_a_second_round():
+    player1 = PokerPlayer(purse=500, name="Jack")
+    player2 = PokerPlayer(purse=500, name="Paul")
+    game = game_factory(players=[player1, player2])
+
+    game.start()
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    game.bet(player1, 100)
+    game.call(player2)
+
+    # round ends, pot is distributed
+
+    assert len(game._community_pile) == 0
+    assert len(game._discard_pile) == 0
+    assert len(game._deck) == 52
+    assert game.pot.total == 0
+
+    # assert game.current_player == player1
+
+
 def test_find_winner_after_reveals():
     pass
 

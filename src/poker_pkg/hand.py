@@ -299,29 +299,6 @@ class PokerHand(Hand):
         return hand[0]
 
     @staticmethod
-    def _extract_straight_flush__v2(hand: list) -> Card:
-        hand.sort()
-        new_hand = []
-        for x in range(1, len(hand)):
-            if hand[x - 1].get_difference(hand[x]) != 1:
-                new_hand = []
-                continue
-            if hand[x - 1].suit != hand[x].suit:
-                new_hand = []
-                continue
-
-            if len(hand) - x < 5:
-                # Not enough cards left to build a straight flush
-                return None
-
-            new_hand.append(hand[x])
-
-        if len(new_hand) == 5:
-            return new_hand
-
-        return None
-
-    @staticmethod
     def _extract_full_house(hand: list) -> list:
         triple = PokerHand._find_set(hand, 3)
         pair = PokerHand._find_set(hand, 2)

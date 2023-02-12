@@ -56,34 +56,24 @@ def make_pot(bets=None):
     return pot
 
 
-@pytest.fixture
-def pot_factory_factory():
-    def factory(bets=None):
-        def fake_pot_factory():
-            return make_pot(bets)
-
-        return fake_pot_factory
-
-    return factory
-
-
 def game_factory(
     players: Union[int, list] = 3,
     game_type: str = Poker.TYPE_STUD,
     chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
     pot_factory=None,
+    deck_factory=None,
 ) -> Poker:
     init_params = {"chips_per_player": chips_per_player}
 
     if shuffler is not None:
         init_params["shuffler"] = shuffler
 
-    if game_type is not None:
-        init_params["game_type"] = game_type
-
     if pot_factory is not None:
         init_params["pot_factory"] = pot_factory
+
+    if deck_factory is not None:
+        init_params["deck_factory"] = deck_factory
 
     if type(players) is int:
         init_params["max_players"] = players
@@ -92,7 +82,7 @@ def game_factory(
         # init_params["players"] = players
         init_params["max_players"] = len(players)
 
-    game = create_poker_game(**init_params)
+    game = create_poker_game(game_type=game_type, **init_params)
 
     # if type(players) is int:
     # print("creating players")
