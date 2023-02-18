@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import Callable
 
-from .card import Card, CardComparator
+from .card import Card, PokerCardComparator
 from .card_collection import CardCollection
 
 
@@ -41,41 +41,6 @@ class Hand(CardCollection):
 
     def __eq__(self, b) -> bool:
         return self._eq(b)
-
-
-class PokerCardComparator(CardComparator):
-    def gt(self, a, b):
-        if b is None:
-            return True
-        return self._reindex_rank(a.rank) > self._reindex_rank(b.rank)
-
-    def lt(self, a, b):
-        if b is None:
-            return False
-        return self._reindex_rank(a.rank) < self._reindex_rank(b.rank)
-
-    def eq(self, a, b):
-        return self._reindex_rank(a.rank) == self._reindex_rank(b.rank)
-
-    def get_difference(self, a, b) -> int:
-        if type(b) == int:
-            return b - self._reindex_rank(a.rank)
-        return self._reindex_rank(b.rank) - self._reindex_rank(a.rank)
-
-    def get_sum(self, a, b) -> int:
-        if type(b) == int:
-            return b + self._reindex_rank(a.rank)
-        return self._reindex_rank(b.rank) + self._reindex_rank(a.rank)
-
-    def get_key(self, a) -> str:
-        return str(self._reindex_rank(a.rank))
-
-    @staticmethod
-    def _reindex_rank(rank: int):
-        if rank is None:
-            return None
-
-        return ((rank - 2 + 13) % 13) + 2
 
 
 class PokerHand(Hand):

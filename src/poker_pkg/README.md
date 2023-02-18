@@ -82,6 +82,8 @@ Ability to record/replay a game
 * Git setup
 ** Branch protections
 ** PR checks (requires approval)
+### Tech debt
+* Hand Ranking engine
 
 
 ## Roadmap

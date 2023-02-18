@@ -69,7 +69,7 @@ class PokerApp:
 
         return game
 
-    def join_game(self, game_id: int, player_id: int) -> None:
+    def join_game(self, game_id: int, player_id: int) -> PokerGame:
         game = self._get_game_by_id(game_id)
 
         if game is None:
@@ -81,6 +81,8 @@ class PokerApp:
             raise PlayerNotFound()
 
         game.join(player)
+
+        return game
 
 
 def create_poker_app(**kwargs) -> PokerApp:

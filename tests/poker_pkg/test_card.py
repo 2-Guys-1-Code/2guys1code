@@ -1,6 +1,6 @@
 import pytest
 
-from poker_pkg.card import BadCardError, Card, CardComparator
+from poker_pkg.card import BadCardError, Card, CardComparator, WildCardComparator
 
 
 @pytest.mark.parametrize(
@@ -109,21 +109,62 @@ def test_get_difference():
     assert Card("3D").get_difference(Card("5D")) == 2
 
 
-# test dunders (gt, lt)
+def test_joker_wildcard_is_equal_to_anything():
+    comparator = WildCardComparator()
+    wildcard = Card("RJ", comparator=comparator)
+    wildcard_2 = Card("BJ", comparator=comparator)
+
+    assert wildcard == Card("1D", comparator=comparator)
+    assert wildcard == Card("13D", comparator=comparator)
+    assert wildcard == Card("2S", comparator=comparator)
+    assert Card("1D", comparator=comparator) == wildcard
+    assert Card("5D", comparator=comparator) != Card("2S", comparator=comparator)
+
+    assert wildcard_2 == Card("1D", comparator=comparator)
+    assert wildcard_2 == Card("5D", comparator=comparator)
+    assert wildcard_2 == Card("2S", comparator=comparator)
+    assert Card("1D", comparator=comparator) == wildcard_2
+    assert Card("5D", comparator=comparator) != Card("2S", comparator=comparator)
+
+    assert wildcard == wildcard_2
 
 
-# class TestObject:
-#     pass
+def test_joker_wildcard_is_greater_than_anything_but_wildcards_and_aces():
+    comparator = WildCardComparator()
+    wildcard = Card("RJ", comparator=comparator)
+    wildcard_2 = Card("BJ", comparator=comparator)
+
+    assert wildcard > Card("13D", comparator=comparator)
+    assert wildcard > Card("2S", comparator=comparator)
+    assert not (wildcard > Card("1S", comparator=comparator))
+    assert not (wildcard > wildcard_2)
+
+    assert not (Card("13D", comparator=comparator) > wildcard)
+    assert not (Card("2S", comparator=comparator) > wildcard)
+    assert not (Card("1S", comparator=comparator) > wildcard)
+    assert not (wildcard_2 > wildcard)
+
+    assert Card("5D", comparator=comparator) > Card("2S", comparator=comparator)
 
 
-# def test_dunders():
-#     card = Card("3C")
-#     obj = TestObject()
+def test_joker_wildcard_is_not_less_than_anything():
+    comparator = WildCardComparator()
+    wildcard = Card("RJ", comparator=comparator)
+    wildcard_2 = Card("BJ", comparator=comparator)
 
-#     # test1 = card > None
-#     # test2 = None < card
-#     # test3 = card < None
-#     # test4 = None > card
+    assert Card("13D", comparator=comparator) < wildcard
+    assert Card("2S", comparator=comparator) < wildcard
+    assert not (Card("1S", comparator=comparator) < wildcard)
+    assert not (wildcard_2 < wildcard)
 
-#     test5 = obj < card
-#     # test6 = card < obj
+    assert not (wildcard < Card("13D", comparator=comparator))
+    assert not (wildcard < Card("2S", comparator=comparator))
+    assert not (wildcard < Card("1S", comparator=comparator))
+    assert not (wildcard < wildcard_2)
+
+    assert Card("2S", comparator=comparator) < Card("5D", comparator=comparator)
+
+
+# Jokers are wild
+# 2s are wild
+# King & low: All kings and your lowest card(s) are wild

@@ -2,8 +2,8 @@ from typing import Iterable, Union
 
 import pytest
 
-from poker_pkg.card import Card
-from poker_pkg.hand import PokerCardComparator, PokerHand
+from poker_pkg.card import Card, PokerCardComparator
+from poker_pkg.hand import PokerHand
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.poker_app import PokerApp, create_poker_app
 from poker_pkg.poker_errors import DuplicateCardException

@@ -1,8 +1,8 @@
 import pytest
 
-from poker_pkg.card import Card
+from poker_pkg.card import Card, PokerCardComparator
 from poker_pkg.card_collection import NotEnoughSpace
-from poker_pkg.hand import Hand, PokerCardComparator, PokerHand
+from poker_pkg.hand import Hand, PokerHand
 
 from .conftest import make_cards, make_poker_hand
 

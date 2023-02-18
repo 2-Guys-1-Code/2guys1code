@@ -1,5 +1,5 @@
-from abc import ABC
 import re
+from abc import ABC
 from typing import Union
 
 
@@ -55,6 +55,88 @@ class CardComparator(AbstractComparator):
 
     def get_key(self, a) -> str:
         return str(a.rank)
+
+
+class PokerCardComparator(CardComparator):
+    def gt(self, a, b):
+        if b is None:
+            return True
+        return self._reindex_rank(a.rank) > self._reindex_rank(b.rank)
+
+    def lt(self, a, b):
+        if b is None:
+            return False
+        return self._reindex_rank(a.rank) < self._reindex_rank(b.rank)
+
+    def eq(self, a, b):
+        return self._reindex_rank(a.rank) == self._reindex_rank(b.rank)
+
+    def get_difference(self, a, b) -> int:
+        if type(b) == int:
+            return b - self._reindex_rank(a.rank)
+        return self._reindex_rank(b.rank) - self._reindex_rank(a.rank)
+
+    def get_sum(self, a, b) -> int:
+        if type(b) == int:
+            return b + self._reindex_rank(a.rank)
+        return self._reindex_rank(b.rank) + self._reindex_rank(a.rank)
+
+    def get_key(self, a) -> str:
+        return str(self._reindex_rank(a.rank))
+
+    @staticmethod
+    def _reindex_rank(rank: int):
+        if rank is None:
+            return None
+
+        return ((rank - 2 + 13) % 13) + 2
+
+
+class WildCardComparator(CardComparator):
+    high_card_rank = 1
+
+    def _is_wildcard(self, card) -> bool:
+        return card.suit in ["RJ", "BJ"]
+
+    def eq(self, a, b) -> bool:
+        if self._is_wildcard(a) or self._is_wildcard(b):
+            return True
+
+        return super().eq(a, b)
+
+    def gt(self, a, b) -> bool:
+        if self._is_wildcard(a) and self._is_wildcard(b):
+            return False
+
+        if (self._is_wildcard(a) and b.rank == self.high_card_rank) or (
+            self._is_wildcard(b) and a.rank == self.high_card_rank
+        ):
+            return False
+
+        if self._is_wildcard(a):
+            return True
+
+        if self._is_wildcard(b):
+            return False
+
+        return super().gt(a, b)
+
+    def lt(self, a, b) -> bool:
+        if self._is_wildcard(a) and self._is_wildcard(b):
+            return False
+
+        if (self._is_wildcard(a) and b.rank == self.high_card_rank) or (
+            self._is_wildcard(b) and a.rank == self.high_card_rank
+        ):
+            return False
+
+        if self._is_wildcard(a):
+            return False
+
+        if self._is_wildcard(b):
+            return True
+
+        return super().lt(a, b)
 
 
 class Card:

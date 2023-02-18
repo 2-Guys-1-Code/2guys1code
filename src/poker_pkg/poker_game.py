@@ -398,7 +398,6 @@ class PokerGame(AbstractPokerGame):
         return self.max_players - len(self._players)
 
 
-# This can be further improved; Steps should become classes
 def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
         DealStep(
@@ -412,7 +411,6 @@ def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     ]
 
 
-# This can be further improved; Steps should become classes
 def get_holdem_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
         DealStep(
@@ -450,7 +448,6 @@ def get_holdem_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     ]
 
 
-# This can be further improved; Steps should become classes
 def get_draw_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
         DealStep(

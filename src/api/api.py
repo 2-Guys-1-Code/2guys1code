@@ -64,6 +64,7 @@ class ProxyAPI(FastAPI):
             endpoint=self.join_game,
             methods=["POST"],
             status_code=status.HTTP_201_CREATED,
+            response_model=Game,
         )
 
     def get_instance_id(self) -> dict:
@@ -96,9 +97,9 @@ class ProxyAPI(FastAPI):
         except GameNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
 
-    def join_game(self, game_id: int, game_data: NewGameData) -> str:
+    def join_game(self, game_id: int, game_data: NewGameData) -> PokerGame:
         try:
-            self.poker_app.join_game(
+            return self.poker_app.join_game(
                 game_id,
                 game_data.current_player_id,
             )
@@ -108,8 +109,6 @@ class ProxyAPI(FastAPI):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
         except PlayerCannotJoin as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-
-        return "Joined successfully."
 
 
 # def factory_register_routes(app):
