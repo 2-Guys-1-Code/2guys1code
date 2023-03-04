@@ -339,7 +339,7 @@ def test_can_sub_card():
 def test_can_sub_card_collections__not_a_subset():
     card_collection_1 = CardCollection(cards=make_cards(["9C", "9S", "7C", "8C", "5D"]))
     card_collection_2 = CardCollection(cards=make_cards(["9C", "9S"]))
-    with pytest.raises(NotASubSet):
+    with pytest.raises(MissingCard):
         _ = card_collection_2 - card_collection_1
 
 

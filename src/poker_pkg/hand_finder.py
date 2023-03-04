@@ -100,7 +100,7 @@ class AbstractHandBuilder:
         self, leftovers: CardCollection, new_hand: CardCollection
     ) -> CardCollection:
         added = new_hand - self.hand
-        leftovers -= added
+        leftovers = leftovers - added
 
         return leftovers
 
@@ -108,7 +108,7 @@ class AbstractHandBuilder:
         hand = self.hand
         for unit in other:
             try:
-                hand += unit
+                hand = hand + unit
             except NotEnoughSpace:
                 break
 

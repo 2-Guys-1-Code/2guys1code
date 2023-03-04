@@ -1,7 +1,9 @@
-from collections import Counter
+from collections import Counter, defaultdict
+from copy import copy
+from operator import itemgetter
 from typing import Callable
 
-from .card import Card, PokerCardComparator
+from .card import Card, PokerCardComparator, WildCard
 from .card_collection import CardCollection
 
 
@@ -53,8 +55,10 @@ class PokerHand(Hand):
 
     @staticmethod
     def beats(hand_1: Hand, hand_2: Hand) -> int:
-        hand_1 = PokerHand._parse_to_cards(hand_1).copy()
-        hand_2 = PokerHand._parse_to_cards(hand_2).copy()
+        # hand_1 = PokerHand._parse_to_cards(hand_1).copy()
+        # hand_2 = PokerHand._parse_to_cards(hand_2).copy()
+        hand_1 = hand_1.clone()
+        hand_2 = hand_2.clone()
 
         ordered_tests = [
             PokerHand._straight_flush_test,
@@ -68,6 +72,8 @@ class PokerHand(Hand):
             PokerHand._high_card_test,
         ]
         for test in ordered_tests:
+            print(test.__name__)
+            print(hand_1, "-", hand_2)
             winner = test(hand_1, hand_2)
             # winning_test = test.__name__
             if winner != 0:
@@ -82,161 +88,195 @@ class PokerHand(Hand):
         return [Card(c, _hash=_hash, comparator=comparator) for c in hand]
 
     @staticmethod
-    def _straight_flush_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._extract_straight_flush(hand_1)
-        second_card = PokerHand._extract_straight_flush(hand_2)
+    def _straight_flush_test(hand_1: Hand, hand_2: Hand) -> int:
+        first = PokerHand._extract_straight_flush(hand_1)
+        second = PokerHand._extract_straight_flush(hand_2)
+        # print(first)
+        # print(second)
 
-        if first_card is None and second_card is None:
+        # print(hand_1)
+        # print(hand_2)
+
+        if first is None and second is None:
             return 0
 
-        if first_card > second_card:
+        if first is None:
+            return -1
+
+        if second is None:
             return 1
-        if second_card > first_card:
+
+        if first[0] > second[0]:
+            return 1
+        if second[0] > first[0]:
             return -1
         return 0
 
     @staticmethod
-    def _four_of_a_kind_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._find_set(hand_1, 4)
-        second_card = PokerHand._find_set(hand_2, 4)
+    def _set_test(hand_1: Hand, hand_2: Hand, set_size: int) -> int:
+        first = PokerHand._find_set(hand_1, set_size)
+        second = PokerHand._find_set(hand_2, set_size)
+        # print(first)
+        # print(second)
 
-        if first_card is None and second_card is None:
+        # print(hand_1)
+        # print(hand_2)
+
+        if first is None and second is None:
             return 0
 
-        if first_card is not None:
-            PokerHand._remove_cards_by_rank(hand_1, first_card)
+        if first is None:
+            return -1
 
-        if second_card is not None:
-            PokerHand._remove_cards_by_rank(hand_2, second_card)
-
-        if first_card > second_card:
+        if second is None:
             return 1
-        if second_card > first_card:
+
+        if first[0] > second[0]:
+            return 1
+        if second[0] > first[0]:
             return -1
         return 0
 
     @staticmethod
-    def _full_house_test(hand_1: list, hand_2: list) -> int:
-        cards_1 = PokerHand._extract_full_house(hand_1)
-        cards_2 = PokerHand._extract_full_house(hand_2)
-
-        if cards_1 is None and cards_2 is None:
-            return 0
-
-        if cards_1 is None:
-            return -1
-
-        if cards_2 is None:
-            return 1
-
-        if cards_1[0] > cards_2[0]:
-            return 1
-        if cards_1[0] < cards_2[0]:
-            return -1
-
-        if cards_1[1] > cards_2[1]:
-            return 1
-        if cards_1[1] < cards_2[1]:
-            return -1
-
-        return 0
+    def _four_of_a_kind_test(hand_1: Hand, hand_2: Hand) -> int:
+        return PokerHand._set_test(hand_1, hand_2, 4)
 
     @staticmethod
-    def _flush_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._extract_flush(hand_1)
-        second_card = PokerHand._extract_flush(hand_2)
+    def _full_house_test(hand_1: Hand, hand_2: Hand) -> int:
+        first_triple, first_pair = PokerHand._extract_full_house(hand_1)
+        second_triple, second_pair = PokerHand._extract_full_house(hand_2)
+        # print(first_triple, first_pair)
+        # print(second_triple, second_pair)
 
-        if first_card is None and second_card is None:
+        # print(hand_1)
+        # print(hand_2)
+
+        has_full_house_1 = first_triple and first_pair
+        has_full_house_2 = second_triple and second_pair
+
+        # if has_full_house_1:
+        #     hand_1.pull_card(cards_1[0])
+        #     hand_1.pull_card(cards_1[1])
+
+        # if has_full_house_2:
+        #     hand_2.pull_card(cards_2[0])
+        #     hand_2.pull_card(cards_2[1])
+
+        if not has_full_house_1 and not has_full_house_2:
             return 0
 
-        if first_card > second_card:
-            return 1
-        if second_card > first_card:
-            return -1
-        return 0
-
-    @staticmethod
-    def _straight_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._extract_straight(hand_1)
-        second_card = PokerHand._extract_straight(hand_2)
-
-        if first_card is None and second_card is None:
-            return 0
-
-        if first_card > second_card:
-            return 1
-        if second_card > first_card:
-            return -1
-        return 0
-
-    @staticmethod
-    def _three_of_a_kind_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._find_set(hand_1, 3)
-        second_card = PokerHand._find_set(hand_2, 3)
-
-        if first_card is None and second_card is None:
-            return 0
-
-        if first_card is not None:
-            PokerHand._remove_cards_by_rank(hand_1, first_card)
-
-        if second_card is not None:
-            PokerHand._remove_cards_by_rank(hand_2, second_card)
-
-        if first_card > second_card:
-            return 1
-        if second_card > first_card:
-            return -1
-        return 0
-
-    @staticmethod
-    def _two_pair_test(hand_1: list, hand_2: list) -> int:
-        cards_1 = PokerHand._find_two_pair(hand_1)
-        cards_2 = PokerHand._find_two_pair(hand_2)
-
-        if cards_1 is None and cards_2 is None:
-            return 0
-
-        if cards_1 is None:
+        if not has_full_house_1:
             return -1
 
-        if cards_2 is None:
+        if not has_full_house_2:
             return 1
 
-        if cards_1[0] > cards_2[0]:
+        if first_triple[0] > second_triple[0]:
             return 1
-        if cards_1[0] < cards_2[0]:
+        if first_triple[0] < second_triple[0]:
             return -1
 
-        if cards_1[1] > cards_2[1]:
+        if first_pair[0] > second_pair[0]:
             return 1
-        if cards_1[1] < cards_2[1]:
+        if first_pair[0] < second_pair[0]:
             return -1
 
         return 0
 
     @staticmethod
-    def _pair_test(hand_1: list, hand_2: list) -> int:
-        first_card = PokerHand._find_set(hand_1, 2)
-        other_card = PokerHand._find_set(hand_2, 2)
+    def _flush_test(hand_1: Hand, hand_2: Hand) -> int:
+        first = PokerHand._extract_flush(hand_1)
+        second = PokerHand._extract_flush(hand_2)
+        # print(first)
+        # print(second)
 
-        if first_card is None and other_card is None:
+        # print(hand_1)
+        # print(hand_2)
+
+        if first is None and second is None:
             return 0
 
-        if first_card is not None:
-            PokerHand._remove_cards_by_rank(hand_1, first_card)
+        if first is None:
+            return -1
 
-        if other_card is not None:
-            PokerHand._remove_cards_by_rank(hand_2, other_card)
-
-        if first_card > other_card:
+        if second is None:
             return 1
-        if other_card > first_card:
+
+        first.sort(reverse=True)
+        second.sort(reverse=True)
+
+        for i in range(5):
+            if first[i] > second[i]:
+                return 1
+            if first[i] < second[i]:
+                return -1
+
+        return 0
+
+    @staticmethod
+    def _straight_test(hand_1: Hand, hand_2: Hand) -> int:
+        first = PokerHand._extract_straight(hand_1)
+        second = PokerHand._extract_straight(hand_2)
+
+        if first is None and second is None:
+            return 0
+
+        if first is None:
+            return -1
+
+        if second is None:
+            return 1
+
+        if first[0] > second[0]:
+            return 1
+        if second[0] > first[0]:
             return -1
         return 0
 
     @staticmethod
-    def _high_card_test(hand_1: list, hand_2: list) -> int:
+    def _three_of_a_kind_test(hand_1: Hand, hand_2: Hand) -> int:
+        return PokerHand._set_test(hand_1, hand_2, 3)
+
+    @staticmethod
+    def _two_pair_test(hand_1: Hand, hand_2: Hand) -> int:
+        first_pair_1, first_pair_2 = PokerHand._find_two_pair(hand_1)
+        second_pair_1, second_pair_2 = PokerHand._find_two_pair(hand_2)
+        # print(first_pair_1, first_pair_2)
+        # print(second_pair_1, second_pair_2)
+
+        # print(hand_1)
+        # print(hand_2)
+
+        has_two_pairs_1 = first_pair_1 and first_pair_2
+        has_two_pairs_2 = second_pair_1 and second_pair_2
+
+        if not has_two_pairs_1 and not has_two_pairs_2:
+            return 0
+
+        if not has_two_pairs_1:
+            return -1
+
+        if not has_two_pairs_2:
+            return 1
+
+        if first_pair_1[0] > second_pair_1[0]:
+            return 1
+        if first_pair_1[0] < second_pair_1[0]:
+            return -1
+
+        if first_pair_2[0] > second_pair_2[0]:
+            return 1
+        if first_pair_2[0] < second_pair_2[0]:
+            return -1
+
+        return 0
+
+    @staticmethod
+    def _pair_test(hand_1: Hand, hand_2: Hand) -> int:
+        return PokerHand._set_test(hand_1, hand_2, 2)
+
+    @staticmethod
+    def _high_card_test(hand_1: Hand, hand_2: Hand) -> int:
         while True:
             first_card = max(hand_1, default=None)
             other_card = max(hand_2, default=None)
@@ -244,8 +284,8 @@ class PokerHand(Hand):
             if first_card is None and other_card is None:
                 return 0
 
-            hand_1.remove(first_card)
-            hand_2.remove(other_card)
+            hand_1.pull_card(first_card)
+            hand_2.pull_card(other_card)
 
             if first_card > other_card:
                 return 1
@@ -253,65 +293,216 @@ class PokerHand(Hand):
                 return -1
 
     @staticmethod
-    def _extract_straight_flush(hand: list) -> Card:
-        hand.sort()
-        for x in range(1, len(hand)):
-            if hand[x - 1].get_difference(hand[x]) != 1:
-                return None
-            if hand[x - 1].suit != hand[x].suit:
-                return None
+    def _extract_wildcards(hand: Hand) -> CardCollection:
+        wildcards = CardCollection()
 
-        return hand[0]
+        for x in range(len(hand) - 1, -1, -1):
+            if hand[x].is_wildcard:
+                wildcards.insert_at_end(hand.pull_from_position(x + 1))
+
+        # print("wildcards found", wildcards)
+        return wildcards
 
     @staticmethod
-    def _extract_full_house(hand: list) -> list:
+    def _extract_straight_flush(hand: Hand) -> Hand:
+        if len(hand) < 5:
+            return None
+
+        comparator = hand[0]._comparator
+        wildcards = PokerHand._extract_wildcards(hand)
+
+        target = WildCard("10S", comparator=comparator)
+
+        if len(hand):
+            hand.sort()
+            if hand[0].rank < 10:
+                target.rank = copy(hand[0].rank)
+            target.suit = hand[0].suit
+
+        failed = False
+        wilcard_updates = {}
+        for x in range(5):
+            c = hand.peek(x + 1) if len(hand) else None
+            if c.rank != target.rank or c.suit != target.suit:
+                if not len(wildcards):
+                    failed = True
+                else:
+                    use = wildcards.pull_from_start()
+                    wilcard_updates[use] = (target.suit, target.rank)
+                    hand.insert_at(x + 1, use)
+
+            if target.rank == 13:
+                target.rank = 1
+            else:
+                target.rank += 1
+
+        if failed:
+            return None
+
+        # for w, (s, r) in wilcard_updates.items():
+        #     w.suit = s
+        #     w.rank = r
+
+        return hand.pull_card(hand)
+
+    @staticmethod
+    def _extract_full_house(hand: Hand) -> list:
+        if len(hand) < 5:
+            return [None, None]
+
         triple = PokerHand._find_set(hand, 3)
+        # print(triple)
+
+        # if triple is not None:
+        #     hand.pull_card(triple)
+
         pair = PokerHand._find_set(hand, 2)
+        # print(pair)
 
-        if triple is None or pair is None:
+        # if triple is not None:
+        #     hand.insert_at_end(triple)
+
+        if triple is not None and pair is not None:
+            return [triple, pair]
+
+        if triple is not None:
+            hand.insert_at_end(triple)
+
+        if pair is not None:
+            hand.insert_at_end(pair)
+
+        return [None, None]
+
+    @staticmethod
+    def _extract_flush(hand: Hand) -> Hand:
+        if len(hand) < 5:
             return None
 
-        return [triple, pair]
+        comparator = hand[0]._comparator
+        wildcards = PokerHand._extract_wildcards(hand)
 
-    @staticmethod
-    def _extract_flush(hand: list) -> Card:
-        for x in range(1, len(hand)):
-            if hand[x - 1].suit != hand[x].suit:
-                return None
+        target = WildCard("1S", comparator=comparator)
 
-        return hand[0]
+        if len(hand):
+            target.suit = hand[0].suit
 
-    @staticmethod
-    def _extract_straight(hand: list) -> Card:
-        hand.sort()
-        for x in range(1, len(hand)):
-            if hand[x - 1].get_difference(hand[x]) != 1:
-                return None
+        failed = False
+        wilcard_updates = {}
+        for x in range(5):
+            c = hand.peek(x + 1) if len(hand) else None
+            if c.suit != target.suit:
+                if not len(wildcards):
+                    failed = True
+                else:
+                    use = wildcards.pull_from_start()
+                    wilcard_updates[use] = target.suit
+                    hand.insert_at(x + 1, use)
 
-        return hand[0]
-
-    @staticmethod
-    def _find_set(hand: list, set_size: int) -> Card:
-        sets = [k for k, v in Counter(hand).items() if v == set_size]
-        if len(sets) == 0:
+        if failed:
             return None
 
-        return max(sets, default=None)
+        # for w, (s, r) in wilcard_updates.items():
+        #     w.suit = s
+
+        return hand.pull_card(hand)
 
     @staticmethod
-    def _remove_cards_by_rank(hand: list, rank_card: Card) -> None:
-        for x in range(len(hand) - 1, -1, -1):
-            if hand[x] == rank_card:
-                hand.pop(x)
-
-    @staticmethod
-    def _find_two_pair(hand: list) -> list:
-        pairs = [k for k, v in Counter(hand).items() if v == 2]
-        if len(pairs) < 2:
+    def _extract_straight(hand: Hand) -> Hand:
+        if len(hand) < 5:
             return None
 
-        pairs.sort(reverse=True)
-        for x in range(len(hand) - 1, -1, -1):
-            if hand[x] == pairs[0] or hand[x] == pairs[1]:
-                hand.pop(x)
-        return [pairs[0], pairs[1]]
+        comparator = hand[0]._comparator
+        wildcards = PokerHand._extract_wildcards(hand)
+
+        target = WildCard("10S", comparator=comparator)
+
+        if len(hand):
+            hand.sort()
+            if hand[0].rank < 10:
+                target.rank = copy(hand[0].rank)
+
+        failed = False
+        wilcard_updates = {}
+        for x in range(5):
+            c = hand.peek(x + 1) if len(hand) else None
+            if c.rank != target.rank:
+                if not len(wildcards):
+                    failed = True
+                else:
+                    use = wildcards.pull_from_start()
+                    wilcard_updates[use] = target.rank
+                    hand.insert_at(x + 1, use)
+
+            if target.rank == 13:
+                target.rank = 1
+            else:
+                target.rank += 1
+
+        if failed:
+            return None
+
+        # for w, (s, r) in wilcard_updates.items():
+        #     w.suit = s
+        #     w.rank = r
+
+        return hand.pull_card(hand)
+
+    @staticmethod
+    def _find_sets(hand: Hand) -> dict:
+        sets = defaultdict(CardCollection)
+        highest = WildCard("1")
+        sets[highest] = CardCollection()
+        for c in hand:
+            if c.is_wildcard:
+                continue
+            sets[c.rank].insert_at_end(c)
+
+        return sets
+
+    @staticmethod
+    def _find_set(hand: Hand, set_size: int) -> CardCollection:
+        wildcards = PokerHand._extract_wildcards(hand)
+
+        sets = PokerHand._find_sets(hand)
+
+        result = None
+        for k, v in sorted(sets.items(), key=itemgetter(0), reverse=True):
+            size = len(v)
+            if size + len(wildcards) >= set_size:
+                for _ in range(0, set_size - size):
+                    use = wildcards.pull_from_start()
+                    # use.suit = "S"
+                    # use.rank = k
+                    v.insert_at_end(use)
+                    hand.insert_at_end(use)
+
+                result = CardCollection([c for i, c in enumerate(v) if i < set_size])
+                break
+
+        hand.insert_at_end(wildcards)
+        if result is not None:
+            return hand.pull_card(result)
+
+        return None
+
+    @staticmethod
+    def _find_two_pair(hand: Hand) -> list:
+        if len(hand) < 4:
+            return [None, None]
+
+        pair_1 = PokerHand._find_set(hand, 2)
+        # print(pair_1)
+
+        pair_2 = PokerHand._find_set(hand, 2)
+        # print(pair_2)
+
+        if pair_1 is not None and pair_2 is not None:
+            return [pair_1, pair_2]
+
+        if pair_1 is not None:
+            hand.insert_at_end(pair_1)
+
+        if pair_2 is not None:
+            hand.insert_at_end(pair_2)
+
+        return [None, None]
