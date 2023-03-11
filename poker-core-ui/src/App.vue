@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+import LocaleSwitcher from './components/LocaleSwitcher.vue'
+import { useLocale } from 'vuetify'
+import { provide } from 'vue';
+const { t: $t } = useLocale()
+provide('i18nObj', $t)
 </script>
 
 <template>
@@ -12,8 +17,11 @@ import HelloWorld from './components/HelloWorld.vue'
 
       <nav>
         <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
+        <RouterLink to="/join">Join a game</RouterLink>
+        <RouterLink to="/create">Create a game</RouterLink>
       </nav>
+
+      <LocaleSwitcher></LocaleSwitcher>
     </div>
   </header>
 
