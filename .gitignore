@@ -1,5 +1,4 @@
 .history
-.vscode
 __pycache__
 .mypy_cache
 .python-version
