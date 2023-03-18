@@ -14,16 +14,15 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
 import './assets/main.css'
-import messages from './i18n/messages'
+import i18n from './i18n'
+import vuetify from './vuetify'
 
-
-
-const i18n: I18n = new (createI18n as any)({
-    legacy: false, // Vuetify does not support the legacy mode of vue-i18n
-    locale: 'en',
-    fallbackLocale: 'fr',
-    messages,
-})
+// const i18n: I18n = new (createI18n as any)({
+//     legacy: false, // Vuetify does not support the legacy mode of vue-i18n
+//     locale: 'en',
+//     fallbackLocale: 'fr',
+//     messages,
+// })
 // const i18n = new (VueI18n as any)({
 //     locale: 'ja',
 //     messages: {
@@ -42,19 +41,20 @@ const i18n: I18n = new (createI18n as any)({
 //     }
 // })
 
-const vuetify = createVuetify({
-    components,
-    directives,
-    locale: {
-        adapter: createVueI18nAdapter({ i18n, useI18n })
-    }
-})
+// const vuetify = createVuetify({
+//     components,
+//     directives,
+//     locale: {
+//         adapter: createVueI18nAdapter({ i18n, useI18n })
+//     }
+// })
 const app = createApp(App)
 
+app.use(i18n)
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
 
 app.mount('#app')
 
-app.config.globalProperties.$t = i18n.global.t
+// app.config.globalProperties.$t = i18n.global.t

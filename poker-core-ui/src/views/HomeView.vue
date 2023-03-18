@@ -32,5 +32,3 @@ main div:nth-child(4) {
   transform: rotate(30deg) translate(30%, 0);
 }
 </style>
-
-
