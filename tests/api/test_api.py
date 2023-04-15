@@ -32,6 +32,19 @@ def test_get_app_version(api_client: TestClient) -> None:
 #     assert parsed_response["detail"] == "Resource not found."
 
 
+# def test_create_game(api_client: TestClient) -> None:
+#     response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
+
+#     assert response.status_code == 201
+#     parsed_response = response.json()
+#     assert parsed_response == {
+#         "id": 1,
+#         "max_players": 3,
+#         "players": {"8": {"id": 8, "name": "Steve", "seat": None}},
+#         "started": False,
+#     }
+
+
 def test_create_game(api_client: TestClient) -> None:
     response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
 
@@ -40,7 +53,8 @@ def test_create_game(api_client: TestClient) -> None:
     assert parsed_response == {
         "id": 1,
         "max_players": 3,
-        "players": {"8": {"id": 8, "name": "Steve", "seat": None}},
+        "table": {"1": {"player_id": 8}},
+        "players": {"8": {"id": 8, "name": "Steve", "seat": 1}},
         "started": False,
     }
 
@@ -112,7 +126,8 @@ def test_get_games(api_client: TestClient) -> None:
     parsed_response = response.json()
     assert parsed_response[0]["id"] == 1
     assert parsed_response[0]["max_players"] == 3
-    assert parsed_response[0]["players"] == {"3": {"id": 3, "name": "Bob", "seat": None}}
+    assert parsed_response[0]["players"] == {"3": {"id": 3, "name": "Bob", "seat": 1}}
+    assert parsed_response[0]["table"] == {"1": {"player_id": 3}}
 
 
 def test_join_game(api_client: TestClient) -> None:
@@ -196,4 +211,4 @@ def test_start_a_game_with_picked_seats(api_client: TestClient) -> None:
 
     assert response.status_code == 200
     parsed_response = response.json()
-    assert parsed_response["players"]["8"]["seat"] == 3
+    assert parsed_response["table"]["3"]["player_id"] == 8

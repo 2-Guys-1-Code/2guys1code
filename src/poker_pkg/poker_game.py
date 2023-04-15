@@ -243,6 +243,9 @@ class PokerGame(AbstractPokerGame):
 
         self._join(player, seat=seat)
 
+    def _get_max_seat(self) -> int:
+        return max([p.seat or 0 for p in self.get_players()] + [0])
+
     def _join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         # This should be a configuration of the game; Do players come in
         # with their own chips or are they given chips upon joining?
@@ -253,7 +256,7 @@ class PokerGame(AbstractPokerGame):
             )
 
         player.hand_factory = self.hand_factory
-        player.seat = seat
+        player.seat = seat or self._get_max_seat() + 1
 
         self._players.append(player)
 
@@ -394,7 +397,13 @@ class PokerGame(AbstractPokerGame):
     # call "get_players" and do with it what it needs
     @property
     def players(self) -> List[AbstractPokerPlayer]:
-        return {p.id: {"id": p.id, "name": p.name, "seat": p.seat} for p in self.get_players()}
+        return {
+            str(p.id): {"id": p.id, "name": p.name, "seat": p.seat} for p in self.get_players()
+        }
+
+    @property
+    def table(self) -> List[AbstractPokerPlayer]:
+        return {str(p.seat): {"player_id": p.id} for p in self.get_players()}
 
     def get_free_seats(self) -> int:
         return self.max_players - len(self._players)

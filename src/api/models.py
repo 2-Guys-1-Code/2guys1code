@@ -12,7 +12,8 @@ class Player(BaseModel):
 class Game(BaseModel):
     id: int
     max_players: int
-    players: Dict[int, Player]
+    players: Dict[str, Player]
+    table: Dict[str, dict]
     started: bool = None
 
     class Config:
