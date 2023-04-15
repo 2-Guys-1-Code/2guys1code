@@ -2,8 +2,9 @@
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 import LocaleSwitcher from './components/LocaleSwitcher.vue'
-import { useLocale } from 'vuetify'
 import { provide } from 'vue'
+import { useLocale } from 'vuetify'
+
 const { t: $t } = useLocale()
 provide('i18nObj', $t)
 </script>

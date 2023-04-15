@@ -4,14 +4,16 @@
     <v-form ref="form" v-model="valid" @submit.prevent="submit">
       <v-row>
         <v-col cols="12">
-          <v-text-field
+          <text-field
             v-model="maxPlayers"
-            :rules="[required, validateBetween(2, 9)]"
+            :rules="[validateBetween(2, 9)]"
+            :max-errors="5"
             :label="$t('$vuetify.game.maxPlayers')"
-            required
+            :required="true"
             data-test="field-max-players"
             type="number"
-          ></v-text-field>
+            @update:model-value="log"
+          ></text-field>
         </v-col>
       </v-row>
       <v-row>
@@ -23,6 +25,13 @@
             required
             data-test="field-game-code"
           ></v-text-field>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="12">
+          <!-- This is a test to allow for translating strings returned from functions before a locale is changed -->
+          <!-- For example, validation rules must only return string-like types, so something like this could be returned and the results translated after the fact -->
+          {{ reapplyPlaceholders('$vuetify.validation.maxNumber{limit:99}{another:something}') }}
         </v-col>
       </v-row>
       <v-row>
@@ -42,11 +51,16 @@
 </template>
 
 <script lang="ts">
-import { makeid } from '@/helpers/helpers'
+import { makeid, reapplyPlaceholders } from '@/helpers/helpers'
 import { ref } from 'vue'
+import TextField from '@/components/UI/inputs/TextField.vue'
+import { validateBetween } from '@/helpers/validation'
 import { VForm } from 'vuetify/components'
 
 export default {
+  components: {
+    TextField,
+  },
   setup() {
     const valid = ref(false)
     const loading = ref(false)
@@ -57,22 +71,14 @@ export default {
       valid,
       loading,
       maxPlayers,
-      code
+      code,
     }
   },
   methods: {
-    required(value: string) {
-      if (!value) return this.$t('$vuetify.validation.required')
-      return true
-    },
-    validateBetween(min: number, max: number) {
-      return (value: string) => {
-        const intVal = parseInt(value)
-        console.log(intVal)
-        if (intVal > max) return this.$t('$vuetify.validation.maxNumber', { limit: max })
-        if (intVal < min) return this.$t('$vuetify.validation.minNumber', { limit: min })
-        return true
-      }
+    validateBetween,
+    reapplyPlaceholders,
+    log(e) {
+      console.log('outer', e)
     },
     async submit() {
       const { valid } = await (this.$refs.form as typeof VForm).validate()
@@ -81,8 +87,8 @@ export default {
 
       this.loading = true
       setTimeout(() => (this.loading = false), 3000)
-    }
-  }
+    },
+  },
 }
 </script>
 

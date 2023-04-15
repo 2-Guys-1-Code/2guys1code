@@ -23,7 +23,7 @@ parser.add_argument(
 
 
 def get_config(env: Environment = Environment.PROD) -> dict:
-    config = {"host": "0.0.0.0", "port": 8000, "reload": False, "factory": True}
+    config = {"host": "localhost", "port": 8000, "reload": False, "factory": True}
 
     if env == Environment.DEV:
         config["reload"] = True

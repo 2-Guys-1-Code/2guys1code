@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { resolve, dirname } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
