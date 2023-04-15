@@ -15,6 +15,7 @@ class AbstractPokerPlayer(ABC):
         self.name = name
         self._hand = None
         self.id = id
+        self.seat: int | None = None
 
     def __repr__(self) -> str:
         return self.name

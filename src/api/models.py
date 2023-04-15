@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class Player(BaseModel):
     id: int
     name: str
+    seat: int | None
 
 
 class Game(BaseModel):
@@ -21,6 +22,7 @@ class Game(BaseModel):
 class NewGameData(BaseModel):
     current_player_id: int
     number_of_players: int = 2
+    seat: int | None = None
 
 
 class UpdateGameData(BaseModel):

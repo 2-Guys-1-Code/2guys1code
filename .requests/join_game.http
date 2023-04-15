@@ -1,0 +1,6 @@
+POST http://0.0.0.0:8000/games/1/players HTTP/1.1
+content-type: application/json
+
+{
+    "current_player_id": 19
+}

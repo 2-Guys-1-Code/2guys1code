@@ -48,7 +48,7 @@ class PokerAction(Enum):
 
 class AbstractPokerGame(ABC):
     @abstractmethod
-    def join(self, player: AbstractPokerPlayer) -> None:
+    def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         pass
 
     @abstractmethod
@@ -222,6 +222,7 @@ class PokerGame(AbstractPokerGame):
         self.started = False
         self._set_deck()
         self.pot = self.pot_factory()
+        self.seats: list[AbstractPokerPlayer] = []
 
     def _validate_max_players(self, max_players: int) -> None:
         if max_players > 9:
@@ -230,7 +231,7 @@ class PokerGame(AbstractPokerGame):
     def _set_deck(self) -> None:
         self._deck = self.deck_factory()
 
-    def join(self, player: AbstractPokerPlayer) -> None:
+    def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         if player in self.get_players():
             return
 
@@ -240,9 +241,9 @@ class PokerGame(AbstractPokerGame):
         if self.started:
             raise PlayerCannotJoin("The game has started.")
 
-        self._join(player)
+        self._join(player, seat=seat)
 
-    def _join(self, player: AbstractPokerPlayer) -> None:
+    def _join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         # This should be a configuration of the game; Do players come in
         # with their own chips or are they given chips upon joining?
         if player.purse is None:
@@ -252,6 +253,7 @@ class PokerGame(AbstractPokerGame):
             )
 
         player.hand_factory = self.hand_factory
+        player.seat = seat
 
         self._players.append(player)
 
@@ -392,7 +394,7 @@ class PokerGame(AbstractPokerGame):
     # call "get_players" and do with it what it needs
     @property
     def players(self) -> List[AbstractPokerPlayer]:
-        return {p.id: {"id": p.id, "name": p.name} for p in self.get_players()}
+        return {p.id: {"id": p.id, "name": p.name, "seat": p.seat} for p in self.get_players()}
 
     def get_free_seats(self) -> int:
         return self.max_players - len(self._players)

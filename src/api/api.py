@@ -99,10 +99,7 @@ class ProxyAPI(FastAPI):
 
     def join_game(self, game_id: int, game_data: NewGameData) -> PokerGame:
         try:
-            return self.poker_app.join_game(
-                game_id,
-                game_data.current_player_id,
-            )
+            return self.poker_app.join_game(game_id, game_data.current_player_id, game_data.seat)
         except GameNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
         except PlayerNotFound as e:
