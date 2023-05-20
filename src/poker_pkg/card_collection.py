@@ -105,7 +105,7 @@ class CardCollection:
             return self._slice(index)
         return self.peek(index + 1)
 
-    def __iter__(self):
+    def __iter__(self) -> Card:
         for c in self._cards:
             yield c
 

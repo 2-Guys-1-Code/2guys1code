@@ -6,14 +6,22 @@ from pydantic import BaseModel
 class Player(BaseModel):
     id: int
     name: str
-    seat: int | None
+
+    class Config:
+        orm_mode = True
+
+
+class Table(BaseModel):
+    seats: Dict[str, Player | None]
+
+    class Config:
+        orm_mode = True
 
 
 class Game(BaseModel):
     id: int
-    max_players: int
     players: Dict[str, Player]
-    table: Dict[str, dict]
+    table: Table
     started: bool = None
 
     class Config:
@@ -23,6 +31,7 @@ class Game(BaseModel):
 class NewGameData(BaseModel):
     current_player_id: int
     number_of_players: int = 2
+    seating: str | None = None
     seat: int | None = None
 
 

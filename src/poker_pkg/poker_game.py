@@ -3,9 +3,11 @@ from enum import Enum
 from functools import partial
 from typing import List
 
+
 from .card import Card
 from .card_collection import CardCollection
 from .deck import Deck, DeckWithoutJokers
+from .game_table import AlreadySeated, FreePickTable, GameTable, TableIsFull
 from .hand import Hand, PokerHand
 from .player import AbstractPokerPlayer, PokerPlayer
 from .poker_errors import (
@@ -88,7 +90,7 @@ class AbstractPokerStep(ABC):
 class DealStep(AbstractPokerStep):
     def start(self) -> None:
         self.game._shuffler.shuffle(self.game._deck)
-        self._deal([p.hand for p in self.game._round_players], **self.config)
+        self._deal([p.hand for _, p in self.game._table], **self.config)
         self.game.end_step()
 
     def end(self) -> None:
@@ -112,23 +114,21 @@ class CommunityCardStep(DealStep):
 
 class PlayerStep(AbstractPokerStep):
     def start(self) -> None:
-        self.game.current_player = self.game._round_players[0]
         self.game.all_players_played = False
+        self.game._table.set_current_player_by_seat(self.game.get_first_seat())
 
     def end(self) -> None:
-        self.game.current_player = None
+        self.game._table.current_player = None
         self.game.end_step()
         raise EndOfStep()
 
     # This should be "end", which raises if we cannot end
     def maybe_end(self) -> None:
-        if len(self.game._round_players) == 1:
+        if len(self.game._table) == 1:
             self.end()
 
         players_left = [
-            p
-            for p in self.game._round_players
-            if self.game.pot.player_owed(p) != 0 and p.purse != 0
+            p for _, p in self.game._table if self.game.pot.player_owed(p) != 0 and p.purse != 0
         ]
 
         if self.game.all_players_played and not len(players_left):
@@ -194,8 +194,9 @@ class PokerGame(AbstractPokerGame):
         hand_factory: Hand = PokerHand,
         deck_factory: Deck = DeckWithoutJokers,
         max_players: int = 9,
+        seating: str = None,
     ) -> None:
-        self._validate_max_players(max_players)
+        self._table = self._create_table(max_players, seating=seating)
 
         self._shuffler = shuffler or Shuffler()
 
@@ -207,7 +208,6 @@ class PokerGame(AbstractPokerGame):
         self.pot_factory = pot_factory
         self.hand_factory = partial(hand_factory)
         self.deck_factory = deck_factory
-        self.max_players = max_players
 
         if chips_per_player is None:
             chips_per_player = 500
@@ -217,34 +217,48 @@ class PokerGame(AbstractPokerGame):
         self._players = []
 
         self.round_count = 0
-        self.current_player = None
         self.current_step = None
-        self.started = False
-        self._set_deck()
+        self._deck = self.deck_factory()
         self.pot = self.pot_factory()
-        self.seats: list[AbstractPokerPlayer] = []
+
+    @property
+    def current_player(self) -> AbstractPokerPlayer | None:
+        return self._table.current_player
+
+    @property
+    def started(self) -> bool:
+        return self.round_count > 0
+
+    def get_first_seat(self) -> AbstractPokerPlayer:
+        return next(i for i, _ in self._table)
+
+    def get_last_seat(self) -> AbstractPokerPlayer:
+        return [i for i, _ in self._table][-1]
+
+    def _create_table(self, max_players: int, seating: str = "sequential") -> GameTable:
+        self._validate_max_players(max_players)
+
+        if seating == "free_pick":
+            return FreePickTable(size=max_players)
+
+        return GameTable(size=max_players)
 
     def _validate_max_players(self, max_players: int) -> None:
         if max_players > 9:
             raise TooManyPlayers()
 
-    def _set_deck(self) -> None:
-        self._deck = self.deck_factory()
-
     def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
-        if player in self.get_players():
-            return
-
-        if self.get_free_seats() <= 0:
-            raise PlayerCannotJoin("There are no free seats in the game.")
-
         if self.started:
             raise PlayerCannotJoin("The game has started.")
 
-        self._join(player, seat=seat)
+        try:
+            self._table.join(player, seat=seat)
+        except AlreadySeated:
+            return
+        except TableIsFull:
+            raise PlayerCannotJoin("There are no free seats in the game.")
 
-    def _get_max_seat(self) -> int:
-        return max([p.seat or 0 for p in self.get_players()] + [0])
+        self._join(player, seat=seat)
 
     def _join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         # This should be a configuration of the game; Do players come in
@@ -256,7 +270,6 @@ class PokerGame(AbstractPokerGame):
             )
 
         player.hand_factory = self.hand_factory
-        player.seat = seat or self._get_max_seat() + 1
 
         self._players.append(player)
 
@@ -265,11 +278,11 @@ class PokerGame(AbstractPokerGame):
             p.add_to_purse(chips_per_player)
 
     def start(self) -> None:
-        self.started = True
         self.start_round()
 
     def start_round(self) -> None:
         self.round_count += 1
+        self._table.activate_all()
         self._round_players = self._players.copy()
 
         self.step_count = 0
@@ -287,7 +300,7 @@ class PokerGame(AbstractPokerGame):
         self.init_step()
 
     def _distribute_pot(self) -> None:
-        winners = self.find_winnners(self._round_players)
+        winners = self.find_winnners([p for _, p in self._table])
         self.pot.distribute(winners)
 
     def _return_cards(self, collections: List[CardCollection]) -> None:
@@ -298,8 +311,9 @@ class PokerGame(AbstractPokerGame):
                 self._deck.insert_at_end(card)
 
     def _remove_broke_players(self):
-        for p in self._round_players:
+        for _, p in self._table:
             if p.purse == 0:
+                self._table.leave(p)
                 self._players.remove(p)
 
     def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
@@ -326,6 +340,7 @@ class PokerGame(AbstractPokerGame):
     def fold(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, PokerAction.FOLD):
             self._round_players.remove(player)
+            self._table.deactivate_player(player)
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
         if bet_amount < self.pot.player_owed(player):
@@ -393,20 +408,16 @@ class PokerGame(AbstractPokerGame):
     def get_players(self) -> List[AbstractPokerPlayer]:
         return self._players
 
-    # I only added this for the Pydantic model; Make the model
-    # call "get_players" and do with it what it needs
     @property
-    def players(self) -> List[AbstractPokerPlayer]:
-        return {
-            str(p.id): {"id": p.id, "name": p.name, "seat": p.seat} for p in self.get_players()
-        }
+    def players(self) -> dict:
+        return {p.id: p for p in self._players}
 
     @property
-    def table(self) -> List[AbstractPokerPlayer]:
-        return {str(p.seat): {"player_id": p.id} for p in self.get_players()}
+    def table(self) -> GameTable:
+        return self._table
 
     def get_free_seats(self) -> int:
-        return self.max_players - len(self._players)
+        return len(self._table.get_free_seats())
 
 
 def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:

@@ -38,6 +38,10 @@ class InvalidPlayer(Exception):
     pass
 
 
+class InvalidNumber(Exception):
+    pass
+
+
 class CannotCreateTable(Exception):
     pass
 
@@ -56,22 +60,34 @@ class GameTable:
         if not isinstance(size, int) or size < 0:
             raise CannotCreateTable()
 
-        self._current_player: None | AbstractPokerPlayer = None
+        self._active_seat: int | None = None
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[any] = [None] * size
+        self._active_map: list[bool] = [True] * size
+
+    @property
+    def seats(self) -> list[any]:
+        return {(i + 1): p for i, p in enumerate(self._seats)}
 
     @property
     def current_player(self) -> AbstractPokerPlayer | None:
-        return self._current_player
+        if self._active_seat is None:
+            return None
+
+        return self.get_at_seat(self._active_seat)
 
     @current_player.setter
     def current_player(self, player: AbstractPokerPlayer) -> None:
+        if player is None:
+            self._active_seat = None
+            return
+
         seat_number = self.get_seat(player)
 
         if seat_number is None:
             raise PlayerNotSeated()
 
-        self._current_player = player
+        self._active_seat = seat_number
 
     @property
     def direction(self) -> GameDirection:
@@ -113,10 +129,20 @@ class GameTable:
 
         self._join(entity, seat_number)
 
-    def get_at_seat(self, seat_number: int) -> AbstractPokerPlayer | None:
+    def leave(self, entity: any) -> None:
+        seat_number = self.get_seat(entity)
+        self._seats[seat_number - 1] = None
+
+    def _validate_seat(self, seat_number: int) -> None:
         if seat_number is None or seat_number < 0 or seat_number > len(self._seats):
             raise InvalidSeat()
 
+    def leave_by_seat(self, seat_number: int) -> None:
+        self._validate_seat(seat_number)
+        self._seats[seat_number - 1] = None
+
+    def get_at_seat(self, seat_number: int) -> AbstractPokerPlayer | None:
+        self._validate_seat(seat_number)
         return self._seats[seat_number - 1]
 
     def set_current_player_by_seat(self, seat_number: int) -> None:
@@ -125,20 +151,21 @@ class GameTable:
         if player is None:
             raise EmptySeat()
 
-        self._current_player = player
+        self._active_seat = seat_number
 
     def _get_next_player(self) -> AbstractPokerPlayer | None:
         offset = 1
         if self.direction is GameDirection.COUNTER_CLOCKWISE:
             offset = -1
-        current_seat = self.get_seat(self.current_player) - 1
 
+        current_seat = self.get_seat(self.current_player) - 1
         num_seats = len(self._seats)
 
         for x in range(1, num_seats + 1):
-            next_player = self._seats[(current_seat + (x * offset)) % num_seats]
+            index = (current_seat + (x * offset)) % num_seats
+            next_player = self._seats[index]
 
-            if next_player is not None:
+            if next_player is not None and self._active_map[index]:
                 self.current_player = next_player
                 return next_player
 
@@ -159,7 +186,48 @@ class GameTable:
 
         return None
 
+    def skip_player(self, number: int = 1) -> AbstractPokerPlayer | None:
+        if not isinstance(number, int) or number < 0:
+            raise InvalidNumber()
+
+        player = self.next_player()
+        for _ in range(0, number % len(self._seats)):
+            player = self.next_player()
+
+        return player
+
+    def get_free_seats(self) -> list[int]:
+        return [i + 1 for i, v in enumerate(self._seats) if v is None]
+
+    def activate_seat(self, seat_number: int) -> None:
+        self._validate_seat(seat_number)
+        self._active_map[seat_number - 1] = True
+
+    def deactivate_seat(self, seat_number: int) -> None:
+        self._validate_seat(seat_number)
+        self._active_map[seat_number - 1] = False
+
+    def activate_player(self, entity: any) -> None:
+        seat_number = self.get_seat(entity)
+        self._active_map[seat_number - 1] = True
+
+    def deactivate_player(self, entity: any) -> None:
+        seat_number = self.get_seat(entity)
+        self._active_map[seat_number - 1] = False
+
+    def activate_all(self) -> None:
+        for i, _ in enumerate(self._active_map):
+            self._active_map[i] = True
+
+    def __iter__(self) -> tuple[int, AbstractPokerPlayer]:
+        for i, p in enumerate(self._seats):
+            if p and self._active_map[i]:
+                yield (i + 1, p)
+
+    def __len__(self) -> AbstractPokerPlayer:
+        return len([p for i, p in enumerate(self._seats) if p and self._active_map[i]])
+
 
 class FreePickTable(GameTable):
-    def join(self, entity: any, seat: int) -> None:
+    def join(self, entity: AbstractPokerPlayer, seat: int) -> None:
         self._join(entity, seat_number=seat)

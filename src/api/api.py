@@ -81,11 +81,14 @@ class ProxyAPI(FastAPI):
 
     def create_game(self, game_data: NewGameData) -> PokerGame:
         try:
-            return self.poker_app.start_game(
+            game = self.poker_app.start_game(
                 game_data.current_player_id,
                 max_players=game_data.number_of_players,
                 chips_per_player=500,
+                seating=game_data.seating,
+                seat=game_data.seat,
             )
+            return game
         except PlayerNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
         except TooManyGames as e:

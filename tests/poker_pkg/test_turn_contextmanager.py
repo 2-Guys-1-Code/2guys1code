@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 
+from poker_pkg.game_table import GameTable
 from poker_pkg.player import AbstractPokerPlayer
 from poker_pkg.poker_errors import IllegalActionException, PlayerOutOfOrderException
 from poker_pkg.poker_game import AbstractPokerStep
@@ -28,12 +29,20 @@ class FakeStep(AbstractPokerStep):
 class FakeGame:
     def __init__(self, player_list, steps: list = None) -> None:
         self.logic_called = 0
-        self.current_player = player_list[0]
         self._round_players: list[AbstractPokerPlayer] = player_list.copy()
         self.step_count = 0
         self.steps = steps or [FakeStep(["action"])]
         self.started = False
         self.all_players_played = False
+
+        self._table = GameTable(size=len(player_list))
+        for p in player_list:
+            self._table.join(p)
+        self._table.current_player = player_list[0]
+
+    @property
+    def current_player(self) -> AbstractPokerPlayer | None:
+        return self._table.current_player
 
     def start(self) -> None:
         self.started = True
@@ -44,6 +53,7 @@ class FakeGame:
 
     def test_action_with_remove(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, "action") as tm:
+            self._table.deactivate_player(player)
             self._round_players.remove(player)
 
     def maybe_end_step(self) -> None:
@@ -89,8 +99,8 @@ def test_turn_context_manager__wraps_around_when_setting_next_player(
     test_game = FakeGame(player_list)
     test_game.start()
 
-    test_game.current_player = player_list[2]
-
+    test_game.test_action(player_list[0])
+    test_game.test_action(player_list[1])
     test_game.test_action(player_list[2])
 
     assert test_game.logic_called == 1
@@ -112,7 +122,8 @@ def test_turn_context_manager__next_player_when_last_player_is_removed(
     test_game = FakeGame(player_list)
     test_game.start()
 
-    test_game.current_player = player_list[2]
+    test_game.test_action(player_list[0])
+    test_game.test_action(player_list[1])
     test_game.test_action_with_remove(player_list[2])
 
     assert test_game.current_player == player_list[0]

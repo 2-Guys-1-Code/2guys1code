@@ -41,7 +41,7 @@ class PokerApp:
     def _get_player_by_id(self, id: int) -> PokerPlayer:
         return self.player_repository.get_by_id(id)
 
-    def start_game(self, host_id: int, **kwargs) -> AbstractPokerGame:
+    def start_game(self, host_id: int, seat: int = None, **kwargs) -> AbstractPokerGame:
         host = self._get_player_by_id(host_id)
         if host is None:
             raise PlayerNotFound()
@@ -52,7 +52,7 @@ class PokerApp:
         game = create_poker_game(**kwargs)
         game.id = self.games[-1].id + 1 if len(self.games) else 1
 
-        game.join(host)
+        game.join(host, seat=seat)
 
         self.games.append(game)
 

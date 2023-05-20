@@ -6,6 +6,7 @@ from poker_pkg.game_table import (
     FreePickTable,
     GameDirection,
     GameTable,
+    InvalidNumber,
     InvalidPlayer,
     InvalidSeat,
     NoCurrentPlayer,
@@ -245,6 +246,74 @@ def test_next_player__current_player_not_set():
     assert table.current_player is None
 
 
+def test_inactive_seats():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+
+    table.current_player = player_1
+    table.deactivate_seat(2)
+    table.next_player()
+
+    assert table.current_player == player_3
+
+    table.activate_seat(2)
+
+    table.skip_player()
+
+    assert table.current_player == player_2
+
+
+def test_inactive_players():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+
+    table.current_player = player_1
+    table.deactivate_player(player_2)
+    table.next_player()
+
+    assert table.current_player == player_3
+
+    table.activate_player(player_2)
+
+    table.skip_player()
+
+    assert table.current_player == player_2
+
+
+def test_activate_all():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+
+    table.deactivate_player(player_1)
+    table.deactivate_player(player_2)
+    table.deactivate_player(player_3)
+
+    table.activate_all()
+
+    assert table._active_map == [True, True, True]
+
+
 def test_get_seat():
     table = GameTable(3)
 
@@ -272,18 +341,93 @@ def test_get_seat__invalid_seat():
         table.get_seat(None)
 
 
-# how to determine the first player?
-# - pick / distribute cards
-# - roll dice
-# - always the first seat
-# -
-# How to determine the next player
-# - normally, just the player to the left (if clockwise)
-# - skip player?
-# - current player is X - just use set_current_by_seat / set_current_by_player
+# skip negative? Raise I think
+@pytest.mark.parametrize(
+    "number, expected_player",
+    [
+        [0, "player_2"],
+        [1, "player_3"],
+        [2, "player_4"],
+        [3, "player_1"],
+        [4, "player_2"],
+    ],
+)
+def test_skip_player(number, expected_player):
+    table = GameTable(4)
 
-# set_direction()
-# skip(x)
-# current_player()
-# set_player(X)
-# set_rand_player()
+    players = {
+        "player_1": AbstractPokerPlayer(name="Alfred"),
+        "player_2": AbstractPokerPlayer(name="Albert"),
+        "player_3": AbstractPokerPlayer(name="Allistair"),
+        "player_4": AbstractPokerPlayer(name="Alfonso"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.current_player = players["player_1"]
+
+    table.skip_player(number=number)
+
+    assert table.current_player is players[expected_player]
+
+
+def test_skip_player__invalid_number():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+
+    table.join(player_1)
+    table.join(player_2)
+
+    table.current_player = player_1
+
+    with pytest.raises(InvalidNumber):
+        table.skip_player(number=-1)
+
+    assert table.current_player is player_1
+
+
+def test_get_free_seats():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+
+    table.join(player_1)
+
+    seats = table.get_free_seats()
+
+    assert seats == [2, 3]
+
+
+def test_leave_table():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+
+    table.join(player_1)
+    table.join(player_2)
+
+    table.leave(player_2)
+
+    assert table.get_at_seat(1) == player_1
+    assert table.get_at_seat(2) == None
+
+
+def test_leave_table_by_seat():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+
+    table.join(player_1)
+    table.join(player_2)
+
+    table.leave_by_seat(1)
+
+    assert table.get_at_seat(1) == None
+    assert table.get_at_seat(2) == player_2

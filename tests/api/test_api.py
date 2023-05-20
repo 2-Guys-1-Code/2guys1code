@@ -24,27 +24,6 @@ def test_get_app_version(api_client: TestClient) -> None:
     assert parsed_response["app_version"] == "0.1.0"
 
 
-# def test_bad_endpoint(api_client: TestClient) -> None:
-#     response = api_client.get("/bad")
-
-#     assert response.status_code == 404
-#     parsed_response = response.json()
-#     assert parsed_response["detail"] == "Resource not found."
-
-
-# def test_create_game(api_client: TestClient) -> None:
-#     response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
-
-#     assert response.status_code == 201
-#     parsed_response = response.json()
-#     assert parsed_response == {
-#         "id": 1,
-#         "max_players": 3,
-#         "players": {"8": {"id": 8, "name": "Steve", "seat": None}},
-#         "started": False,
-#     }
-
-
 def test_create_game(api_client: TestClient) -> None:
     response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
 
@@ -52,9 +31,8 @@ def test_create_game(api_client: TestClient) -> None:
     parsed_response = response.json()
     assert parsed_response == {
         "id": 1,
-        "max_players": 3,
-        "table": {"1": {"player_id": 8}},
-        "players": {"8": {"id": 8, "name": "Steve", "seat": 1}},
+        "table": {"seats": {"1": {"id": 8, "name": "Steve"}, "2": None, "3": None}},
+        "players": {"8": {"id": 8, "name": "Steve"}},
         "started": False,
     }
 
@@ -125,9 +103,10 @@ def test_get_games(api_client: TestClient) -> None:
     assert response.status_code == 200
     parsed_response = response.json()
     assert parsed_response[0]["id"] == 1
-    assert parsed_response[0]["max_players"] == 3
-    assert parsed_response[0]["players"] == {"3": {"id": 3, "name": "Bob", "seat": 1}}
-    assert parsed_response[0]["table"] == {"1": {"player_id": 3}}
+    assert parsed_response[0]["players"] == {"3": {"id": 3, "name": "Bob"}}
+    assert parsed_response[0]["table"] == {
+        "seats": {"1": {"id": 3, "name": "Bob"}, "2": None, "3": None}
+    }
 
 
 def test_join_game(api_client: TestClient) -> None:
@@ -203,7 +182,8 @@ def test_start_a_nonexistent_game_game(api_client: TestClient) -> None:
 
 def test_start_a_game_with_picked_seats(api_client: TestClient) -> None:
     api_client.post(
-        "/games", json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick"}
+        "/games",
+        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
     )
     api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
 
@@ -211,4 +191,5 @@ def test_start_a_game_with_picked_seats(api_client: TestClient) -> None:
 
     assert response.status_code == 200
     parsed_response = response.json()
-    assert parsed_response["table"]["3"]["player_id"] == 8
+    assert parsed_response["table"]["seats"]["2"]["id"] == 3
+    assert parsed_response["table"]["seats"]["3"]["id"] == 8
