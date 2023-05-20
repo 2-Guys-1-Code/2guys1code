@@ -79,11 +79,10 @@ class GameTable:
 
     @direction.setter
     def direction(self, direction: GameDirection) -> None:
-        if direction is None:
+        if not isinstance(direction, GameDirection):
             raise InvalidDirection()
 
         self._direction = direction
-        self._seats = list(reversed(self._seats))
 
     def get_seat(self, entity: any) -> int:
         # this currently accepts anything;
@@ -129,12 +128,15 @@ class GameTable:
         self._current_player = player
 
     def _get_next_player(self) -> AbstractPokerPlayer | None:
+        offset = 1
+        if self.direction is GameDirection.COUNTER_CLOCKWISE:
+            offset = -1
         current_seat = self.get_seat(self.current_player) - 1
 
         num_seats = len(self._seats)
 
-        for x in range(current_seat + 1, num_seats + current_seat):
-            next_player = self._seats[x % num_seats]
+        for x in range(1, num_seats + 1):
+            next_player = self._seats[(current_seat + (x * offset)) % num_seats]
 
             if next_player is not None:
                 self.current_player = next_player
