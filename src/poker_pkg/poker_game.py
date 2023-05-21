@@ -115,7 +115,7 @@ class CommunityCardStep(DealStep):
 class PlayerStep(AbstractPokerStep):
     def start(self) -> None:
         self.game.all_players_played = False
-        self.game._table.set_current_player_by_seat(self.game.get_first_seat())
+        self.game._table.current_player = self.game._table.get_nth_player(1)
 
     def end(self) -> None:
         self.game._table.current_player = None
@@ -283,7 +283,6 @@ class PokerGame(AbstractPokerGame):
     def start_round(self) -> None:
         self.round_count += 1
         self._table.activate_all()
-        self._round_players = self._players.copy()
 
         self.step_count = 0
         self.init_step()
@@ -339,7 +338,6 @@ class PokerGame(AbstractPokerGame):
 
     def fold(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, PokerAction.FOLD):
-            self._round_players.remove(player)
             self._table.deactivate_player(player)
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:

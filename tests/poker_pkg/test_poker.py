@@ -131,11 +131,11 @@ def test_start_round__initial_state():
     game = game_factory()
 
     game.start()
-    assert len(game._round_players) == 3
-    for x in range(0, 3):
-        assert isinstance(game._round_players[x].hand, Hand)
-        assert len(game._round_players[x].hand) == 5
-        assert isinstance(game._round_players[x].hand[0], Card)
+    assert len(game._table) == 3
+    for x in range(1, 4):
+        assert isinstance(game._table.get_at_seat(x).hand, Hand)
+        assert len(game._table.get_at_seat(x).hand) == 5
+        assert isinstance(game._table.get_at_seat(x).hand[0], Card)
 
     assert len(game._deck) == 37
     assert game.current_player == game._players[0]
@@ -282,20 +282,20 @@ def test_fold():
 
     game.start()
 
-    assert len(game._round_players) == 3
+    assert len(game._table) == 3
 
     assert game.current_player == player1
 
     game.fold(player1)
     assert player1.purse == 300
     assert game.pot.total == 0
-    assert len(game._round_players) == 2
+    assert len(game._table) == 2
     assert game.current_player == player2
 
     game.all_in(player2)
     assert player2.purse == 0
     assert game.pot.total == 228
-    assert len(game._round_players) == 2
+    assert len(game._table) == 2
     assert game.current_player == player3
 
     game.fold(player3)
@@ -303,7 +303,7 @@ def test_fold():
 
     assert player2.purse == 228
     assert game.pot.total == 0
-    assert len(game._round_players) == 1
+    assert len(game._table) == 1
     assert game.current_player == None
 
 
@@ -592,7 +592,7 @@ def test_game__players_without_money_are_out_of_the_game():
 
     game.start()
 
-    assert game._round_players == [player1, player3]
+    assert [p for _, p in game._table] == [player1, player3]
 
 
 def test_bet():

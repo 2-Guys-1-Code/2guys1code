@@ -13,10 +13,9 @@ class TurnManager:
         self.player = player
         self.action = action
 
-        self.is_last_player = self.game._table.current_player is self.game._round_players[-1]
-        # self.is_last_player = self.game._table.current_player is self.game._table.get_at_seat(
-        #     self.game.get_last_seat
-        # )
+        self.is_last_player = self.game._table.current_player is self.game._table.get_nth_player(
+            -1
+        )
         self.current_step = self.game.steps[self.game.step_count]
 
     def __enter__(self) -> None:

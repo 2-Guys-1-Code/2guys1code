@@ -29,7 +29,6 @@ class FakeStep(AbstractPokerStep):
 class FakeGame:
     def __init__(self, player_list, steps: list = None) -> None:
         self.logic_called = 0
-        self._round_players: list[AbstractPokerPlayer] = player_list.copy()
         self.step_count = 0
         self.steps = steps or [FakeStep(["action"])]
         self.started = False
@@ -54,7 +53,6 @@ class FakeGame:
     def test_action_with_remove(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, "action") as tm:
             self._table.deactivate_player(player)
-            self._round_players.remove(player)
 
     def maybe_end_step(self) -> None:
         pass

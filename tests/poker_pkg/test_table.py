@@ -431,3 +431,72 @@ def test_leave_table_by_seat():
 
     assert table.get_at_seat(1) == None
     assert table.get_at_seat(2) == player_2
+
+
+@pytest.mark.parametrize(
+    "chip_seat, n, expected_player",
+    [
+        [1, 1, "player_1"],
+        [1, 3, "player_4"],
+        [1, -1, "player_4"],
+        [1, -3, "player_1"],
+        [2, 1, "player_3"],
+        [2, 3, "player_1"],
+        [2, -1, "player_1"],
+        [2, -3, "player_3"],
+    ],
+)
+def test_get_nth_player(chip_seat, n, expected_player):
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPokerPlayer(name="Alfred"),
+        "player_2": AbstractPokerPlayer(name="Albert"),
+        "player_3": AbstractPokerPlayer(name="Allistair"),
+        "player_4": AbstractPokerPlayer(name="Al"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.set_chip_to_seat(chip_seat)
+    table.deactivate_seat(2)
+
+    assert table.get_nth_player(n) == players[expected_player]
+
+
+@pytest.mark.parametrize(
+    "chip_seat, n, expected_player",
+    [
+        [1, 1, "player_1"],
+        [1, 3, "player_3"],
+        [1, -1, "player_3"],
+        [1, -3, "player_1"],
+        [2, 1, "player_1"],
+        [2, 3, "player_3"],
+        [2, -1, "player_3"],
+        [2, -3, "player_1"],
+    ],
+)
+def test_get_nth_player__counter_clockwise(chip_seat, n, expected_player):
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPokerPlayer(name="Alfred"),
+        "player_2": AbstractPokerPlayer(name="Albert"),
+        "player_3": AbstractPokerPlayer(name="Allistair"),
+        "player_4": AbstractPokerPlayer(name="Al"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.set_chip_to_seat(chip_seat)
+    table.deactivate_seat(2)
+    table.direction = GameDirection.COUNTER_CLOCKWISE
+
+    assert table.get_nth_player(n) == players[expected_player]

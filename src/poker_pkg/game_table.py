@@ -51,8 +51,8 @@ class InvalidDirection(Exception):
 
 
 class GameDirection(Enum):
-    CLOCKWISE = "CLOCKWISE"
-    COUNTER_CLOCKWISE = "COUNTER_CLOCKWISE"
+    CLOCKWISE = 1
+    COUNTER_CLOCKWISE = -1
 
 
 class GameTable:
@@ -64,6 +64,7 @@ class GameTable:
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[any] = [None] * size
         self._active_map: list[bool] = [True] * size
+        self._chip_index = 1
 
     @property
     def seats(self) -> list[any]:
@@ -134,7 +135,7 @@ class GameTable:
         self._seats[seat_number - 1] = None
 
     def _validate_seat(self, seat_number: int) -> None:
-        if seat_number is None or seat_number < 0 or seat_number > len(self._seats):
+        if seat_number is None or seat_number < 1 or seat_number > len(self._seats):
             raise InvalidSeat()
 
     def leave_by_seat(self, seat_number: int) -> None:
@@ -153,25 +154,30 @@ class GameTable:
 
         self._active_seat = seat_number
 
-    def _get_next_player(self) -> AbstractPokerPlayer | None:
-        offset = 1
-        if self.direction is GameDirection.COUNTER_CLOCKWISE:
-            offset = -1
+    # Can we make this smaller?
+    def _get_next_player(
+        self, after: int, direction: GameDirection, skip: int = 0
+    ) -> tuple[int | None, AbstractPokerPlayer | None]:
+        after -= 1
+        skipped = 0
 
-        current_seat = self.get_seat(self.current_player) - 1
         num_seats = len(self._seats)
 
         for x in range(1, num_seats + 1):
-            index = (current_seat + (x * offset)) % num_seats
+            index = (after + (x * direction)) % num_seats
             next_player = self._seats[index]
 
             if next_player is not None and self._active_map[index]:
-                self.current_player = next_player
-                return next_player
+                if skipped < skip:
+                    skipped += 1
+                    continue
 
-        return None
+                return index + 1, next_player
 
-    def next_player(self) -> AbstractPokerPlayer | None:
+        return None, None
+
+    # Can we make this smaller?
+    def next_player(self, skip: int = 0) -> AbstractPokerPlayer | None:
         is_empty = next((s for s in self._seats if s is not None), None) is None
         if is_empty:
             raise TableIsEmpty()
@@ -179,20 +185,17 @@ class GameTable:
         if self.current_player is None:
             raise NoCurrentPlayer()
 
-        next_player = self._get_next_player()
-        if next_player is not None:
-            self.current_player = next_player
-            return next_player
+        self.current_player = self._get_next_player(
+            self.get_seat(self.current_player), self.direction.value, skip=skip
+        )[1]
 
-        return None
+        return self.current_player
 
     def skip_player(self, number: int = 1) -> AbstractPokerPlayer | None:
         if not isinstance(number, int) or number < 0:
             raise InvalidNumber()
 
-        player = self.next_player()
-        for _ in range(0, number % len(self._seats)):
-            player = self.next_player()
+        player = self.next_player(skip=number % len(self._seats))
 
         return player
 
@@ -226,6 +229,46 @@ class GameTable:
 
     def __len__(self) -> AbstractPokerPlayer:
         return len([p for i, p in enumerate(self._seats) if p and self._active_map[i]])
+
+    def set_chip_to_seat(self, seat_number: int) -> None:
+        self._validate_seat(seat_number)
+        self._chip_index = seat_number
+
+    def move_chip(self, number: int = 1) -> None:
+        if not isinstance(number, int) or number < 0:
+            raise InvalidNumber()
+
+        for _ in range(0, number % len(self._seats)):
+            # This likely will not work correctly for counter-clockwise
+            index, _ = self._get_next_player(self._chip_index, self.direction.value)
+            self._chip_index = index
+
+    def get_nth_player(self, number: int) -> AbstractPokerPlayer | None:
+        # I don't love this big validation
+        number_of_seats = len(self._seats)
+        if (
+            not isinstance(number, int)
+            or number == 0
+            or number > number_of_seats
+            or number < -number_of_seats
+        ):
+            raise InvalidNumber()
+
+        number_direction = (
+            GameDirection.CLOCKWISE if number > 0 else GameDirection.COUNTER_CLOCKWISE
+        )
+        direction = number_direction.value * self.direction.value
+
+        start = self._chip_index
+        if number > 0:
+            # Maybe we could use a _get_previous_player
+            start, _ = self._get_next_player(self._chip_index, direction * -1)
+
+        _, player = self._get_next_player(
+            start, direction, skip=abs(number - number_direction.value)
+        )
+
+        return player
 
 
 class FreePickTable(GameTable):
