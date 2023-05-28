@@ -223,9 +223,24 @@ class GameTable:
             self._active_map[i] = True
 
     def __iter__(self) -> tuple[int, AbstractPokerPlayer]:
-        for i, p in enumerate(self._seats):
-            if p and self._active_map[i]:
+        # This won't iterate following table direction
+        if self.direction == GameDirection.COUNTER_CLOCKWISE:
+            start = len(self._seats) - 1
+            stop = -1
+            step = -1
+        else:
+            start = 0
+            stop = len(self._seats)
+            step = 1
+
+        for i in range(start, stop, step):
+            p = self._seats[i]
+            if p is not None and self._active_map[i]:
                 yield (i + 1, p)
+
+    def __getitem__(self, index: int) -> AbstractPokerPlayer | None:
+        # This won't iterate following table direction
+        pass
 
     def __len__(self) -> AbstractPokerPlayer:
         return len([p for i, p in enumerate(self._seats) if p and self._active_map[i]])
@@ -243,8 +258,7 @@ class GameTable:
             index, _ = self._get_next_player(self._chip_index, self.direction.value)
             self._chip_index = index
 
-    def get_nth_player(self, number: int) -> AbstractPokerPlayer | None:
-        # I don't love this big validation
+    def _validate_player_position(self, number: int) -> None:
         number_of_seats = len(self._seats)
         if (
             not isinstance(number, int)
@@ -253,6 +267,45 @@ class GameTable:
             or number < -number_of_seats
         ):
             raise InvalidNumber()
+
+    def get_nth_player(self, number: int) -> AbstractPokerPlayer | None:
+        self._validate_player_position(number)
+
+        # [1,(2),3,4] with chip index 2 (real index 1)
+        # Move [seat-index-to-end to the beginning]
+        # _[(2),3,4,1] @-1 = 1, or @1 = 2
+
+        # [1,(2),3,4] with chip index 2 (real index 1), counter-clockwise
+        # Move [seat-index-to-beginning to the end]
+        # [3, 4, 1, (2)], then reverse
+        # _[(2),1,4,3] @-1 = 3, or @1 = 2
+
+        number_direction = (
+            GameDirection.CLOCKWISE if number > 0 else GameDirection.COUNTER_CLOCKWISE
+        )
+        direction = number_direction.value * self.direction.value
+
+        nb_seats = len(self._seats)
+        if direction == -1:
+            start = nb_seats + self._chip_index - 1
+            stop = self._chip_index
+            step = -1
+        else:
+            start = self._chip_index - 1
+            stop = nb_seats + self._chip_index
+            step = 1
+
+        nth = direction
+        for i in range(start, stop, step):
+            index = i % nb_seats
+            p = self._seats[index]
+            if p is not None and self._active_map[index]:
+                if nth == number:
+                    return p
+
+                nth += step
+
+        return None
 
         number_direction = (
             GameDirection.CLOCKWISE if number > 0 else GameDirection.COUNTER_CLOCKWISE

@@ -499,4 +499,75 @@ def test_get_nth_player__counter_clockwise(chip_seat, n, expected_player):
     table.deactivate_seat(2)
     table.direction = GameDirection.COUNTER_CLOCKWISE
 
-    assert table.get_nth_player(n) == players[expected_player]
+    result = table.get_nth_player(n)
+    assert result == players[expected_player]
+
+
+def test_iterate_table():
+    table = GameTable(4)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Allistair")
+    player_4 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+    table.join(player_4)
+
+    assert [p for _, p in table] == [player_1, player_2, player_3, player_4]
+
+
+def test_iterate_table__counter_clockwise():
+    table = GameTable(4)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Allistair")
+    player_4 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+    table.join(player_4)
+
+    table.direction = GameDirection.COUNTER_CLOCKWISE
+
+    assert [p for _, p in table] == [player_4, player_3, player_2, player_1]
+
+
+def test_iterate_table__counter_clockwise_with_deactivated():
+    table = GameTable(4)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Allistair")
+    player_4 = AbstractPokerPlayer(name="Al")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+    table.join(player_4)
+
+    table.deactivate_seat(2)
+    table.direction = GameDirection.COUNTER_CLOCKWISE
+
+    assert [p for _, p in table] == [player_4, player_3, player_1]
+
+
+# def test_table__get_at_seat_negative_index():
+#     table = GameTable(4)
+
+#     player_1 = AbstractPokerPlayer(name="Alfred")
+#     player_2 = AbstractPokerPlayer(name="Albert")
+#     player_3 = AbstractPokerPlayer(name="Allistair")
+#     player_4 = AbstractPokerPlayer(name="Al")
+
+#     table.join(player_1)
+#     table.join(player_2)
+#     table.join(player_3)
+#     table.join(player_4)
+
+
+#     table.direction = GameDirection.COUNTER_CLOCKWISE
