@@ -5,17 +5,21 @@ from .hand import Hand
 from .poker_errors import InvalidAmountTooMuch
 
 
-class AbstractPokerPlayer(ABC):
+class AbstractPlayer(ABC):
+    def __init__(self, name: str = "John", id=None, **kwargs) -> None:
+        self.name = name
+        self.id = id
+
+
+class AbstractPokerPlayer(AbstractPlayer):
     def __init__(
         self, purse: int = None, name: str = "John", hand_factory: Hand = Hand, id=None
     ) -> None:
-        self.hand_factory = hand_factory
+        super(AbstractPokerPlayer, self).__init__(name=name, id=id)
 
+        self.hand_factory = hand_factory
         self.purse = purse
-        self.name = name
         self._hand = None
-        self.id = id
-        self.seat: int | None = None
 
     def __repr__(self) -> str:
         return self.name

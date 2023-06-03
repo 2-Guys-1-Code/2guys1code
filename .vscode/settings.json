@@ -8,7 +8,7 @@
         "src/poker_pkg"
     ],
     "editor.formatOnSave": true,
-    "python.formatting.provider": "black",
+    "python.formatting.provider": "none",
     "python.formatting.blackArgs": [
         "--line-length=99"
     ],
@@ -20,7 +20,8 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports": true
         },
-        "editor.formatOnType": true
+        "editor.formatOnType": true,
+        "editor.defaultFormatter": "ms-python.black-formatter"
     },
     "[typescript]": {
         "editor.codeActionsOnSave": {

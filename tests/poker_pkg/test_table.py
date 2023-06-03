@@ -11,12 +11,13 @@ from poker_pkg.game_table import (
     InvalidSeat,
     NoCurrentPlayer,
     PlayerNotSeated,
+    Seat,
     SeatIsTaken,
     TableIsEmpty,
     TableIsFull,
 )
 
-from poker_pkg.player import AbstractPokerPlayer
+from poker_pkg.player import AbstractPlayer, AbstractPokerPlayer
 
 
 @pytest.mark.parametrize("size_param", [-1, None, "string"])
@@ -197,6 +198,26 @@ def test_next_player__current_player_is_last():
     assert table.current_player == player_1
 
 
+def test_next_player__current_player_is_inactive():
+    table = GameTable(3)
+
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_2 = AbstractPokerPlayer(name="Albert")
+    player_3 = AbstractPokerPlayer(name="Allan")
+
+    table.join(player_1)
+    table.join(player_2)
+    table.join(player_3)
+
+    table.current_player = player_1
+    table.deactivate_seat(1)
+
+    next_player = table.next_player()
+
+    assert next_player == player_2
+    assert table.current_player == player_2
+
+
 def test_next_player__counter_clockwise():
     table = GameTable(3)
 
@@ -225,10 +246,15 @@ def test_next_player__counter_clockwise():
 def test_next_player__empty_table():
     table = GameTable(3)
 
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    table.join(player_1)
+    table.current_player = player_1
+    table.deactivate_seat(1)
+
     with pytest.raises(TableIsEmpty):
         table.next_player()
 
-    assert table.current_player is None
+    assert table.current_player == player_1
 
 
 def test_next_player__current_player_not_set():
@@ -311,7 +337,7 @@ def test_activate_all():
 
     table.activate_all()
 
-    assert table._active_map == [True, True, True]
+    assert [s.active for s in table._seats] == [True, True, True]
 
 
 def test_get_seat():
@@ -343,16 +369,18 @@ def test_get_seat__invalid_seat():
 
 # skip negative? Raise I think
 @pytest.mark.parametrize(
-    "number, expected_player",
+    "number, deactivated, expected_player",
     [
-        [0, "player_2"],
-        [1, "player_3"],
-        [2, "player_4"],
-        [3, "player_1"],
-        [4, "player_2"],
+        [0, [], "player_2"],
+        [1, [], "player_3"],
+        [2, [], "player_4"],
+        [3, [], "player_1"],
+        [4, [], "player_2"],
+        [2, ["player_2"], "player_1"],
+        [5, ["player_2"], "player_1"],
     ],
 )
-def test_skip_player(number, expected_player):
+def test_skip_player(number, deactivated, expected_player):
     table = GameTable(4)
 
     players = {
@@ -368,6 +396,8 @@ def test_skip_player(number, expected_player):
     table.join(players["player_4"])
 
     table.current_player = players["player_1"]
+    for p in deactivated:
+        table.deactivate_player(players[p])
 
     table.skip_player(number=number)
 
@@ -556,18 +586,42 @@ def test_iterate_table__counter_clockwise_with_deactivated():
     assert [p for _, p in table] == [player_4, player_3, player_1]
 
 
-# def test_table__get_at_seat_negative_index():
-#     table = GameTable(4)
+def test_move_chip():
+    table = GameTable(4)
 
-#     player_1 = AbstractPokerPlayer(name="Alfred")
-#     player_2 = AbstractPokerPlayer(name="Albert")
-#     player_3 = AbstractPokerPlayer(name="Allistair")
-#     player_4 = AbstractPokerPlayer(name="Al")
+    players = {
+        "player_1": AbstractPokerPlayer(name="Alfred"),
+        "player_2": AbstractPokerPlayer(name="Albert"),
+        "player_3": AbstractPokerPlayer(name="Allistair"),
+        "player_4": AbstractPokerPlayer(name="Al"),
+    }
 
-#     table.join(player_1)
-#     table.join(player_2)
-#     table.join(player_3)
-#     table.join(player_4)
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.set_chip_to_seat(2)
+    table.deactivate_seat(3)
+
+    table.move_chip()
+
+    assert table._chip_index == 4
 
 
-#     table.direction = GameDirection.COUNTER_CLOCKWISE
+def test_seat_class():
+    player_1 = AbstractPokerPlayer(name="Alfred")
+    seat = Seat(1, player=player_1)
+    assert seat.active == True
+    assert seat.player == player_1
+
+    seat_2 = Seat(1, active=False, player=player_1)
+    assert seat_2.active == False
+    assert seat_2.player == player_1
+
+
+def test_seat_deactivate():
+    seat = Seat(1)
+    seat.deactivate()
+
+    assert seat.active == False
