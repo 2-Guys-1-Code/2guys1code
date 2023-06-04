@@ -66,6 +66,8 @@ def test_game__player_cannot_switch_cards_they_dont_have():
     with pytest.raises(IllegalCardSwitch):
         game.switch_cards(player1, [player1.hand[2], player2.hand[4]])
 
+    assert game.current_player == player1
+
     assert str(player1.hand) == "1H 3C 4C 5C 6C"
     assert str(player2.hand) == "1D 3H 4H 5H 6H"
     assert len(game._deck) == 42

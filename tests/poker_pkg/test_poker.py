@@ -351,36 +351,6 @@ def test_find_winners__tied_hands():
     assert step._find_winnners([player1, player2, player3]) == [[player1, player3], [player2]]
 
 
-# This is temporary; the only realy winner is based on chip-count, not the last best hand
-def test_game__all_players_check__best_hand_is_the_winner():
-    # fmt: off
-    fake_shuffler = FakeShufflerByPosition([
-        1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
-        43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
-        33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ], all_cards=CARDS_NO_JOKERS)
-    # fmt: on
-    game = game_factory(shuffler=fake_shuffler, players=3)
-
-    game.start()
-
-    game.check(game.get_players()[0])
-    game.check(game.get_players()[1])
-    game.check(game.get_players()[2])
-
-    # player 1 hand: 1S 3S 3H 6S 6H
-    # player 2 hand: 2S 2H 5S 5H 8S
-    # player 3 hand: 1H 4S 4H 7S 7H
-
-    # assert game.winners == [game.get_players()[2]]
-    # assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
-
-    assert game.get_players()[0].purse == 500
-    assert game.get_players()[1].purse == 500
-    assert game.get_players()[2].purse == 500
-
-
-# This is temporary; the only realy winner is based on chip-count, not the last best hand
 def test_game__all_players_all_in__best_hand_is_the_winner():
     # fmt: off
     fake_shuffler = FakeShufflerByPosition([
@@ -399,14 +369,6 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     game.all_in(player1)
     game.all_in(player2)
     game.all_in(player3)
-
-    # TODO: Use shuffler factory to define hands
-    # player 1 hand: 1S 3S 3H 6S 6H
-    # player 2 hand: 2S 2H 5S 5H 8S
-    # player 3 hand: 1H 4S 4H 7S 7H
-
-    # assert game.winners == [player3]
-    # assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
 
     assert player1.purse == 0
     assert player2.purse == 0
@@ -782,40 +744,44 @@ def test_game__side_pot_participant_cannot_win_when_out():
     assert game.current_player is None
 
 
-def test_transfer_to_pot():
+def test_bet_transfers_to_pot():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+        ]
+    )
+    game.start()
+
+    # game.pot = make_pot()
+    game.bet(player1, 100)
+    assert game.pot.total == 100
+    assert player1.purse == 400
+
+    game.bet(player2, 200)
+    assert game.pot.total == 300
+    assert player2.purse == 300
+
+
+def test_bet__invalid_amout():
     player1 = PokerPlayer(purse=500, name="Michael")
     game = game_factory(
         players=[
             player1,
         ]
     )
-
-    game.pot = make_pot()
-    game._transfer_to_pot(player1, 250)
-    assert game.pot.total == 250
-    assert player1.purse == 250
-
-    game._transfer_to_pot(player1, 200)
-    assert game.pot.total == 450
-    assert player1.purse == 50
-
-
-def test_transfer_to_pot__invalid_amout():
-    player1 = PokerPlayer(purse=500, name="Michael")
-    game = game_factory(
-        players=[
-            player1,
-        ]
-    )
+    game.start()
 
     with pytest.raises(InvalidAmountTooMuch):
-        game._transfer_to_pot(player1, 600)
+        game.bet(player1, 600)
 
     with pytest.raises(InvalidAmountNegative):
-        game._transfer_to_pot(player1, -600)
+        game.bet(player1, -600)
 
     with pytest.raises(InvalidAmountNotAnInteger):
-        game._transfer_to_pot(player1, -600.66)
+        game.bet(player1, -600.66)
 
 
 # Rule sets
