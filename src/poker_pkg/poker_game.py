@@ -69,7 +69,10 @@ class AbstractPokerGame(ABC):
 class AbstractPokerStep(ABC):
     def __init__(self, game: AbstractPokerGame, config: dict = None) -> None:
         self.game = game
-        self.config = config or {}
+        self._set_config(**(config or {}))
+
+    def _set_config(self, **config) -> None:
+        self.config = config
 
     @abstractmethod
     def start(self) -> None:
@@ -88,9 +91,13 @@ class AbstractPokerStep(ABC):
 
 
 class DealStep(AbstractPokerStep):
+    def _set_config(self, shuffler: AbstractShuffler = Shuffler, count: int = 5, **config) -> None:
+        self.shuffler = shuffler
+        self.count = count
+
     def start(self) -> None:
-        self.game._shuffler.shuffle(self.game._deck)
-        self._deal([p.hand for _, p in self.game._table], **self.config)
+        self._shuffle(self.game._deck)
+        self._deal([p.hand for _, p in self.game._table], count=self.count)
         self.game.end_step()
 
     def end(self) -> None:
@@ -99,16 +106,24 @@ class DealStep(AbstractPokerStep):
     def maybe_end(self) -> None:
         pass
 
-    def _deal(self, targets: List[CardCollection], count: int = 5) -> None:
+    def _shuffle(self, deck: CardCollection) -> None:
+        # Update the tests to inject the shuffler
+        self.game._shuffler.shuffle(deck)
+
+    def _deal(self, targets: List[CardCollection], count: int) -> None:
         for _ in range(0, count):
             for t in targets:
                 t.insert_at_end(self.game._deck.pull_from_top())
 
 
 class CommunityCardStep(DealStep):
+    def _set_config(self, cards_to_burn: int = 0, cards_to_reveal: int = 0, **config) -> None:
+        self.cards_to_burn = cards_to_burn
+        self.cards_to_reveal = cards_to_reveal
+
     def start(self) -> None:
-        self._deal([self.game._discard_pile], count=self.config.get("cards_to_burn", 0))
-        self._deal([self.game._community_pile], count=self.config.get("cards_to_reveal", 0))
+        self._deal([self.game._discard_pile], count=self.cards_to_burn)
+        self._deal([self.game._community_pile], count=self.cards_to_reveal)
         self.game.end_step()
 
 
@@ -164,14 +179,16 @@ class SwitchingStep(PlayerStep):
         ]
 
 
-class EndRoundStep(PlayerStep):
+class StartRoundStep(PlayerStep):
+    def __init__(self, game: AbstractPokerGame, config: dict = None) -> None:
+        super().__init__(game, config)
+
+    def _set_config(self, hand_factory: Hand = PokerHand, **config) -> None:
+        self.hand_factory = hand_factory
+
     def start(self) -> None:
-        self.game._distribute_pot()
-        self.game._return_cards(
-            [p.hand for p in self.game._players]
-            + [self.game._community_pile, self.game._discard_pile]
-        )
-        self.game._remove_broke_players()
+        self.game._table.activate_all()
+        self.init_hands(self.game._table.players)
         self.game.end_step()
 
     def end(self) -> None:
@@ -179,6 +196,66 @@ class EndRoundStep(PlayerStep):
 
     def maybe_end(self) -> None:
         pass
+
+    def init_hands(self, players: list[AbstractPokerPlayer]) -> None:
+        for p in players:
+            p.hand = self.hand_factory()
+
+
+class EndRoundStep(PlayerStep):
+    def start(self) -> None:
+        self._distribute_pot()
+        self._return_cards(
+            [p.hand for p in self.game._table.seats.values() if p is not None]
+            + [self.game._community_pile, self.game._discard_pile]
+        )
+        self._remove_broke_players()
+        self.game.end_step()
+
+    def end(self) -> None:
+        pass
+
+    def maybe_end(self) -> None:
+        pass
+
+    def _distribute_pot(self) -> None:
+        winners = self._find_winnners([p for _, p in self.game._table])
+        self.game.pot.distribute(winners)
+
+    def _find_winnners(
+        self, players: List[AbstractPokerPlayer]
+    ) -> List[List[AbstractPokerPlayer]]:
+        winners = [[players[0]]]
+
+        for p2 in players[1:]:
+            inserted = False
+            for i, w in enumerate(winners):
+                if p2.hand > w[0].hand:
+                    inserted = True
+                    winners.insert(i, [p2])
+                    break
+
+                if p2.hand == w[0].hand:
+                    inserted = True
+                    w.append(p2)
+                    break
+
+            if not inserted:
+                winners.append([p2])
+
+        return winners
+
+    def _return_cards(self, collections: List[CardCollection]) -> None:
+        for c in collections:
+            # It would be nice to be able to pull all cards
+            for i in range(len(c), 0, -1):
+                card = c.pull_from_position(i)
+                self.game._deck.insert_at_end(card)
+
+    def _remove_broke_players(self):
+        for _, p in self.game._table:
+            if p.purse == 0:
+                self.game._table.leave(p)
 
 
 class PokerGame(AbstractPokerGame):
@@ -191,10 +268,10 @@ class PokerGame(AbstractPokerGame):
         chips_per_player: int = None,
         shuffler: AbstractShuffler = None,
         pot_factory: Pot = Pot,
-        hand_factory: Hand = PokerHand,
         deck_factory: Deck = DeckWithoutJokers,
         max_players: int = 9,
         seating: str = None,
+        **kwargs
     ) -> None:
         self._table = self._create_table(max_players, seating=seating)
 
@@ -206,15 +283,12 @@ class PokerGame(AbstractPokerGame):
         )  # This should become a "hidden" card collection of sorts
         self._community_pile = CardCollection()
         self.pot_factory = pot_factory
-        self.hand_factory = partial(hand_factory)
         self.deck_factory = deck_factory
 
         if chips_per_player is None:
             chips_per_player = 500
 
         self._chips_per_player = chips_per_player
-
-        self._players = []
 
         self.round_count = 0
         self.current_step = None
@@ -229,15 +303,16 @@ class PokerGame(AbstractPokerGame):
     def started(self) -> bool:
         return self.round_count > 0
 
-    def get_first_seat(self) -> AbstractPokerPlayer:
-        return next(i for i, _ in self._table)
+    # def get_first_seat(self) -> AbstractPokerPlayer:
+    #     return next(i for i, _ in self._table)
 
-    def get_last_seat(self) -> AbstractPokerPlayer:
-        return [i for i, _ in self._table][-1]
+    # def get_last_seat(self) -> AbstractPokerPlayer:
+    #     return [i for i, _ in self._table][-1]
 
     def _create_table(self, max_players: int, seating: str = "sequential") -> GameTable:
         self._validate_max_players(max_players)
 
+        # Make a table factory
         if seating == "free_pick":
             return FreePickTable(size=max_players)
 
@@ -249,18 +324,9 @@ class PokerGame(AbstractPokerGame):
 
     def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         if self.started:
+            # It would be nice to allow joining a table mid-game
             raise PlayerCannotJoin("The game has started.")
 
-        try:
-            self._table.join(player, seat=seat)
-        except AlreadySeated:
-            return
-        except TableIsFull:
-            raise PlayerCannotJoin("There are no free seats in the game.")
-
-        self._join(player, seat=seat)
-
-    def _join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         # This should be a configuration of the game; Do players come in
         # with their own chips or are they given chips upon joining?
         if player.purse is None:
@@ -269,9 +335,12 @@ class PokerGame(AbstractPokerGame):
                 self._chips_per_player,
             )
 
-        player.hand_factory = self.hand_factory
-
-        self._players.append(player)
+        try:
+            self._table.join(player, seat=seat)
+        except AlreadySeated:
+            return
+        except TableIsFull:
+            raise PlayerCannotJoin("There are no free seats in the game.")
 
     def _distribute_chips(self, players: List[AbstractPokerPlayer], chips_per_player: int) -> None:
         for p in players:
@@ -280,13 +349,16 @@ class PokerGame(AbstractPokerGame):
     def start(self) -> None:
         self.start_round()
 
+    # Add a round manager to move from round to round
+    # Current logic requires triggering the next round manually;
+    # It would be nice to be able to control this (e.g. manually for tests, after a short delay for a real game)
     def start_round(self) -> None:
         self.round_count += 1
-        self._table.activate_all()
 
         self.step_count = 0
         self.init_step()
 
+    # Add a step manager to move from step to step
     def init_step(self) -> None:
         if self.step_count == len(self.steps):
             return
@@ -297,23 +369,6 @@ class PokerGame(AbstractPokerGame):
     def end_step(self) -> None:
         self.step_count += 1
         self.init_step()
-
-    def _distribute_pot(self) -> None:
-        winners = self.find_winnners([p for _, p in self._table])
-        self.pot.distribute(winners)
-
-    def _return_cards(self, collections: List[CardCollection]) -> None:
-        for c in collections:
-            # It would be nice to be able to pull all cards
-            for i in range(len(c), 0, -1):
-                card = c.pull_from_position(i)
-                self._deck.insert_at_end(card)
-
-    def _remove_broke_players(self):
-        for _, p in self._table:
-            if p.purse == 0:
-                self._table.leave(p)
-                self._players.remove(p)
 
     def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
         if type(amount) is not int:
@@ -368,7 +423,6 @@ class PokerGame(AbstractPokerGame):
 
         for card in cards_to_switch:
             if not card in hand:
-
                 return False
 
         return True
@@ -382,33 +436,15 @@ class PokerGame(AbstractPokerGame):
                 self._discard_pile.insert_at_end(player.hand.pull_card(card))
                 player.add_card(self._deck.pull_from_top())
 
-    def find_winnners(self, players: List[AbstractPokerPlayer]) -> List[List[AbstractPokerPlayer]]:
-        winners = [[players[0]]]
-
-        for p2 in players[1:]:
-            inserted = False
-            for i, w in enumerate(winners):
-                if p2.hand > w[0].hand:
-                    inserted = True
-                    winners.insert(i, [p2])
-                    break
-
-                if p2.hand == w[0].hand:
-                    inserted = True
-                    w.append(p2)
-                    break
-
-            if not inserted:
-                winners.append([p2])
-
-        return winners
-
+    # We have to deal with this whole .get_players() vs .players thing
     def get_players(self) -> List[AbstractPokerPlayer]:
-        return self._players
+        return [p for _, p in self._table]
 
+    # We only need this to avoid having to do this manually in the api layer;
+    # I'd like to find a way for Pydantic to do this
     @property
     def players(self) -> dict:
-        return {p.id: p for p in self._players}
+        return {p.id: p for _, p in self._table}
 
     @property
     def table(self) -> GameTable:
@@ -420,6 +456,7 @@ class PokerGame(AbstractPokerGame):
 
 def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
+        StartRoundStep(game),
         DealStep(
             game,
             {
@@ -433,6 +470,7 @@ def get_stud_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
 
 def get_holdem_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
+        StartRoundStep(game),
         DealStep(
             game,
             config={
@@ -470,6 +508,7 @@ def get_holdem_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
 
 def get_draw_steps(game: AbstractPokerGame) -> List[AbstractPokerStep]:
     return [
+        StartRoundStep(game),
         DealStep(
             game,
             {

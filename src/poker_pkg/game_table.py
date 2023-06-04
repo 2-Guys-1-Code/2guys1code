@@ -93,9 +93,15 @@ class GameTable:
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[Seat] = [Seat(i + 1) for i in range(size)]
 
+    # We only need this as a dict to avoid having to do this manually in the api layer;
+    # I'd like to find a way for Pydantic to do this
     @property
-    def seats(self) -> list[AbstractPlayer]:
+    def seats(self) -> dict[int, AbstractPlayer]:
         return {(i + 1): s.player for i, s in enumerate(self._seats)}
+
+    @property
+    def players(self) -> list[AbstractPlayer]:
+        return [p.player for p in self._seats if p.player is not None]
 
     @property
     def current_player(self) -> AbstractPlayer | None:

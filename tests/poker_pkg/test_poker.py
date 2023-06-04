@@ -16,7 +16,7 @@ from poker_pkg.poker_errors import (
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
-from poker_pkg.poker_game import DealStep, PokerGame, create_poker_game
+from poker_pkg.poker_game import DealStep, EndRoundStep, PokerGame, create_poker_game
 from poker_pkg.shuffler import FakeShufflerByPosition
 
 from .conftest import (
@@ -109,12 +109,12 @@ def test_start_game__initial_state():
 
     game.start()
 
-    assert len(game._players) == 3
+    assert len(game.get_players()) == 3
     assert game.pot.kitty == 0
 
-    assert game._players[0].purse == 500
-    assert game._players[1].purse == 500
-    assert game._players[2].purse == 500
+    assert game.get_players()[0].purse == 500
+    assert game.get_players()[1].purse == 500
+    assert game.get_players()[2].purse == 500
 
     assert Card("RJ") not in game._deck
     assert Card("BJ") not in game._deck
@@ -122,9 +122,9 @@ def test_start_game__initial_state():
 
 def test_game_can_set_chips_per_player():
     game = game_factory(players=2, chips_per_player=1500)
-    assert len(game._players) == 2
-    assert game._players[0].purse == 1500
-    assert game._players[1].purse == 1500
+    assert len(game.get_players()) == 2
+    assert game.get_players()[0].purse == 1500
+    assert game.get_players()[1].purse == 1500
 
 
 def test_start_round__initial_state():
@@ -138,7 +138,7 @@ def test_start_round__initial_state():
         assert isinstance(game._table.get_at_seat(x).hand[0], Card)
 
     assert len(game._deck) == 37
-    assert game.current_player == game._players[0]
+    assert game.current_player == game.get_players()[0]
     assert game.round_count == 1
 
 
@@ -152,7 +152,7 @@ def test_start_round_shuffles_deck_and_deals():
     # fmt: on
     game = game_factory(shuffler=fake_shuffler, players=1)
     game.start()
-    assert str(game._players[0].hand) == "1H RJ 2H BJ 3H"
+    assert str(game.get_players()[0].hand) == "1H RJ 2H BJ 3H"
 
 
 def test_deal_cycles_hands():
@@ -166,11 +166,16 @@ def test_deal_cycles_hands():
     deck = Deck()
     fake_shuffler.shuffle(deck)
 
-    players = [PokerPlayer() for _ in range(4)]
+    players = []
+    for _ in range(4):
+        p = PokerPlayer()
+        p.hand = PokerHand()
+        players.append(p)
+
     game = game_factory(shuffler=fake_shuffler, players=players, deck_factory=lambda: deck)
 
-    step = DealStep(game, config={"count": 5})
-    step._deal([p.hand for p in players])
+    step = DealStep(game)
+    step._deal([p.hand for p in players], count=5)
 
     assert players[0].hand[0] == Card("1H")
     assert players[1].hand[0] == Card("RJ")
@@ -183,9 +188,10 @@ def test_deal__cards_are_removed_from_deck():
     game = game_factory(deck_factory=Deck)
 
     player = PokerPlayer()
+    player.hand = PokerHand()
 
-    step = DealStep(game, config={"count": 5})
-    step._deal([player.hand])
+    step = DealStep(game)
+    step._deal([player.hand], count=5)
 
     for c in player.hand:
         assert c not in game._deck
@@ -200,14 +206,14 @@ def test_check():
     game = game_factory(players=2)
     game.start()
 
-    assert game.current_player == game._players[0]
-    game.check(game._players[0])
-    assert game.current_player == game._players[1]
-    game.check(game._players[1])
+    assert game.current_player == game.get_players()[0]
+    game.check(game.get_players()[0])
+    assert game.current_player == game.get_players()[1]
+    game.check(game.get_players()[1])
     assert game.current_player == None
 
-    assert game._players[0].purse == 500
-    assert game._players[1].purse == 500
+    assert game.get_players()[0].purse == 500
+    assert game.get_players()[1].purse == 500
 
 
 def test_all_in():
@@ -322,7 +328,8 @@ def test_find_winners():
     player2.hand = hand2
     player3.hand = hand3
 
-    assert game.find_winnners([player1, player2, player3]) == [[player1], [player2], [player3]]
+    step = EndRoundStep(game)
+    assert step._find_winnners([player1, player2, player3]) == [[player1], [player2], [player3]]
 
 
 def test_find_winners__tied_hands():
@@ -340,7 +347,8 @@ def test_find_winners__tied_hands():
     player2.hand = hand2
     player3.hand = hand3
 
-    assert game.find_winnners([player1, player2, player3]) == [[player1, player3], [player2]]
+    step = EndRoundStep(game)
+    assert step._find_winnners([player1, player2, player3]) == [[player1, player3], [player2]]
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand
@@ -356,20 +364,20 @@ def test_game__all_players_check__best_hand_is_the_winner():
 
     game.start()
 
-    game.check(game._players[0])
-    game.check(game._players[1])
-    game.check(game._players[2])
+    game.check(game.get_players()[0])
+    game.check(game.get_players()[1])
+    game.check(game.get_players()[2])
 
     # player 1 hand: 1S 3S 3H 6S 6H
     # player 2 hand: 2S 2H 5S 5H 8S
     # player 3 hand: 1H 4S 4H 7S 7H
 
-    # assert game.winners == [game._players[2]]
+    # assert game.winners == [game.get_players()[2]]
     # assert str(game.winners[0].hand) == "1H 4S 4H 7S 7H"
 
-    assert game._players[0].purse == 500
-    assert game._players[1].purse == 500
-    assert game._players[2].purse == 500
+    assert game.get_players()[0].purse == 500
+    assert game.get_players()[1].purse == 500
+    assert game.get_players()[2].purse == 500
 
 
 # This is temporary; the only realy winner is based on chip-count, not the last best hand

@@ -12,12 +12,9 @@ class AbstractPlayer(ABC):
 
 
 class AbstractPokerPlayer(AbstractPlayer):
-    def __init__(
-        self, purse: int = None, name: str = "John", hand_factory: Hand = Hand, id=None
-    ) -> None:
+    def __init__(self, purse: int = None, name: str = "John", id=None) -> None:
         super(AbstractPokerPlayer, self).__init__(name=name, id=id)
 
-        self.hand_factory = hand_factory
         self.purse = purse
         self._hand = None
 
@@ -44,9 +41,6 @@ class AbstractPokerPlayer(AbstractPlayer):
 
     @property
     def hand(self) -> Union[Hand, None]:
-        if not self._hand:
-            self._hand = self.hand_factory()
-
         return self._hand
 
     @hand.setter
