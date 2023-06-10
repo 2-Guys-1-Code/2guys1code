@@ -2,9 +2,8 @@ import pytest
 
 from card_pkg.deck import Deck, DeckWithoutJokers
 from card_pkg.hand import Hand
-from poker_pkg.poker_errors import DuplicateCardException
 
-from .conftest import shuffler_factory
+from .conftest import DuplicateCardException, shuffler_factory
 
 
 # Maybe a Dealer entity instead of duplicating logic?
@@ -96,7 +95,7 @@ def test_shuffler_factory__can_handle_multiple_rounds():
         "Duplicate cards across hands",
     ],
 )
-def test_shuffler_factory__cannot_deal_same_card_twice(hands):
+def test_shuffler_factory__cannot_make_same_card_twice(hands):
     with pytest.raises(DuplicateCardException):
         shuffler_factory(hands)
 

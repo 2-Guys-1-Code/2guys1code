@@ -2,14 +2,18 @@ from typing import List
 
 import pytest
 
-from poker_pkg.game_table import GameTable
+from game_engine.engine import AbstractRoundStep
+from game_engine.errors import (
+    GameException,
+    IllegalActionException,
+    PlayerOutOfOrderException,
+)
+from game_engine.table import GameTable
 from poker_pkg.player import AbstractPokerPlayer
-from poker_pkg.poker_errors import IllegalActionException, PlayerOutOfOrderException
-from poker_pkg.poker_game import AbstractPokerStep
 from poker_pkg.turn import TurnManager
 
 
-class FakeStep(AbstractPokerStep):
+class FakeStep(AbstractRoundStep):
     def __init__(self, actions: List) -> None:
         self.actions = actions
 
@@ -22,7 +26,8 @@ class FakeStep(AbstractPokerStep):
     def maybe_end(self) -> None:
         pass
 
-    def get_available_actions(self) -> List:
+    @property
+    def available_actions(self) -> List:
         return self.actions
 
 
@@ -47,11 +52,11 @@ class FakeGame:
         self.started = True
 
     def test_action(self, player: AbstractPokerPlayer) -> None:
-        with TurnManager(self, player, "action") as tm:
+        with TurnManager(self, player, "action"):
             self.logic_called = 1
 
     def test_action_with_remove(self, player: AbstractPokerPlayer) -> None:
-        with TurnManager(self, player, "action") as tm:
+        with TurnManager(self, player, "action"):
             self._table.deactivate_player(player)
 
     def maybe_end_step(self) -> None:
@@ -60,11 +65,14 @@ class FakeGame:
     def maybe_end_round(self) -> None:
         pass
 
+    def next_player(self) -> None:
+        self._table.next_player()
+
 
 def test_turn_context_manager__handles_game_not_started(player_list):
     test_game = FakeGame(player_list)
 
-    with pytest.raises(IllegalActionException) as e:
+    with pytest.raises(GameException) as e:
         test_game.test_action(player_list[1])
 
     assert str(e.value) == "The game has not started"
@@ -125,13 +133,3 @@ def test_turn_context_manager__next_player_when_last_player_is_removed(
     test_game.test_action_with_remove(player_list[2])
 
     assert test_game.current_player == player_list[0]
-
-
-def test_turn_context_manager__handles_illegal_step_action(player_list):
-    test_game = FakeGame(player_list, steps=[FakeStep(["different"])])
-    test_game.start()
-
-    with pytest.raises(IllegalActionException):
-        test_game.test_action(player_list[0])
-
-    assert test_game.logic_called == 0

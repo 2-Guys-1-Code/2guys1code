@@ -3,8 +3,8 @@ from typing import List
 from fastapi import FastAPI, HTTPException, status
 
 from api.models import Game, NewGameData, UpdateGameData
-from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_app import (
+from game_engine.errors import PlayerCannotJoin
+from poker_pkg.app import (
     GameNotFound,
     PlayerNotFound,
     PokerApp,
@@ -12,8 +12,8 @@ from poker_pkg.poker_app import (
     create_poker_app,
     get_poker_config,
 )
-from poker_pkg.poker_errors import PlayerCannotJoin
-from poker_pkg.poker_game import PokerGame
+from poker_pkg.game import PokerGame
+from poker_pkg.player import PokerPlayer
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
 
 
@@ -109,6 +109,18 @@ class ProxyAPI(FastAPI):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
         except PlayerCannotJoin as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    def do(self, action_name, **payload):
+        pass
+        # self.game_do[action_name]()
+        # match action_name:
+        #     case "bet":
+        #           return self.poker_app.bet(game_id, ...)
+
+        # if action_name == 'bet':
+        #     return self.poker_app.bet(...)
+        # elif action_name == 'raise':
+        #     return self.poker_app.raise(...)
 
 
 # def factory_register_routes(app):

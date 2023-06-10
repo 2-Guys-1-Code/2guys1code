@@ -1,15 +1,9 @@
-from abc import ABC
 from typing import Union
 
 from card_pkg.hand import Hand
+from game_engine.player import AbstractPlayer
 
-from .poker_errors import InvalidAmountTooMuch
-
-
-class AbstractPlayer(ABC):
-    def __init__(self, name: str = "John", id=None, **kwargs) -> None:
-        self.name = name
-        self.id = id
+from .errors import InvalidAmountTooMuch
 
 
 class AbstractPokerPlayer(AbstractPlayer):
@@ -18,9 +12,6 @@ class AbstractPokerPlayer(AbstractPlayer):
 
         self.purse = purse
         self._hand = None
-
-    def __repr__(self) -> str:
-        return self.name
 
     def add_to_purse(self, amount: int) -> None:
         if self.purse is None:

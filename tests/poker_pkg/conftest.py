@@ -1,14 +1,11 @@
-from typing import Iterable, Union
+from typing import Union
 
 import pytest
 
 from card_pkg.card import Card
+from poker_pkg.app import PokerApp, create_poker_app
+from poker_pkg.game import PokerGame, create_poker_game
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
-from poker_pkg.poker_app import PokerApp, create_poker_app
-from poker_pkg.poker_errors import DuplicateCardException
-from poker_pkg.poker_game import AbstractPokerGame
-from poker_pkg.poker_game import PokerGame as Poker
-from poker_pkg.poker_game import create_poker_game
 from poker_pkg.pot import Pot
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
@@ -22,6 +19,10 @@ CARDS_NO_JOKERS = [
     '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
 ]
 # fmt: on
+
+
+class DuplicateCardException(Exception):
+    pass
 
 
 @pytest.fixture()
@@ -42,12 +43,12 @@ def make_pot(bets=None):
 
 def game_factory(
     players: Union[int, list] = 3,
-    game_type: str = Poker.TYPE_STUD,
+    game_type: str = PokerGame.TYPE_STUD,
     chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
     pot_factory=None,
     deck_factory=None,
-) -> Poker:
+) -> PokerGame:
     init_params = {"chips_per_player": chips_per_player}
 
     if shuffler is not None:
@@ -99,7 +100,7 @@ def shuffler_factory(hands: list, padding: list = None, cards_per_hand: int = 5)
 
     # fmt: off
     all_cards = [
-        # 'RJ', 'BJ',  # No jokers in Poker
+        # 'RJ', 'BJ',  # No jokers in PokerGame
         '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
         '1D', '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', '10D', '11D', '12D', '13D', 
         '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
@@ -163,7 +164,7 @@ def shuffler_factory(hands: list, padding: list = None, cards_per_hand: int = 5)
     return FakeShuffler(rounds)
 
 
-class FakePokerGame(AbstractPokerGame):
+class FakePokerGame(PokerGame):
     pass
 
 

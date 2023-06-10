@@ -3,7 +3,7 @@ from typing import List
 
 from repositories import AbstractPlayerRepository
 
-from .poker_game import AbstractPokerGame, PokerGame, PokerPlayer, create_poker_game
+from .game import PokerGame, PokerPlayer, create_poker_game
 
 
 class TooManyGames(Exception):
@@ -35,13 +35,13 @@ class PokerApp:
     def get_games(self) -> List[PokerGame]:
         return self.games
 
-    def _get_game_by_id(self, id: int) -> AbstractPokerGame:
+    def _get_game_by_id(self, id: int) -> PokerGame:
         return next((g for g in self.games if g.id == id), None)
 
     def _get_player_by_id(self, id: int) -> PokerPlayer:
         return self.player_repository.get_by_id(id)
 
-    def start_game(self, host_id: int, seat: int = None, **kwargs) -> AbstractPokerGame:
+    def start_game(self, host_id: int, seat: int = None, **kwargs) -> PokerGame:
         host = self._get_player_by_id(host_id)
         if host is None:
             raise PlayerNotFound()
@@ -58,7 +58,7 @@ class PokerApp:
 
         return game
 
-    def update_game(self, game_id: int, started=None, **kwargs) -> AbstractPokerGame:
+    def update_game(self, game_id: int, started=None, **kwargs) -> PokerGame:
         game = self._get_game_by_id(game_id)
 
         if game is None:

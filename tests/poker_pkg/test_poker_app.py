@@ -3,8 +3,8 @@ from unittest import mock
 import pytest
 from repositories import AbstractPlayerRepository
 
+from poker_pkg.app import PlayerNotFound, PokerApp
 from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_app import PlayerNotFound, PokerApp
 
 
 def test_get_games_when_none_started(poker_app: PokerApp) -> None:

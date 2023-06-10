@@ -1,7 +1,7 @@
 from functools import partial
 
+from poker_pkg.game import PokerGame as Poker
 from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_game import PokerGame as Poker
 
 from .conftest import game_factory as default_game_factory
 from .conftest import shuffler_factory as _shuffler_factory

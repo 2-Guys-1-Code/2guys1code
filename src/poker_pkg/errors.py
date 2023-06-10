@@ -1,25 +1,12 @@
+from game_engine.errors import IllegalActionException
+
+
 class PokerException(Exception):
     def __str__(self) -> str:
         return self.args[0]
 
 
 class NotEnoughChips(Exception):
-    pass
-
-
-class PlayerOutOfOrderException(Exception):
-    pass
-
-
-class TooManyPlayers(Exception):
-    pass
-
-
-class EndOfRound(Exception):
-    pass
-
-
-class EndOfStep(Exception):
     pass
 
 
@@ -39,22 +26,9 @@ class InvalidAmountNotAnInteger(TransferToPotException):
     pass
 
 
-class IllegalActionException(Exception):
-    pass
-
-
 class IllegalBetException(IllegalActionException):
     pass
 
 
-class DuplicateCardException(Exception):
-    pass
-
-
 class IllegalCardSwitch(IllegalActionException):
-    pass
-    pass
-
-
-class PlayerCannotJoin(PokerException):
     pass

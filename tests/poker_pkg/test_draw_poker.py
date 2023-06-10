@@ -3,13 +3,10 @@ from functools import partial
 import pytest
 
 from card_pkg.card import Card
+from game_engine.errors import PlayerOutOfOrderException
+from poker_pkg.errors import IllegalActionException, IllegalCardSwitch
+from poker_pkg.game import PokerGame as Poker
 from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_errors import (
-    IllegalActionException,
-    IllegalCardSwitch,
-    PlayerOutOfOrderException,
-)
-from poker_pkg.poker_game import PokerGame as Poker
 
 from .conftest import game_factory as default_game_factory
 from .conftest import shuffler_factory

@@ -1,6 +1,7 @@
 import pytest
 
-from poker_pkg.game_table import (
+from game_engine.player import AbstractPlayer
+from game_engine.table import (
     AlreadySeated,
     CannotCreateTable,
     EmptySeat,
@@ -17,7 +18,6 @@ from poker_pkg.game_table import (
     TableIsEmpty,
     TableIsFull,
 )
-from poker_pkg.player import AbstractPokerPlayer
 
 
 @pytest.mark.parametrize("size_param", [-1, None, "string"])
@@ -109,8 +109,8 @@ def test_pick_seat__invalid_seat_raises_exception(seat_number, seats_in_table):
 def test_set_current_player_by_seat():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -139,8 +139,8 @@ def test_set_current_player_by_seat__invalid_seat():
 def test_set_current_player():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -153,8 +153,8 @@ def test_set_current_player():
 def test_set_current_player__invalid_player():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
 
@@ -167,8 +167,8 @@ def test_set_current_player__invalid_player():
 def test_next_player():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -184,8 +184,8 @@ def test_next_player():
 def test_next_player__current_player_is_last():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -201,9 +201,9 @@ def test_next_player__current_player_is_last():
 def test_next_player__current_player_is_inactive():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Allan")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Allan")
 
     table.join(player_1)
     table.join(player_2)
@@ -221,9 +221,9 @@ def test_next_player__current_player_is_inactive():
 def test_next_player__counter_clockwise():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Alexander")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Alexander")
 
     table.join(player_1)
     table.join(player_2)
@@ -246,7 +246,7 @@ def test_next_player__counter_clockwise():
 def test_next_player__empty_table():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_1 = AbstractPlayer(name="Alfred")
     table.join(player_1)
     table.current_player = player_1
     table.deactivate_seat(1)
@@ -260,8 +260,8 @@ def test_next_player__empty_table():
 def test_next_player__current_player_not_set():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -275,9 +275,9 @@ def test_next_player__current_player_not_set():
 def test_inactive_seats():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -299,9 +299,9 @@ def test_inactive_seats():
 def test_inactive_players():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -323,9 +323,9 @@ def test_inactive_players():
 def test_activate_all():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -343,8 +343,8 @@ def test_activate_all():
 def test_get_seat():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -357,8 +357,8 @@ def test_get_seat():
 def test_get_seat__invalid_seat():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -384,10 +384,10 @@ def test_skip_player(number, deactivated, expected_player):
     table = GameTable(4)
 
     players = {
-        "player_1": AbstractPokerPlayer(name="Alfred"),
-        "player_2": AbstractPokerPlayer(name="Albert"),
-        "player_3": AbstractPokerPlayer(name="Allistair"),
-        "player_4": AbstractPokerPlayer(name="Alfonso"),
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Alfonso"),
     }
 
     table.join(players["player_1"])
@@ -407,8 +407,8 @@ def test_skip_player(number, deactivated, expected_player):
 def test_skip_player__invalid_number():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -424,7 +424,7 @@ def test_skip_player__invalid_number():
 def test_get_free_seats():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_1 = AbstractPlayer(name="Alfred")
 
     table.join(player_1)
 
@@ -436,8 +436,8 @@ def test_get_free_seats():
 def test_leave_table():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -451,8 +451,8 @@ def test_leave_table():
 def test_leave_table_by_seat():
     table = GameTable(3)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
 
     table.join(player_1)
     table.join(player_2)
@@ -480,10 +480,10 @@ def test_get_nth_player(chip_seat, n, expected_player):
     table = GameTable(4)
 
     players = {
-        "player_1": AbstractPokerPlayer(name="Alfred"),
-        "player_2": AbstractPokerPlayer(name="Albert"),
-        "player_3": AbstractPokerPlayer(name="Allistair"),
-        "player_4": AbstractPokerPlayer(name="Al"),
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Al"),
     }
 
     table.join(players["player_1"])
@@ -514,10 +514,10 @@ def test_get_nth_player__counter_clockwise(chip_seat, n, expected_player):
     table = GameTable(4)
 
     players = {
-        "player_1": AbstractPokerPlayer(name="Alfred"),
-        "player_2": AbstractPokerPlayer(name="Albert"),
-        "player_3": AbstractPokerPlayer(name="Allistair"),
-        "player_4": AbstractPokerPlayer(name="Al"),
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Al"),
     }
 
     table.join(players["player_1"])
@@ -536,10 +536,10 @@ def test_get_nth_player__counter_clockwise(chip_seat, n, expected_player):
 def test_iterate_table():
     table = GameTable(4)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Allistair")
-    player_4 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Allistair")
+    player_4 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -552,10 +552,10 @@ def test_iterate_table():
 def test_iterate_table__counter_clockwise():
     table = GameTable(4)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Allistair")
-    player_4 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Allistair")
+    player_4 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -570,10 +570,10 @@ def test_iterate_table__counter_clockwise():
 def test_iterate_table__counter_clockwise_with_deactivated():
     table = GameTable(4)
 
-    player_1 = AbstractPokerPlayer(name="Alfred")
-    player_2 = AbstractPokerPlayer(name="Albert")
-    player_3 = AbstractPokerPlayer(name="Allistair")
-    player_4 = AbstractPokerPlayer(name="Al")
+    player_1 = AbstractPlayer(name="Alfred")
+    player_2 = AbstractPlayer(name="Albert")
+    player_3 = AbstractPlayer(name="Allistair")
+    player_4 = AbstractPlayer(name="Al")
 
     table.join(player_1)
     table.join(player_2)
@@ -590,10 +590,10 @@ def test_move_chip():
     table = GameTable(4)
 
     players = {
-        "player_1": AbstractPokerPlayer(name="Alfred"),
-        "player_2": AbstractPokerPlayer(name="Albert"),
-        "player_3": AbstractPokerPlayer(name="Allistair"),
-        "player_4": AbstractPokerPlayer(name="Al"),
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Al"),
     }
 
     table.join(players["player_1"])
@@ -610,7 +610,7 @@ def test_move_chip():
 
 
 def test_seat_class():
-    player_1 = AbstractPokerPlayer(name="Alfred")
+    player_1 = AbstractPlayer(name="Alfred")
     seat = Seat(1, player=player_1)
     assert seat.active == True
     assert seat.player == player_1

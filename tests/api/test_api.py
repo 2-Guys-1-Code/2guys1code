@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from tests.api.conftest import api_app_factory
 
 
-@mock.patch("poker_pkg.poker_app.uuid.uuid4", return_value="someUUID")
+@mock.patch("poker_pkg.app.uuid.uuid4", return_value="someUUID")
 def test_get_instance_id(patcher) -> None:
     api_client = TestClient(api_app_factory())
 
