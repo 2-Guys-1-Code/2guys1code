@@ -1,5 +1,4 @@
 from poker_pkg.player import PokerPlayer
-from poker_pkg.poker_game import PokerGame
 from poker_pkg.pot import Pot
 
 

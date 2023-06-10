@@ -3,7 +3,7 @@ name = "poker-game"
 version = "0.1.0"
 description = ""
 authors = ["2guys1Code <2guys1code@protonmail.com>"]
-packages = [{include = "poker_pkg", from = "src"}, {include = "api", from = "src"} ]
+packages = [{include = "card_pkg", from = "src"}, {include = "poker_pkg", from = "src"}, {include = "api", from = "src"} ]
 
 [tool.poetry.scripts]
 poker = "poker_pkg.main:main"
@@ -33,3 +33,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 79
+
+[tool.isort]
+profile = "black"

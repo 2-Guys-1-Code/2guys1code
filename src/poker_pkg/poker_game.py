@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List
 
+from card_pkg.card import Card
+from card_pkg.card_collection import CardCollection
+from card_pkg.deck import Deck, DeckWithoutJokers
+from card_pkg.hand import Hand, PokerHand
 
-from .card import Card
-from .card_collection import CardCollection
-from .deck import Deck, DeckWithoutJokers
 from .game_table import AlreadySeated, FreePickTable, GameTable, TableIsFull
-from .hand import Hand, PokerHand
 from .player import AbstractPokerPlayer, PokerPlayer
 from .poker_errors import (
     EndOfStep,

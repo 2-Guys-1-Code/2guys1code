@@ -2,7 +2,7 @@ from functools import partial
 
 import pytest
 
-from poker_pkg.card import Card
+from card_pkg.card import Card
 from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_errors import (
     IllegalActionException,

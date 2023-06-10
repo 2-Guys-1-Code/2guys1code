@@ -2,9 +2,9 @@ from unittest import mock
 
 import pytest
 
-from poker_pkg.card import Card
-from poker_pkg.deck import Deck
-from poker_pkg.hand import Hand, PokerHand
+from card_pkg.card import Card
+from card_pkg.deck import Deck
+from card_pkg.hand import Hand, PokerHand
 from poker_pkg.player import PokerPlayer
 from poker_pkg.poker_errors import (
     IllegalActionException,
@@ -19,13 +19,8 @@ from poker_pkg.poker_errors import (
 from poker_pkg.poker_game import DealStep, EndRoundStep, PokerGame, create_poker_game
 from poker_pkg.shuffler import FakeShufflerByPosition
 
-from .conftest import (
-    CARDS_NO_JOKERS,
-    game_factory,
-    make_cards,
-    make_pot,
-    shuffler_factory,
-)
+from ..conftest import make_cards
+from .conftest import CARDS_NO_JOKERS, game_factory, make_pot, shuffler_factory
 
 
 def test_create_game():

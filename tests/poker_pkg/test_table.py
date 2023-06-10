@@ -1,4 +1,5 @@
 import pytest
+
 from poker_pkg.game_table import (
     AlreadySeated,
     CannotCreateTable,
@@ -16,8 +17,7 @@ from poker_pkg.game_table import (
     TableIsEmpty,
     TableIsFull,
 )
-
-from poker_pkg.player import AbstractPlayer, AbstractPokerPlayer
+from poker_pkg.player import AbstractPokerPlayer
 
 
 @pytest.mark.parametrize("size_param", [-1, None, "string"])

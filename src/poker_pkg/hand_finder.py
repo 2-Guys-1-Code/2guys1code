@@ -2,8 +2,8 @@ from collections import defaultdict
 from itertools import groupby
 from typing import Iterable
 
-from .card_collection import CardCollection, NotEnoughSpace
-from .hand import Hand
+from card_pkg.card_collection import CardCollection, NotEnoughSpace
+from card_pkg.hand import Hand
 
 
 class SortByRankDescending:

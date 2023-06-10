@@ -1,6 +1,6 @@
 import pytest
 
-from poker_pkg.card import (
+from card_pkg.card import (
     BadCardError,
     Card,
     CardComparator,

@@ -1,4 +1,4 @@
-from collections import Counter, defaultdict
+from collections import defaultdict
 from copy import copy
 from operator import itemgetter
 from typing import Callable
@@ -8,7 +8,6 @@ from .card_collection import CardCollection
 
 
 class Hand(CardCollection):
-
     DEFAULT_MAX_LENGTH: int = 5
 
     def __init__(

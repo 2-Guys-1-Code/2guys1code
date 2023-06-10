@@ -2,8 +2,7 @@ from typing import Iterable, Union
 
 import pytest
 
-from poker_pkg.card import Card, PokerCardComparator
-from poker_pkg.hand import PokerHand
+from card_pkg.card import Card
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.poker_app import PokerApp, create_poker_app
 from poker_pkg.poker_errors import DuplicateCardException
@@ -23,21 +22,6 @@ CARDS_NO_JOKERS = [
     '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
 ]
 # fmt: on
-
-
-comparator = PokerCardComparator()
-
-
-def make_cards(cards: Iterable) -> list:
-    return [Card(c) for c in cards]
-
-
-def make_poker_cards(cards: Iterable) -> list:
-    return [Card(c, comparator=comparator) for c in cards]
-
-
-def make_poker_hand(cards: Iterable) -> list:
-    return PokerHand(make_poker_cards(cards))
 
 
 @pytest.fixture()

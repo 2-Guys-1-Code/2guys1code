@@ -1,7 +1,8 @@
 from abc import ABC
 from typing import Union
 
-from .hand import Hand
+from card_pkg.hand import Hand
+
 from .poker_errors import InvalidAmountTooMuch
 
 

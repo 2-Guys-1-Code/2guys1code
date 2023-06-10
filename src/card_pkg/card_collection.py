@@ -29,7 +29,6 @@ class NotASubSet(Exception):
 
 
 class CardCollection:
-
     DEFAULT_MAX_LENGTH: int = None
 
     def __init__(

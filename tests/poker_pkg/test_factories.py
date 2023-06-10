@@ -1,7 +1,7 @@
 import pytest
 
-from poker_pkg.deck import Deck, DeckWithoutJokers
-from poker_pkg.hand import Hand
+from card_pkg.deck import Deck, DeckWithoutJokers
+from card_pkg.hand import Hand
 from poker_pkg.poker_errors import DuplicateCardException
 
 from .conftest import shuffler_factory

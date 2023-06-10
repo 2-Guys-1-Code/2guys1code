@@ -1,17 +1,16 @@
 import pytest
 
-from poker_pkg.card import Card
-from poker_pkg.card_collection import (
+from card_pkg.card import Card
+from card_pkg.card_collection import (
     CardCollection,
     InvalidCardPosition,
     MissingCard,
     NotACard,
-    NotASubSet,
     NotEnoughSpace,
 )
-from poker_pkg.hand import Hand
+from card_pkg.hand import Hand
 
-from .conftest import make_cards
+from ..conftest import make_cards
 
 
 def test_eq_is_false_when_types_are_different():
