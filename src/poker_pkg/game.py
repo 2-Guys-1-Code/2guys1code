@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import partial
 from typing import List
 
@@ -30,13 +31,16 @@ from .steps import (
 from .turn import TurnManager
 
 
-class PokerGame(GameEngine):
-    # These could now be their own classes with the steps built-in...
-    # Or they could be extracted into their own Enum
-    TYPE_STUD: str = "STUD"
-    TYPE_DRAW: str = "DRAW"
-    TYPE_HOLDEM: str = "HOLDEM"
+class PokerTypes(Enum):
+    STUD: str = "STUD"
+    DRAW: str = "DRAW"
+    HOLDEM: str = "HOLDEM"
 
+    def __str__(self):
+        return self.value
+
+
+class PokerGame(GameEngine):
     def __init__(
         self,
         chips_per_player: int = None,
@@ -63,7 +67,7 @@ class PokerGame(GameEngine):
         # Needed when dealing, ending the round or switching cards... still pretty integral to a poker game
         self._deck = deck_factory()
         # Used in a bunch of places, very integral to a poker game
-        self.pot = pot_factory()
+        self._pot_factory = pot_factory
 
         # See comments in .join()
         self._chips_per_player = 500 if chips_per_player is None else chips_per_player
@@ -80,6 +84,11 @@ class PokerGame(GameEngine):
     def _validate_max_players(self, max_players: int) -> None:
         if max_players > 9:
             raise TooManyPlayers()
+
+    def start(self) -> None:
+        super().start()
+
+        self.pot = self._pot_factory()
 
     def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         if self.started:
@@ -243,19 +252,19 @@ def get_draw_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractRou
 
 
 def get_round_steps(game_type: str, game: PokerGame, **kwargs) -> list:
-    if game_type == PokerGame.TYPE_STUD:
+    if game_type == PokerTypes.STUD:
         return get_stud_steps(game, **kwargs)
 
-    if game_type == PokerGame.TYPE_HOLDEM:
+    if game_type == PokerTypes.HOLDEM:
         return get_holdem_steps(game, **kwargs)
 
-    if game_type == PokerGame.TYPE_DRAW:
+    if game_type == PokerTypes.DRAW:
         return get_draw_steps(game, **kwargs)
 
     return []
 
 
-def create_poker_game(game_type: str = PokerGame.TYPE_STUD, **kwargs) -> PokerGame:
+def create_poker_game(game_type: str = PokerTypes.STUD, **kwargs) -> PokerGame:
     game = PokerGame(**kwargs)
     game.steps = get_round_steps(game_type, game, **kwargs)
     return game

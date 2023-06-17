@@ -4,7 +4,7 @@ import pytest
 
 from card_pkg.card import Card
 from poker_pkg.app import PokerApp, create_poker_app
-from poker_pkg.game import PokerGame, create_poker_game
+from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.pot import Pot
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
@@ -43,7 +43,7 @@ def make_pot(bets=None):
 
 def game_factory(
     players: Union[int, list] = 3,
-    game_type: str = PokerGame.TYPE_STUD,
+    game_type: str = PokerTypes.STUD,
     chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
     pot_factory=None,

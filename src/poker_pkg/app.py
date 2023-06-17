@@ -3,6 +3,7 @@ from typing import List
 
 from repositories import AbstractPlayerRepository
 
+from .actions import PokerActionName
 from .game import PokerGame, PokerPlayer, create_poker_game
 
 
@@ -82,6 +83,23 @@ class PokerApp:
 
         game.join(player, seat=seat)
 
+        return game
+
+    def do(
+        self, game_id: int, player_id: int, action_name: PokerActionName, **kwargs
+    ) -> PokerGame:
+        game = self._get_game_by_id(game_id)
+
+        if game is None:
+            raise GameNotFound()
+
+        player = self._get_player_by_id(player_id)
+
+        if player is None:
+            raise PlayerNotFound()
+
+        func = getattr(game, action_name)
+        func(player, **kwargs)
         return game
 
 

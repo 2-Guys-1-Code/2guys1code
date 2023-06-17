@@ -111,6 +111,12 @@ class GameEngine(AbstractGameEngine):
         return self._table.current_player
 
     @property
+    def current_player_id(self) -> int:
+        if self.current_player is None:
+            return None
+        return self._table.current_player.id
+
+    @property
     def started(self) -> bool:
         return self.round_count > 0
 
@@ -158,6 +164,7 @@ class GameEngine(AbstractGameEngine):
     #         action.do(player, **kwargs)
 
     # We have to deal with this whole .get_players() vs .players thing
+    # We agreed to keep the property, but make it a list
     def get_players(self) -> List[AbstractPlayer]:
         return [p for _, p in self._table]
 

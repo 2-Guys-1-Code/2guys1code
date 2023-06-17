@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import FastAPI, HTTPException, status
 
-from api.models import Game, NewGameData, UpdateGameData
+from api.models import Game, NewActionData, NewGameData, UpdateGameData
 from game_engine.errors import PlayerCannotJoin
 from poker_pkg.app import (
     GameNotFound,
@@ -66,6 +66,13 @@ class ProxyAPI(FastAPI):
             status_code=status.HTTP_201_CREATED,
             response_model=Game,
         )
+        self.add_api_route(
+            path="/games/{game_id}/actions",
+            endpoint=self.do,
+            methods=["POST"],
+            status_code=status.HTTP_201_CREATED,
+            response_model=Game,
+        )
 
     def get_instance_id(self) -> dict:
         return {"app_instance_id": self.poker_app.get_id()}
@@ -84,9 +91,10 @@ class ProxyAPI(FastAPI):
             game = self.poker_app.start_game(
                 game_data.current_player_id,
                 max_players=game_data.number_of_players,
-                chips_per_player=500,
                 seating=game_data.seating,
                 seat=game_data.seat,
+                game_type=game_data.game_type,
+                chips_per_player=500,
             )
             return game
         except PlayerNotFound as e:
@@ -110,17 +118,17 @@ class ProxyAPI(FastAPI):
         except PlayerCannotJoin as e:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
-    def do(self, action_name, **payload):
-        pass
-        # self.game_do[action_name]()
-        # match action_name:
-        #     case "bet":
-        #           return self.poker_app.bet(game_id, ...)
+    def do(self, game_id: int, action_data: NewActionData) -> PokerGame:
+        # Move this to the app?
+        action = str(action_data.action_name).lower()
+        player_id = action_data.player_id
 
-        # if action_name == 'bet':
-        #     return self.poker_app.bet(...)
-        # elif action_name == 'raise':
-        #     return self.poker_app.raise(...)
+        try:
+            return self.poker_app.do(game_id, player_id, action, **action_data.action_data)
+        except GameNotFound as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
+        except PlayerNotFound as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
 
 
 # def factory_register_routes(app):

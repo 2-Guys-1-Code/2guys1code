@@ -5,13 +5,13 @@ import pytest
 from card_pkg.card import Card
 from game_engine.errors import PlayerOutOfOrderException
 from poker_pkg.errors import IllegalActionException, IllegalCardSwitch
-from poker_pkg.game import PokerGame as Poker
+from poker_pkg.game import PokerTypes
 from poker_pkg.player import PokerPlayer
 
 from .conftest import game_factory as default_game_factory
 from .conftest import shuffler_factory
 
-game_factory = partial(default_game_factory, game_type=Poker.TYPE_DRAW)
+game_factory = partial(default_game_factory, game_type=PokerTypes.DRAW)
 
 
 def test_game__player_can_switch_cards():
