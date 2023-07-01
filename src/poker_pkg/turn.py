@@ -28,8 +28,9 @@ class TurnManager:
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         if exc_value is not None:
+            print("raised, but not a timeout")
             # The only exception that should skip the player's turn is if they take too long to play
-            return
+            raise exc_value
 
         self.game.all_players_played = self.is_last_player or self.game.all_players_played
 

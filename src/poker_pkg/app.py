@@ -1,10 +1,10 @@
 import uuid
 from typing import List
 
-from repositories import AbstractPlayerRepository
-
 from .actions import PokerActionName
+from .errors import PlayerNotInGame, PokerException, ValidationException
 from .game import PokerGame, PokerPlayer, create_poker_game
+from .repositories import AbstractPlayerRepository
 
 
 class TooManyGames(Exception):
@@ -21,6 +21,17 @@ class PlayerNotFound(Exception):
 
 class PlayerNotFound(Exception):
     pass
+
+
+class ActionDoesNotExist(Exception):
+    pass
+
+
+class ValidationError(Exception):
+    def __init__(self, loc: list, msg: str, type_: str) -> None:
+        self.loc = loc
+        self.msg = msg
+        self.type = type_
 
 
 class PokerApp:
@@ -85,6 +96,22 @@ class PokerApp:
 
         return game
 
+    def _raise(self, exception: Exception) -> None:
+        if isinstance(exception, ValidationException):
+            raise ValidationError(exception.loc, exception.msg, exception.type)
+
+        if isinstance(exception, PlayerNotInGame):
+            raise PlayerNotFound()
+
+        raise exception
+
+    def _do(self, func, player, **kwargs) -> None:
+        try:
+            func(player, **kwargs)
+        except PokerException as e:
+            print("caught in app")
+            self._raise(e)
+
     def do(
         self, game_id: int, player_id: int, action_name: PokerActionName, **kwargs
     ) -> PokerGame:
@@ -98,8 +125,13 @@ class PokerApp:
         if player is None:
             raise PlayerNotFound()
 
-        func = getattr(game, action_name)
-        func(player, **kwargs)
+        try:
+            func = getattr(game, action_name)
+        except AttributeError as e:
+            raise ActionDoesNotExist()
+
+        self._do(func, player, **kwargs)
+
         return game
 
 

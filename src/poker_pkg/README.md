@@ -12,7 +12,7 @@ A way for humans to play
 
 
 Round
-    goes to wining / tying hand is determined
+    goes to winning / tying hand is determined
     players place bets or check or fold in squential order until 
 Bet
 Pot

@@ -44,9 +44,11 @@ class Game(BaseModel):
 class NewGameData(BaseModel):
     current_player_id: int
     number_of_players: int = 2
-    game_type: PokerTypes = PokerTypes.HOLDEM
     seating: str | None = None
     seat: int | None = None
+
+    # Less poker-centric
+    game_type: PokerTypes = PokerTypes.HOLDEM
 
 
 class UpdateGameData(BaseModel):
@@ -54,6 +56,6 @@ class UpdateGameData(BaseModel):
 
 
 class NewActionData(BaseModel):
-    action_name: PokerActionName
     player_id: int
     action_data: Dict[str, Any]
+    action_name: str

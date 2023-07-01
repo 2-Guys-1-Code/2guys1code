@@ -4,19 +4,16 @@ from typing import List
 
 from card_pkg.card_collection import CardCollection
 from card_pkg.deck import Deck, DeckWithoutJokers
-from game_engine.engine import AbstractAction, AbstractRoundStep, GameEngine
-from game_engine.errors import IllegalActionException, PlayerCannotJoin, TooManyPlayers
+from game_engine.engine import AbstractRoundStep, GameEngine
+from game_engine.errors import PlayerCannotJoin, TooManyPlayers
 from game_engine.table import AlreadySeated, FreePickTable, GameTable, TableIsFull
 
-from .actions import (
-    PokerActionName,
-    PokerAllIn,
-    PokerBet,
-    PokerCall,
-    PokerCheck,
-    PokerFold,
-    PokerRaise,
-    PokerSwitchCards,
+from .actions import PokerActionName
+from .errors import (
+    InvalidAmountNegative,
+    InvalidAmountNotAnInteger,
+    PlayerNotInGame,
+    ValidationException,
 )
 from .player import AbstractPokerPlayer, PokerPlayer
 from .pot import Pot
@@ -53,7 +50,7 @@ class PokerGame(GameEngine):
         table_factory = partial(self._create_table, max_players, seating=seating)
         super(PokerGame, self).__init__(table_factory=table_factory)
 
-        # This class is startint to look like an AbstractGameEngine;
+        # This class is starting to look like an AbstractGameEngine;
         # Everything below belongs either in injected rules, or in a subclass
 
         # This should become a "hidden" card collection of sorts
@@ -71,6 +68,7 @@ class PokerGame(GameEngine):
 
         # See comments in .join()
         self._chips_per_player = 500 if chips_per_player is None else chips_per_player
+        self.id = None
 
     def _create_table(self, max_players: int, seating: str = "sequential") -> GameTable:
         self._validate_max_players(max_players)
@@ -141,6 +139,9 @@ class PokerGame(GameEngine):
     #     return action_class(self)
 
     def do(self, action_name: PokerActionName, player: AbstractPokerPlayer, **kwargs) -> None:
+        if player not in self.get_players():
+            raise PlayerNotInGame()
+
         action = self.current_step.get_action(action_name, self)
         # action = self._get_action(action_name)
 
@@ -160,8 +161,27 @@ class PokerGame(GameEngine):
         self.do(PokerActionName.FOLD, player)
         return
 
-    def bet(self, player: AbstractPokerPlayer, bet_amount: int) -> None:
-        self.do(PokerActionName.BET, player, amount=bet_amount)
+    def _validate_amount(self, amount: int) -> None:
+        # We could use pydantic models here too;
+        # Or the API could allow for specifying more accurate models
+        if amount is None:
+            raise ValidationException("field required", ["bet_amount"], "value_error.missing")
+
+        if type(amount) is not int:
+            raise ValidationException(
+                "value is not a valid integer", ["bet_amount"], "type_error.integer"
+            )
+
+        if amount < 0:
+            raise ValidationException("negative amount", ["bet_amount"], "type_error.negative")
+
+    def bet(self, player: AbstractPokerPlayer, bet_amount: int = None) -> None:
+        self._validate_amount(bet_amount)
+
+        try:
+            self.do(PokerActionName.BET, player, amount=bet_amount)
+        except (InvalidAmountNegative, InvalidAmountNotAnInteger) as e:
+            raise ValidationException(str(e), ["bet_amount"], e.type)
         return
 
     def call(self, player: AbstractPokerPlayer) -> None:
@@ -205,6 +225,7 @@ def get_holdem_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractR
                 "shuffler": shuffler,
             },
         ),
+        # Blinds & Antes? or make it part of the betting step?
         BettingStep(game),
         CommunityCardStep(
             game,

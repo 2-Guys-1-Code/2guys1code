@@ -5,10 +5,12 @@ from fastapi import FastAPI, HTTPException, status
 from api.models import Game, NewActionData, NewGameData, UpdateGameData
 from game_engine.errors import PlayerCannotJoin
 from poker_pkg.app import (
+    ActionDoesNotExist,
     GameNotFound,
     PlayerNotFound,
     PokerApp,
     TooManyGames,
+    ValidationError,
     create_poker_app,
     get_poker_config,
 )
@@ -30,7 +32,7 @@ def get_player_repository() -> AbstractPlayerRepository:
 class ProxyAPI(FastAPI):
     def __init__(self, poker_app: PokerApp) -> None:
         super().__init__()
-        print("registering routes")
+        # print("registering routes")
         # self.add_exception_handler(StarletteHTTPException, self.handle_validation_error)
         self.register_routes()
         self.poker_app = poker_app
@@ -129,6 +131,28 @@ class ProxyAPI(FastAPI):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
         except PlayerNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
+        except ActionDoesNotExist as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        "loc": ["body", "action_name"],
+                        "msg": f'The action "{action_data.action_name}" is invalid',
+                        "type": "game_action.invalid",
+                    }
+                ],
+            )
+        except ValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        "loc": ["body", "action_data"] + e.loc,
+                        "msg": e.msg,
+                        "type": e.type,
+                    }
+                ],
+            )
 
 
 # def factory_register_routes(app):
@@ -137,7 +161,7 @@ class ProxyAPI(FastAPI):
 
 
 def create_app() -> ProxyAPI:
-    print("create app")
+    # print("create app")
     # app = FastAPI()
     # factory_register_routes(app)
 
