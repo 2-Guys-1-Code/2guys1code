@@ -30,14 +30,21 @@ class InvalidAmountTooMuch(TransferToPotException):
     pass
 
 
-class InvalidAmountNegative(TransferToPotException):
+class InvalidAmountMissing(TransferToPotException, ValidationException):
+    type = "value_error.missing"
+
+    def __str__(self) -> str:
+        return "field required"
+
+
+class InvalidAmountNegative(TransferToPotException, ValidationException):
     type = "type_error.negative"
 
     def __str__(self) -> str:
         return "negative amount"
 
 
-class InvalidAmountNotAnInteger(TransferToPotException):
+class InvalidAmountNotAnInteger(TransferToPotException, ValidationException):
     type = "type_error.integer"
 
     def __str__(self) -> str:

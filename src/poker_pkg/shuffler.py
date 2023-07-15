@@ -18,6 +18,7 @@ def build_list_of_cards_from_mapping(mapping: list, all_cards) -> list:
 
 class FakeShufflerByPosition:
     def __init__(self, mapping: list, all_cards=None) -> None:
+        # This can results in cards that are not in the deck to be added to the deck.
         all_cards = all_cards or ALL_CARDS
         self.mapping = build_list_of_cards_from_mapping(mapping, all_cards)
 

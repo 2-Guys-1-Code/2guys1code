@@ -26,7 +26,7 @@ def test_game__deals_2_cards():
     assert len(player1.hand) == 2
     assert len(player2.hand) == 2
 
-    assert len(game._deck) == 48
+    assert len(game.deck) == 48
 
 
 def test_reveal_flop_after_bet_step():
@@ -42,7 +42,7 @@ def test_reveal_flop_after_bet_step():
 
     assert len(game._community_pile) == 3
     assert len(game._discard_pile) == 1
-    assert len(game._deck) == 44
+    assert len(game.deck) == 44
 
     assert game.current_player == player1
 
@@ -62,7 +62,7 @@ def test_reveal_turn():
 
     assert len(game._community_pile) == 4
     assert len(game._discard_pile) == 2
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
 
     assert game.current_player == player1
 
@@ -85,7 +85,7 @@ def test_reveal_river():
 
     assert len(game._community_pile) == 5
     assert len(game._discard_pile) == 3
-    assert len(game._deck) == 40
+    assert len(game.deck) == 40
 
     assert game.current_player == player1
 
@@ -113,7 +113,7 @@ def test_start_a_second_round():
 
     assert len(game._community_pile) == 0
     assert len(game._discard_pile) == 0
-    assert len(game._deck) == 52
+    assert len(game.deck) == 52
     assert game.pot.total == 0
 
     # assert game.current_player == player1

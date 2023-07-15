@@ -2,7 +2,7 @@ from typing import List
 
 import pytest
 
-from game_engine.engine import AbstractRoundStep
+from game_engine.engine import AbstractGameEngine, AbstractRoundStep
 from game_engine.errors import (
     GameException,
     IllegalActionException,
@@ -10,21 +10,28 @@ from game_engine.errors import (
 )
 from game_engine.table import GameTable
 from poker_pkg.player import AbstractPokerPlayer
+from poker_pkg.steps import PlayerStep
 from poker_pkg.turn import TurnManager
 
 
-class FakeStep(AbstractRoundStep):
-    def __init__(self, actions: List) -> None:
+class FakeStep(PlayerStep):
+    def __init__(
+        self,
+        actions: List,
+        game: AbstractGameEngine,
+        config: dict = None,
+    ) -> None:
+        super().__init__(game, config=config)
         self.actions = actions
 
-    def start(self) -> None:
-        pass
+    # def start(self) -> None:
+    #     pass
 
-    def end(self, player: AbstractPokerPlayer) -> None:
-        pass
+    # def end(self) -> None:
+    #     self.game.next_player()
 
     def maybe_end(self) -> None:
-        pass
+        False
 
     @property
     def available_actions(self) -> List:
@@ -35,18 +42,18 @@ class FakeGame:
     def __init__(self, player_list, steps: list = None) -> None:
         self.logic_called = 0
         self.step_count = 0
-        self.steps = steps or [FakeStep(["action"])]
+        self.steps = steps or [FakeStep(["action"], self)]
         self.started = False
         self.all_players_played = False
 
-        self._table = GameTable(size=len(player_list))
+        self.table = GameTable(size=len(player_list))
         for p in player_list:
-            self._table.join(p)
-        self._table.current_player = player_list[0]
+            self.table.join(p)
+        self.table.current_player = player_list[0]
 
     @property
     def current_player(self) -> AbstractPokerPlayer | None:
-        return self._table.current_player
+        return self.table.current_player
 
     def start(self) -> None:
         self.started = True
@@ -57,7 +64,7 @@ class FakeGame:
 
     def test_action_with_remove(self, player: AbstractPokerPlayer) -> None:
         with TurnManager(self, player, "action"):
-            self._table.deactivate_player(player)
+            self.table.deactivate_player(player)
 
     def maybe_end_step(self) -> None:
         pass
@@ -66,7 +73,7 @@ class FakeGame:
         pass
 
     def next_player(self) -> None:
-        self._table.next_player()
+        self.table.next_player()
 
 
 def test_turn_context_manager__handles_game_not_started(player_list):

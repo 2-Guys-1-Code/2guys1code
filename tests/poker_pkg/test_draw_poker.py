@@ -34,14 +34,14 @@ def test_game__player_can_switch_cards():
 
     assert str(player1.hand) == "1H 3C 5C 7S 10H"
 
-    assert Card("7S") not in game._deck
-    assert Card("10H") not in game._deck
+    assert Card("7S") not in game.deck
+    assert Card("10H") not in game.deck
 
     assert Card("4C") in game._discard_pile
     assert Card("6C") in game._discard_pile
 
-    assert Card("4C") not in game._deck
-    assert Card("6C") not in game._deck
+    assert Card("4C") not in game.deck
+    assert Card("6C") not in game.deck
 
 
 def test_game__player_cannot_switch_cards_they_dont_have():
@@ -67,7 +67,7 @@ def test_game__player_cannot_switch_cards_they_dont_have():
 
     assert str(player1.hand) == "1H 3C 4C 5C 6C"
     assert str(player2.hand) == "1D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 
@@ -100,7 +100,7 @@ def test_game__player_cannot_switch_more_than_3_cards():
 
     assert str(player1.hand) == "13H 3C 4C 5C 6C"
     assert str(player2.hand) == "13D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 
@@ -127,7 +127,7 @@ def test_game__player_can_switch_4_cards_if_has_ace():
 
     assert str(player1.hand) == "1S 7S 10H 4D 8H"
     assert str(player2.hand) == "13D 3H 4H 5H 6H"
-    assert len(game._deck) == 38
+    assert len(game.deck) == 38
     assert len(game._discard_pile) == 4
 
 
@@ -161,7 +161,7 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
 
     assert str(player1.hand) == "1S 3C 4C 5C 6C"
     assert str(player2.hand) == "13D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 
@@ -186,7 +186,7 @@ def test_game__player_cannot_switch_cards_our_of_order():
 
     assert str(player1.hand) == "1H 3C 4C 5C 6C"
     assert str(player2.hand) == "1D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 
@@ -210,7 +210,7 @@ def test_game__player_can_switch_no_cards():
 
     assert str(player1.hand) == "1H 3C 4C 5C 6C"
     assert str(player2.hand) == "1D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 
@@ -238,7 +238,7 @@ def test_game__players_can_only_switch_cards_during_switch_step():
 
     assert str(player1.hand) == "1H 3C 4C 5C 6C"
     assert str(player2.hand) == "1D 3H 4H 5H 6H"
-    assert len(game._deck) == 42
+    assert len(game.deck) == 42
     assert len(game._discard_pile) == 0
 
 

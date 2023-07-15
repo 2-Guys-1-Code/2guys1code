@@ -236,7 +236,7 @@ class GameTable:
             s.active = True
 
     def __iter__(self) -> tuple[int, AbstractPlayer]:
-        seats = self._get_ordered_seats()
+        seats = self._get_ordered_seats(only_active=True)
         for s in seats:
             yield (s.position, s.player)
 
@@ -272,7 +272,9 @@ class GameTable:
             raise InvalidNumber()
         return index - 1 if index > 0 else index
 
-    def _get_ordered_seats(self, starting_seat_number: int = None) -> list:
+    def _get_ordered_seats(
+        self, starting_seat_number: int = None, only_active: bool = True
+    ) -> list[Seat]:
         seats = deque(self._seats)
 
         if starting_seat_number is None:
@@ -288,14 +290,21 @@ class GameTable:
             seats.reverse()
 
         seats.rotate(-rotation)
-        # return seats
-        return [s for s in seats if s.player is not None and s.active is True]
+
+        return [s for s in seats if s.player is not None and (not only_active or s.active is True)]
+        # return [s for s in seats if s.player is not None]
 
     def get_nth_player(self, number: int) -> AbstractPlayer | None:
-        seats = self._get_ordered_seats(self._chip_index)
+        seats = self._get_ordered_seats(self._chip_index, only_active=True)
         if len(seats) == 0:
             raise TableIsEmpty()
         return seats[self._get_1_indexed(number)].player
+
+    def get_nth_seat(self, number: int) -> Seat | None:
+        seats = self._get_ordered_seats(self._chip_index, only_active=False)
+        if len(seats) == 0:
+            raise TableIsEmpty()
+        return seats[self._get_1_indexed(number)]
 
 
 class FreePickTable(GameTable):

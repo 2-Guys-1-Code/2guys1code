@@ -42,6 +42,20 @@ class AbstractGameEngine(ABC):
         pass
 
 
+class AbstractStartingPlayerStrategy(ABC):
+    def __init__(self, game: AbstractGameEngine) -> None:
+        self.game = game
+
+    @abstractmethod
+    def get_first_player_index(self) -> int:
+        pass
+
+
+class FirstPlayerStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        return 1
+
+
 class AbstractAction(ABC):
     def __init__(self, game: AbstractGameEngine, config: dict = None) -> None:
         self.game = game
@@ -99,9 +113,11 @@ class GameEngine(AbstractGameEngine):
     def __init__(
         self,
         table_factory: Callable = GameTable,
+        first_player_strategy: AbstractStartingPlayerStrategy = FirstPlayerStarts,
         **kwargs,
     ) -> None:
         self._table = table_factory()
+        self._first_player_strategy = first_player_strategy(self)
         self.steps = []
         self.round_count = 0
         self.current_step = None
@@ -109,6 +125,10 @@ class GameEngine(AbstractGameEngine):
     @property
     def current_player(self) -> AbstractPlayer | None:
         return self._table.current_player
+
+    @current_player.setter
+    def current_player(self, player: AbstractPlayer) -> None:
+        self._table.current_player = player
 
     @property
     def current_player_id(self) -> int:
@@ -120,7 +140,11 @@ class GameEngine(AbstractGameEngine):
     def started(self) -> bool:
         return self.round_count > 0
 
+    def _set_first_player(self) -> None:
+        self._table.set_chip_to_seat(self._first_player_strategy.get_first_player_index())
+
     def start(self) -> None:
+        self._set_first_player()
         self.start_round()
 
     # Add a round manager to move from round to round

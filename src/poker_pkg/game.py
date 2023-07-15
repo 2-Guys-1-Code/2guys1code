@@ -1,15 +1,25 @@
 from enum import Enum
 from functools import partial
-from typing import List
+from typing import Callable, List
+
+from shuffler import Shuffler
 
 from card_pkg.card_collection import CardCollection
 from card_pkg.deck import Deck, DeckWithoutJokers
-from game_engine.engine import AbstractRoundStep, GameEngine
+from card_pkg.hand import PokerHand
+from game_engine.engine import (
+    AbstractRoundStep,
+    AbstractStartingPlayerStrategy,
+    FirstPlayerStarts,
+    GameEngine,
+)
 from game_engine.errors import PlayerCannotJoin, TooManyPlayers
 from game_engine.table import AlreadySeated, FreePickTable, GameTable, TableIsFull
 
 from .actions import PokerActionName
+from .dealer import AbstractDealer, Dealer
 from .errors import (
+    InvalidAmountMissing,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     PlayerNotInGame,
@@ -19,6 +29,7 @@ from .player import AbstractPokerPlayer, PokerPlayer
 from .pot import Pot
 from .steps import (
     BettingStep,
+    BlindBettingStep,
     CommunityCardStep,
     DealStep,
     EndRoundStep,
@@ -37,18 +48,64 @@ class PokerTypes(Enum):
         return self.value
 
 
+class HighestCardStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        for _, p in self.game.table:
+            p.hand = PokerHand(max_length=1)
+
+        self.game.dealer.shuffle()
+        self.game.dealer.deal([p.hand for _, p in self.game.table], count=1)
+        winners = self._find_winnners(self.game.get_players())
+        winner = winners[0][0]
+        return self.game.table.get_seat(winner)
+
+    # Duplicated from EndRoundSte -- REFACTOR
+    def _find_winnners(
+        self, players: List[AbstractPokerPlayer]
+    ) -> List[List[AbstractPokerPlayer]]:
+        winners = [[players[0]]]
+
+        for p2 in players[1:]:
+            inserted = False
+            for i, w in enumerate(winners):
+                if p2.hand > w[0].hand:
+                    inserted = True
+                    winners.insert(i, [p2])
+                    break
+
+                if p2.hand == w[0].hand:
+                    inserted = True
+                    w.append(p2)
+                    break
+
+            if not inserted:
+                winners.append([p2])
+
+        return winners
+
+
+class HighestOfSuitStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        return 1
+
+
 class PokerGame(GameEngine):
     def __init__(
         self,
         chips_per_player: int = None,
         pot_factory: Pot = Pot,
-        deck_factory: Deck = DeckWithoutJokers,
         max_players: int = 9,
         seating: str = None,
+        # first_player_strategy: Callable = HighestCardStarts,  # This is not right for poker; Fix after refactoring
+        first_player_strategy: Callable = FirstPlayerStarts,  # This is not right for poker; Fix after refactoring
+        dealer_factory: Dealer = Dealer,
         **kwargs,
     ) -> None:
+        self.dealer = dealer_factory(DeckWithoutJokers(), game=self)
         table_factory = partial(self._create_table, max_players, seating=seating)
-        super(PokerGame, self).__init__(table_factory=table_factory)
+        super(PokerGame, self).__init__(
+            table_factory=table_factory, first_player_strategy=first_player_strategy
+        )
 
         # This class is starting to look like an AbstractGameEngine;
         # Everything below belongs either in injected rules, or in a subclass
@@ -61,14 +118,20 @@ class PokerGame(GameEngine):
         # cards and returning cards at the end of the round
         self._community_pile = CardCollection()
 
-        # Needed when dealing, ending the round or switching cards... still pretty integral to a poker game
-        self._deck = deck_factory()
         # Used in a bunch of places, very integral to a poker game
         self._pot_factory = pot_factory
 
         # See comments in .join()
         self._chips_per_player = 500 if chips_per_player is None else chips_per_player
         self.id = None
+
+    @property
+    def deck(self) -> CardCollection:
+        return self.dealer.deck
+
+    @property
+    def table(self) -> CardCollection:
+        return self._table
 
     def _create_table(self, max_players: int, seating: str = "sequential") -> GameTable:
         self._validate_max_players(max_players)
@@ -84,9 +147,8 @@ class PokerGame(GameEngine):
             raise TooManyPlayers()
 
     def start(self) -> None:
-        super().start()
-
         self.pot = self._pot_factory()
+        super().start()
 
     def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
         if self.started:
@@ -146,9 +208,11 @@ class PokerGame(GameEngine):
         # action = self._get_action(action_name)
 
         with TurnManager(self, player, action_name):
+            self.is_last_player = self.current_player is self._table.get_nth_player(-1)
             action.do(player, **kwargs)
+            self.all_players_played = self.is_last_player or self.all_players_played
 
-    # Wire everything directly to .do()
+    # Wire everything directly to .do() from the poker app?
     def check(self, player: AbstractPokerPlayer) -> None:
         self.do(PokerActionName.CHECK, player)
         return
@@ -165,24 +229,29 @@ class PokerGame(GameEngine):
         # We could use pydantic models here too;
         # Or the API could allow for specifying more accurate models
         if amount is None:
-            raise ValidationException("field required", ["bet_amount"], "value_error.missing")
+            raise InvalidAmountMissing("field required", ["bet_amount"], "value_error.missing")
 
         if type(amount) is not int:
-            raise ValidationException(
+            raise InvalidAmountNotAnInteger(
                 "value is not a valid integer", ["bet_amount"], "type_error.integer"
             )
 
         if amount < 0:
-            raise ValidationException("negative amount", ["bet_amount"], "type_error.negative")
+            raise InvalidAmountNegative("negative amount", ["bet_amount"], "type_error.negative")
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int = None) -> None:
+        # Rework this... Right now, self._validate_amount catches everything and raises expected exceptions
+        # However, I think the validation should occur in the injected actions so the game can remain very generic
+        # See open/closed principle
         self._validate_amount(bet_amount)
-
-        try:
-            self.do(PokerActionName.BET, player, amount=bet_amount)
-        except (InvalidAmountNegative, InvalidAmountNotAnInteger) as e:
-            raise ValidationException(str(e), ["bet_amount"], e.type)
+        self.do(PokerActionName.BET, player, amount=bet_amount)
         return
+
+        # try:
+        #     self.do(PokerActionName.BET, player, amount=bet_amount)
+        # except (InvalidAmountNegative, InvalidAmountNotAnInteger) as e:
+        #     raise ValidationException(str(e), ["bet_amount"], e.type)
+        # return
 
     def call(self, player: AbstractPokerPlayer) -> None:
         self.do(PokerActionName.CALL, player)
@@ -200,33 +269,31 @@ class PokerGame(GameEngine):
         self._table.next_player()
 
 
-def get_stud_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractRoundStep]:
+def get_stud_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
     return [
         StartRoundStep(game),
         DealStep(
             game,
             {
                 "count": 5,
-                "shuffler": shuffler,
             },
         ),
-        BettingStep(game),
+        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
         EndRoundStep(game),
     ]
 
 
-def get_holdem_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractRoundStep]:
+def get_holdem_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
     return [
         StartRoundStep(game),
         DealStep(
             game,
             config={
                 "count": 2,
-                "shuffler": shuffler,
             },
         ),
         # Blinds & Antes? or make it part of the betting step?
-        BettingStep(game),
+        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
         CommunityCardStep(
             game,
             config={
@@ -255,17 +322,16 @@ def get_holdem_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractR
     ]
 
 
-def get_draw_steps(game: PokerGame, shuffler=None, **kwargs) -> List[AbstractRoundStep]:
+def get_draw_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
     return [
         StartRoundStep(game),
         DealStep(
             game,
             {
                 "count": 5,
-                "shuffler": shuffler,
             },
         ),
-        BettingStep(game),
+        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
         SwitchingStep(game),
         BettingStep(game),
         EndRoundStep(game),

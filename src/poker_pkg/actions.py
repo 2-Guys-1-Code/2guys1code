@@ -33,7 +33,7 @@ class PokerCheck(AbstractAction):
 
 class PokerFold(AbstractAction):
     def do(self, player: AbstractPokerPlayer, **kwargs) -> None:
-        self.game._table.deactivate_player(player)
+        self.game.table.deactivate_player(player)
 
 
 class PokerBet(AbstractAction):
@@ -96,7 +96,7 @@ class PokerSwitchCards(AbstractAction):
 
         for card in cards_to_switch:
             self.game._discard_pile.insert_at_end(player.hand.pull_card(card))
-            player.add_card(self.game._deck.pull_from_top())
+            self.game.dealer.deal([player.hand], 1)
 
     def _can_switch_cards(self, hand: Hand, cards_to_switch: list) -> bool:
         has_ace = {

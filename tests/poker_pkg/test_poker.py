@@ -3,21 +3,24 @@ from unittest import mock
 import pytest
 
 from card_pkg.card import Card
+from card_pkg.constants import ALL_CARDS_NO_JOKERS
 from card_pkg.deck import Deck
 from card_pkg.hand import Hand, PokerHand
+from game_engine.engine import AbstractStartingPlayerStrategy, FirstPlayerStarts
 from game_engine.errors import (
     IllegalActionException,
     PlayerCannotJoin,
     PlayerOutOfOrderException,
     TooManyPlayers,
 )
+from poker_pkg.dealer import Dealer
 from poker_pkg.errors import (
     IllegalBetException,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
 )
-from poker_pkg.game import PokerGame, create_poker_game
+from poker_pkg.game import HighestCardStarts, PokerGame, create_poker_game
 from poker_pkg.player import PokerPlayer
 from poker_pkg.shuffler import FakeShufflerByPosition
 from poker_pkg.steps import DealStep, EndRoundStep
@@ -114,8 +117,41 @@ def test_start_game__initial_state():
     assert game.get_players()[1].purse == 500
     assert game.get_players()[2].purse == 500
 
-    assert Card("RJ") not in game._deck
-    assert Card("BJ") not in game._deck
+    assert Card("RJ") not in game.deck
+    assert Card("BJ") not in game.deck
+
+    assert game.current_player == game.get_players()[0]
+
+
+class SecondPlayerStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        return 2
+
+
+class LastPlayerStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        return len(self.game.get_players())
+
+
+@pytest.mark.parametrize(
+    "strategy, shuffler, expected_starting_player",
+    [
+        (SecondPlayerStarts, None, 1),
+        (LastPlayerStarts, None, 2),
+        (HighestCardStarts, shuffler_factory([["13H"], ["1H"], ["7H"]]), 1),
+    ],
+    ids=[
+        "second seat",
+        "last seat",
+        "highest card",
+    ],
+)
+def test_first_player_strategy(strategy, shuffler, expected_starting_player):
+    game = game_factory(shuffler=shuffler, first_player_strategy=strategy)
+
+    game.start()
+
+    assert game.current_player == game.get_players()[expected_starting_player]
 
 
 def test_game_can_set_chips_per_player():
@@ -129,13 +165,13 @@ def test_start_round__initial_state():
     game = game_factory()
 
     game.start()
-    assert len(game._table) == 3
+    assert len(game.table) == 3
     for x in range(1, 4):
-        assert isinstance(game._table.get_at_seat(x).hand, Hand)
-        assert len(game._table.get_at_seat(x).hand) == 5
-        assert isinstance(game._table.get_at_seat(x).hand[0], Card)
+        assert isinstance(game.table.get_at_seat(x).hand, Hand)
+        assert len(game.table.get_at_seat(x).hand) == 5
+        assert isinstance(game.table.get_at_seat(x).hand[0], Card)
 
-    assert len(game._deck) == 37
+    assert len(game.deck) == 37
     assert game.current_player == game.get_players()[0]
     assert game.round_count == 1
 
@@ -156,13 +192,14 @@ def test_start_round_shuffles_deck_and_deals():
 def test_deal_cycles_hands():
     # fmt: off
     fake_shuffler = FakeShufflerByPosition([
-        54, 1, 53, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
+        1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ])
+    ], all_cards=ALL_CARDS_NO_JOKERS)
+
     # fmt: on
-    deck = Deck()
-    fake_shuffler.shuffle(deck)
+    # deck = Deck()
+    # fake_shuffler.shuffle(deck)
 
     players = []
     for _ in range(4):
@@ -170,20 +207,28 @@ def test_deal_cycles_hands():
         p.hand = PokerHand()
         players.append(p)
 
-    game = game_factory(shuffler=fake_shuffler, players=players, deck_factory=lambda: deck)
+    def get_dealer(deck, **kwargs) -> Dealer:
+        return Dealer(deck, shuffler=fake_shuffler)
 
-    step = DealStep(game)
+    game = game_factory(
+        players=players,
+        dealer_factory=get_dealer,
+    )
+    # game.start()
+
+    step = DealStep(game, config={"count": 5})
+    game.dealer.shuffle()
     step._deal([p.hand for p in players], count=5)
 
-    assert players[0].hand[0] == Card("1H")
-    assert players[1].hand[0] == Card("RJ")
-    assert players[2].hand[0] == Card("2H")
-    assert players[3].hand[0] == Card("BJ")
-    assert players[0].hand[1] == Card("3H")
+    assert players[0].hand[0] == Card("1S")
+    assert players[1].hand[0] == Card("2S")
+    assert players[2].hand[0] == Card("1H")
+    assert players[3].hand[0] == Card("3S")
+    assert players[0].hand[1] == Card("2H")
 
 
 def test_deal__cards_are_removed_from_deck():
-    game = game_factory(deck_factory=Deck)
+    game = game_factory()
 
     player = PokerPlayer()
     player.hand = PokerHand()
@@ -192,7 +237,7 @@ def test_deal__cards_are_removed_from_deck():
     step._deal([player.hand], count=5)
 
     for c in player.hand:
-        assert c not in game._deck
+        assert c not in game.deck
 
 
 def test_game_fails_when_too_many_players():
@@ -286,20 +331,20 @@ def test_fold():
 
     game.start()
 
-    assert len(game._table) == 3
+    assert len(game.table) == 3
 
     assert game.current_player == player1
 
     game.fold(player1)
     assert player1.purse == 300
     assert game.pot.total == 0
-    assert len(game._table) == 2
+    assert len(game.table) == 2
     assert game.current_player == player2
 
     game.all_in(player2)
     assert player2.purse == 0
     assert game.pot.total == 228
-    assert len(game._table) == 2
+    assert len(game.table) == 2
     assert game.current_player == player3
 
     game.fold(player3)
@@ -307,7 +352,7 @@ def test_fold():
 
     assert player2.purse == 228
     assert game.pot.total == 0
-    assert len(game._table) == 1
+    assert len(game.table) == 1
     assert game.current_player == None
 
 
@@ -560,7 +605,7 @@ def test_game__players_without_money_are_out_of_the_game():
 
     game.start()
 
-    assert [p for _, p in game._table] == [player1, player3]
+    assert [p for _, p in game.table] == [player1, player3]
 
 
 def test_bet():
@@ -753,7 +798,6 @@ def test_bet_transfers_to_pot():
     )
     game.start()
 
-    # game.pot = make_pot()
     game.bet(player1, 100)
     assert game.pot.total == 100
     assert player1.purse == 400
@@ -782,25 +826,139 @@ def test_bet__invalid_amout():
         game.bet(player1, -600.66)
 
 
-# Rule sets
-# Stud
-#   distribute 5 cards
-#   round of betting
-#   find winner
-# Draw
-#   distribute 5 cards
-#   round of betting
-#   players change up to 3 cards (up to four is they have an Ace)
-#   round of betting
-#   find winner
+class BlindsFactory:
+    def __init__(self, game: PokerGame) -> None:
+        self.game = game
+
+    def get_small_blind(self) -> int:
+        return 1
+
+    def get_big_blind(self) -> int:
+        return 2
 
 
-# def test_start_game_assigns_player_ids():
-#     player1 = PokerPlayer(purse=500, name="Michael", id=42)
-#     game = game_factory(
-#         players=[
-#             player1,
-#         ]
-#     )
+#  Update those tests; If the first player has the dealer chip, then the SECOND player has the small blind
+def test_start_game_with_blinds():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        blinds_factory=BlindsFactory,
+    )
 
-#     assert game.get_player_ids() == [42]
+    game.start()
+
+    assert player1.purse == 499
+    assert player2.purse == 498
+    assert game.pot.total == 3
+    assert game.current_player == player3
+
+
+def test_start_game_with_blinds__only_2_players():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+        ],
+        blinds_factory=BlindsFactory,
+        first_player_strategy=FirstPlayerStarts,
+    )
+
+    game.start()
+
+    # we will first need to determine who gets the dealer chip
+    # assert 1 == 2
+    assert player1.purse == 499
+    assert player2.purse == 498
+    assert game.pot.total == 3
+    assert game.current_player == player1
+
+
+def test_big_blind_can_play_again_when_called():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        blinds_factory=BlindsFactory,
+    )
+
+    game.start()
+
+    game.fold(player3)
+
+    assert game.current_player == player1
+
+    game.call(player1)
+    assert player1.purse == 498
+    assert game.current_player == player2
+
+    game.check(player2)
+    assert game.current_player == None
+
+
+def test_big_blind_can_play_again_when_called__v2():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        blinds_factory=BlindsFactory,
+    )
+
+    game.start()
+
+    game.call(player3)
+
+    assert game.current_player == player1
+
+    game.fold(player1)
+    assert game.current_player == player2
+
+    game.check(player2)
+    assert game.current_player == None
+
+
+def test_big_blind_cannot_play_again_when_extra_raised_is_called():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        blinds_factory=BlindsFactory,
+    )
+
+    game.start()
+
+    game.call(player3)
+    game.fold(player1)
+    game.raise_bet(player2, 2)
+
+    game.call(player3)
+
+    assert game.current_player == None
+
+
+# test when blinds are flipped when only 2 players
+# test when blinds are larger than players' purses
+# test big blind player can only talk again on the first betting step
+# test increasing blinds (by time, by round count)

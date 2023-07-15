@@ -3,7 +3,9 @@ from typing import Union
 import pytest
 
 from card_pkg.card import Card
+from card_pkg.deck import DeckWithoutJokers
 from poker_pkg.app import PokerApp, create_poker_app
+from poker_pkg.dealer import Dealer
 from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.pot import Pot
@@ -47,34 +49,35 @@ def game_factory(
     chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
     pot_factory=None,
-    deck_factory=None,
+    dealer_factory=None,
+    **kwargs,
 ) -> PokerGame:
     init_params = {"chips_per_player": chips_per_player}
-
-    if shuffler is not None:
-        init_params["shuffler"] = shuffler
 
     if pot_factory is not None:
         init_params["pot_factory"] = pot_factory
 
-    if deck_factory is not None:
-        init_params["deck_factory"] = deck_factory
+    if dealer_factory is not None:
+        init_params["dealer_factory"] = dealer_factory
+    else:
+
+        def get_dealer(_, **kwargs) -> Dealer:
+            return Dealer(DeckWithoutJokers(), shuffler=shuffler)
+
+        init_params["dealer_factory"] = get_dealer
 
     if type(players) is int:
         init_params["max_players"] = players
-        players = [PokerPlayer() for _ in range(players)]
+        players = [PokerPlayer(name=f"John {i+1}") for i in range(players)]
     else:
-        # init_params["players"] = players
         init_params["max_players"] = len(players)
+
+    init_params.update(**kwargs)
 
     game = create_poker_game(game_type=game_type, **init_params)
 
-    # if type(players) is int:
-    # print("creating players")
-
     for p in players:
         game.join(p)
-        # p.hand_factory = game.hand_factory
 
     return game
 
