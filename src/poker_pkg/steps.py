@@ -22,7 +22,7 @@ from .shuffler import AbstractShuffler, Shuffler
 class PlayerStep(AbstractRoundStep):
     def start(self) -> None:
         self.game.all_players_played = False
-        self.game.current_player = self.game.table.get_nth_player(1)
+        self.game.current_player = self.game.table.get_nth_player(2)
 
     def end(self) -> None:
         if self.maybe_end():
@@ -76,16 +76,23 @@ class BlindBettingStep(BettingStep):
     def start(self) -> None:
         super().start()
 
-        if self.blinds_factory:
-            self.game.bet(self.game.current_player, self.blinds_factory.get_small_blind())
-            self.game.bet(self.game.current_player, self.blinds_factory.get_big_blind())
+        if self.game_has_blinds:
+            if len(self.game.get_players()) == 2:
+                self.game.current_player = self.game.table.get_nth_player(1)
+
+            self.game.bet(self.game.current_player, self.game.betting_structure.small_blind)
+            self.game.bet(self.game.current_player, self.game.betting_structure.big_blind)
+
+    @property
+    def game_has_blinds(self) -> bool:
+        return self.game.betting_structure.small_blind or self.game.betting_structure.big_blind
 
     def _get_players_left_to_talk(self) -> List[AbstractPokerPlayer]:
         players = super()._get_players_left_to_talk()
-        if players or self.blinds_factory is None:
+        if players or not self.game_has_blinds:
             return players
 
-        big_blind_player = self.game.table.get_nth_seat(2).player
+        big_blind_player = self.game.table.get_nth_seat(3).player
         bbp_bets = self.game.pot.bets[big_blind_player]
         if self.game.current_player != big_blind_player and len(bbp_bets) < 2:
             return [self.game.table.get_nth_player(2)]
@@ -139,6 +146,7 @@ class EndRoundStep(PlayerStep):
         winners = self._find_winnners([p for _, p in self.game.table])
         self.game.pot.distribute(winners)
 
+    # This is super weird... figure out why and fix
     def _find_winnners(
         self, players: List[AbstractPokerPlayer]
     ) -> List[List[AbstractPokerPlayer]]:

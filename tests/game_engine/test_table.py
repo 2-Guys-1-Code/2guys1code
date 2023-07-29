@@ -606,7 +606,7 @@ def test_move_chip():
 
     table.move_chip()
 
-    assert table._chip_index == 4
+    assert table._dealer_seat == 4
 
 
 def test_seat_class():

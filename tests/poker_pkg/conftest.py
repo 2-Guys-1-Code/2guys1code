@@ -4,6 +4,7 @@ import pytest
 
 from card_pkg.card import Card
 from card_pkg.deck import DeckWithoutJokers
+from game_engine.engine import AbstractStartingPlayerStrategy
 from poker_pkg.app import PokerApp, create_poker_app
 from poker_pkg.dealer import Dealer
 from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
@@ -11,16 +12,6 @@ from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.pot import Pot
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
-
-# fmt: off
-CARDS_NO_JOKERS = [
-    # 'RJ', 'BJ',
-    '1S', '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', '10S', '11S', '12S', '13S', 
-    '1D', '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', '10D', '11D', '12D', '13D', 
-    '13C', '12C', '11C', '10C', '9C', '8C', '7C', '6C', '5C', '4C', '3C', '2C', '1C', 
-    '13H', '12H', '11H', '10H', '9H', '8H', '7H', '6H', '5H', '4H', '3H', '2H', '1H',
-]
-# fmt: on
 
 
 class DuplicateCardException(Exception):
@@ -43,28 +34,26 @@ def make_pot(bets=None):
     return pot
 
 
+class LastPlayerStarts(AbstractStartingPlayerStrategy):
+    def get_first_player_index(self) -> int:
+        player = self.game.table.get_nth_player(-1)
+        return self.game.table.get_seat(player)
+
+
 def game_factory(
     players: Union[int, list] = 3,
-    game_type: str = PokerTypes.STUD,
-    chips_per_player: int = None,
     shuffler: AbstractShuffler = None,
-    pot_factory=None,
-    dealer_factory=None,
     **kwargs,
 ) -> PokerGame:
-    init_params = {"chips_per_player": chips_per_player}
+    def get_dealer(_, **kwargs) -> Dealer:
+        return Dealer(DeckWithoutJokers(), shuffler=shuffler)
 
-    if pot_factory is not None:
-        init_params["pot_factory"] = pot_factory
-
-    if dealer_factory is not None:
-        init_params["dealer_factory"] = dealer_factory
-    else:
-
-        def get_dealer(_, **kwargs) -> Dealer:
-            return Dealer(DeckWithoutJokers(), shuffler=shuffler)
-
-        init_params["dealer_factory"] = get_dealer
+    init_params = {
+        "game_type": PokerTypes.STUD,
+        "chips_per_player": 500,
+        "dealer_factory": get_dealer,
+        "first_player_strategy": LastPlayerStarts,
+    }
 
     if type(players) is int:
         init_params["max_players"] = players
@@ -74,7 +63,7 @@ def game_factory(
 
     init_params.update(**kwargs)
 
-    game = create_poker_game(game_type=game_type, **init_params)
+    game = create_poker_game(**init_params)
 
     for p in players:
         game.join(p)

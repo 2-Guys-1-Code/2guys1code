@@ -27,6 +27,7 @@ class TurnManager:
         if exc_value is not None:
             print("raised, but not a timeout")
             # The only exception that should skip the player's turn is if they take too long to play
+            # In that case: default action -> check if the player can, fold otherwise
             raise exc_value
 
         try:

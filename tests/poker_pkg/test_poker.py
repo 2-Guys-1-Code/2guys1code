@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+from betting_structure import BasicBettingStructure
 
 from card_pkg.card import Card
 from card_pkg.constants import ALL_CARDS_NO_JOKERS
@@ -26,45 +27,45 @@ from poker_pkg.shuffler import FakeShufflerByPosition
 from poker_pkg.steps import DealStep, EndRoundStep
 
 from ..conftest import make_cards
-from .conftest import CARDS_NO_JOKERS, game_factory, make_pot, shuffler_factory
+from .conftest import LastPlayerStarts, game_factory, shuffler_factory
 
 
 def test_create_game():
-    game = PokerGame(500, max_players=3)
+    game = PokerGame(BasicBettingStructure(), max_players=3)
 
     assert len(game.get_players()) == 0
     assert game.get_free_seats() == 3
 
 
 def test_join_game():
-    game = PokerGame(500, max_players=3)
+    game = PokerGame(BasicBettingStructure(starting_chips=500), max_players=3)
 
-    player = PokerPlayer(name="Jack")
+    player1 = PokerPlayer(name="Jack")
+    player2 = PokerPlayer(name="Zack")
 
-    game.join(player)
+    game.join(player1)
+    game.join(player2)
 
-    players = game.get_players()
-    assert players == [player]
-    assert players[0].purse == 500
-    assert game.get_free_seats() == 2
+    assert game.get_players() == [player1, player2]
+    assert player1.purse == 500
+    assert player2.purse == 500
+    assert game.get_free_seats() == 1
 
 
 def test_player_cannot_join_more_than_once():
-    game = PokerGame(500, max_players=3)
+    game = PokerGame(BasicBettingStructure(), max_players=3)
 
     player = PokerPlayer(name="Jack")
 
     game.join(player)
     game.join(player)
 
-    players = game.get_players()
-    assert players == [player]
-    assert players[0].purse == 500
+    assert game.get_players() == [player]
     assert game.get_free_seats() == 2
 
 
 def test_player_cannot_join_when_no_free_seat():
-    game = PokerGame(500, max_players=2)
+    game = PokerGame(BasicBettingStructure(), max_players=2)
 
     player1 = PokerPlayer(name="Jack")
     player2 = PokerPlayer(name="Zack")
@@ -80,15 +81,12 @@ def test_player_cannot_join_when_no_free_seat():
 
     assert str(e.value) == "There are no free seats in the game."
 
-    players = game.get_players()
-    assert players == [player1, player2]
-    assert players[0].purse == 500
-    assert players[1].purse == 500
+    assert game.get_players() == [player1, player2]
     assert game.get_free_seats() == 0
 
 
 def test_player_cannot_join_when_game_has_started():
-    game = create_poker_game(chips_per_player=500, max_players=3)
+    game = create_poker_game(max_players=3)
 
     player1 = PokerPlayer(name="Jack")
     player2 = PokerPlayer(name="Zack")
@@ -128,11 +126,6 @@ class SecondPlayerStarts(AbstractStartingPlayerStrategy):
         return 2
 
 
-class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
-        return len(self.game.get_players())
-
-
 @pytest.mark.parametrize(
     "strategy, shuffler, expected_starting_player",
     [
@@ -151,11 +144,11 @@ def test_first_player_strategy(strategy, shuffler, expected_starting_player):
 
     game.start()
 
-    assert game.current_player == game.get_players()[expected_starting_player]
+    assert game.dealer_player == game.get_players()[expected_starting_player]
 
 
 def test_game_can_set_chips_per_player():
-    game = game_factory(players=2, chips_per_player=1500)
+    game = game_factory(players=2, betting_structure=BasicBettingStructure(starting_chips=1500))
     assert len(game.get_players()) == 2
     assert game.get_players()[0].purse == 1500
     assert game.get_players()[1].purse == 1500
@@ -184,9 +177,10 @@ def test_start_round_shuffles_deck_and_deals():
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
     ])
     # fmt: on
-    game = game_factory(shuffler=fake_shuffler, players=1)
+    game = game_factory(shuffler=fake_shuffler, players=2)
     game.start()
-    assert str(game.get_players()[0].hand) == "1H RJ 2H BJ 3H"
+    assert str(game.get_players()[0].hand) == "1H 2H 3H 4H 5H"
+    assert str(game.get_players()[1].hand) == "RJ BJ 1S 2S 3S"
 
 
 def test_deal_cycles_hands():
@@ -265,7 +259,7 @@ def test_all_in():
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ], all_cards=CARDS_NO_JOKERS)
+    ], all_cards=ALL_CARDS_NO_JOKERS)
     # fmt: on
 
     player1 = PokerPlayer(purse=300, name="Jack")
@@ -400,7 +394,7 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
         1, 2, 52, 3, 51, 4, 50, 5, 49, 6, 48, 7, 47, 8, 46, 9, 45, 10, 44, 11,
         43, 12, 42, 13, 41, 14, 40, 15, 39, 16, 38, 17, 37, 18, 36, 19, 35, 20, 34, 21,
         33, 22, 32, 23, 31, 24, 30, 25, 29, 26, 28, 27
-    ], all_cards=CARDS_NO_JOKERS)
+    ], all_cards=ALL_CARDS_NO_JOKERS)
     # fmt: on
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
@@ -508,7 +502,7 @@ def test_game__two_rounds():
     game.check(player3)
 
     # Start the next round automatically?
-    game.start()
+    game.start_round()
 
     game.all_in(player1)
     game.all_in(player2)
@@ -540,7 +534,7 @@ def test_game__two_rounds__more_coverage():
     game.fold(player3)
 
     # Start the next round automatically?
-    game.start()
+    game.start_round()
 
     game.all_in(player1)
     game.fold(player2)
@@ -809,9 +803,11 @@ def test_bet_transfers_to_pot():
 
 def test_bet__invalid_amout():
     player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Bort")
     game = game_factory(
         players=[
             player1,
+            player2,
         ]
     )
     game.start()
@@ -826,18 +822,6 @@ def test_bet__invalid_amout():
         game.bet(player1, -600.66)
 
 
-class BlindsFactory:
-    def __init__(self, game: PokerGame) -> None:
-        self.game = game
-
-    def get_small_blind(self) -> int:
-        return 1
-
-    def get_big_blind(self) -> int:
-        return 2
-
-
-#  Update those tests; If the first player has the dealer chip, then the SECOND player has the small blind
 def test_start_game_with_blinds():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Kichael")
@@ -848,7 +832,7 @@ def test_start_game_with_blinds():
             player2,
             player3,
         ],
-        blinds_factory=BlindsFactory,
+        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
     )
 
     game.start()
@@ -867,14 +851,12 @@ def test_start_game_with_blinds__only_2_players():
             player1,
             player2,
         ],
-        blinds_factory=BlindsFactory,
+        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
         first_player_strategy=FirstPlayerStarts,
     )
 
     game.start()
 
-    # we will first need to determine who gets the dealer chip
-    # assert 1 == 2
     assert player1.purse == 499
     assert player2.purse == 498
     assert game.pot.total == 3
@@ -891,7 +873,7 @@ def test_big_blind_can_play_again_when_called():
             player2,
             player3,
         ],
-        blinds_factory=BlindsFactory,
+        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
     )
 
     game.start()
@@ -918,7 +900,7 @@ def test_big_blind_can_play_again_when_called__v2():
             player2,
             player3,
         ],
-        blinds_factory=BlindsFactory,
+        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
     )
 
     game.start()
@@ -944,7 +926,7 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
             player2,
             player3,
         ],
-        blinds_factory=BlindsFactory,
+        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
     )
 
     game.start()
@@ -958,7 +940,6 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
     assert game.current_player == None
 
 
-# test when blinds are flipped when only 2 players
 # test when blinds are larger than players' purses
 # test big blind player can only talk again on the first betting step
 # test increasing blinds (by time, by round count)

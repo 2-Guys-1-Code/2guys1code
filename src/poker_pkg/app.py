@@ -1,5 +1,5 @@
 import uuid
-from typing import List
+from typing import Callable, List
 
 from .actions import PokerActionName
 from .errors import PlayerNotInGame, PokerException, ValidationException
@@ -35,11 +35,17 @@ class ValidationError(Exception):
 
 
 class PokerApp:
-    def __init__(self, player_repository: AbstractPlayerRepository, max_games: int = 2) -> None:
+    def __init__(
+        self,
+        player_repository: AbstractPlayerRepository,
+        max_games: int = 2,
+        game_factory: Callable = create_poker_game,
+    ) -> None:
         self._id = str(uuid.uuid4())
         self.games = []
         self.player_repository = player_repository
         self.max_games = max_games
+        self.game_factory = game_factory
 
     def get_id(self) -> str:
         return self._id
@@ -61,7 +67,7 @@ class PokerApp:
         if len(self.games) >= self.max_games:
             raise TooManyGames("The maximum number of games has been reached.")
 
-        game = create_poker_game(**kwargs)
+        game = self.game_factory(**kwargs)
         game.id = self.games[-1].id + 1 if len(self.games) else 1
 
         game.join(host, seat=seat)

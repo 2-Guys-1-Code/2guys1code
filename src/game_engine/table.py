@@ -90,7 +90,7 @@ class GameTable:
             raise CannotCreateTable()
 
         self._active_seat: int | None = None
-        self._chip_index = 1
+        self._dealer_seat = 1
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[Seat] = [Seat(i + 1) for i in range(size)]
 
@@ -103,6 +103,10 @@ class GameTable:
     @property
     def players(self) -> list[AbstractPlayer]:
         return [p.player for p in self._seats if p.player is not None]
+
+    @property
+    def dealer(self) -> AbstractPlayer | None:
+        return self.get_at_seat(self._dealer_seat)
 
     @property
     def current_player(self) -> AbstractPlayer | None:
@@ -248,14 +252,14 @@ class GameTable:
 
     def set_chip_to_seat(self, seat_number: int) -> None:
         self._validate_seat(seat_number)
-        self._chip_index = seat_number
+        self._dealer_seat = seat_number
 
     def move_chip(self, number: int = 1) -> None:
         if not isinstance(number, int) or number < 0:
             raise InvalidNumber()
 
-        player = self._get_next_player(self.get_at_seat(self._chip_index), skip=number - 1)
-        self._chip_index = self.get_seat(player)
+        player = self._get_next_player(self.get_at_seat(self._dealer_seat), skip=number - 1)
+        self._dealer_seat = self.get_seat(player)
 
     def _validate_player_position(self, number: int) -> None:
         number_of_seats = len(self._seats)
@@ -295,13 +299,13 @@ class GameTable:
         # return [s for s in seats if s.player is not None]
 
     def get_nth_player(self, number: int) -> AbstractPlayer | None:
-        seats = self._get_ordered_seats(self._chip_index, only_active=True)
+        seats = self._get_ordered_seats(self._dealer_seat, only_active=True)
         if len(seats) == 0:
             raise TableIsEmpty()
         return seats[self._get_1_indexed(number)].player
 
     def get_nth_seat(self, number: int) -> Seat | None:
-        seats = self._get_ordered_seats(self._chip_index, only_active=False)
+        seats = self._get_ordered_seats(self._dealer_seat, only_active=False)
         if len(seats) == 0:
             raise TableIsEmpty()
         return seats[self._get_1_indexed(number)]

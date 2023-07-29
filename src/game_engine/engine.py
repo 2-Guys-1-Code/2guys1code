@@ -123,6 +123,10 @@ class GameEngine(AbstractGameEngine):
         self.current_step = None
 
     @property
+    def dealer_player(self) -> AbstractPlayer | None:
+        return self._table.dealer
+
+    @property
     def current_player(self) -> AbstractPlayer | None:
         return self._table.current_player
 

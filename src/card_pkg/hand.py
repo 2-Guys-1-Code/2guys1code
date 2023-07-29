@@ -71,8 +71,8 @@ class PokerHand(Hand):
             PokerHand._high_card_test,
         ]
         for test in ordered_tests:
-            print(test.__name__)
-            print(hand_1, "-", hand_2)
+            # print(test.__name__)
+            # print(hand_1, "-", hand_2)
             winner = test(hand_1, hand_2)
             # winning_test = test.__name__
             if winner != 0:

@@ -2,28 +2,26 @@ from enum import Enum
 from functools import partial
 from typing import Callable, List
 
-from shuffler import Shuffler
+from betting_structure import AbstractBettingStructure, BasicBettingStructure
 
 from card_pkg.card_collection import CardCollection
-from card_pkg.deck import Deck, DeckWithoutJokers
+from card_pkg.deck import DeckWithoutJokers
 from card_pkg.hand import PokerHand
 from game_engine.engine import (
     AbstractRoundStep,
     AbstractStartingPlayerStrategy,
-    FirstPlayerStarts,
     GameEngine,
 )
 from game_engine.errors import PlayerCannotJoin, TooManyPlayers
 from game_engine.table import AlreadySeated, FreePickTable, GameTable, TableIsFull
 
 from .actions import PokerActionName
-from .dealer import AbstractDealer, Dealer
+from .dealer import Dealer
 from .errors import (
     InvalidAmountMissing,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
     PlayerNotInGame,
-    ValidationException,
 )
 from .player import AbstractPokerPlayer, PokerPlayer
 from .pot import Pot
@@ -59,7 +57,7 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
         winner = winners[0][0]
         return self.game.table.get_seat(winner)
 
-    # Duplicated from EndRoundSte -- REFACTOR
+    # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(
         self, players: List[AbstractPokerPlayer]
     ) -> List[List[AbstractPokerPlayer]]:
@@ -84,31 +82,24 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
         return winners
 
 
-class HighestOfSuitStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
-        return 1
-
-
 class PokerGame(GameEngine):
     def __init__(
         self,
-        chips_per_player: int = None,
+        betting_structure: AbstractBettingStructure,
         pot_factory: Pot = Pot,
         max_players: int = 9,
         seating: str = None,
-        # first_player_strategy: Callable = HighestCardStarts,  # This is not right for poker; Fix after refactoring
-        first_player_strategy: Callable = FirstPlayerStarts,  # This is not right for poker; Fix after refactoring
+        first_player_strategy: Callable = HighestCardStarts,
         dealer_factory: Dealer = Dealer,
         **kwargs,
     ) -> None:
+        self.betting_structure = betting_structure
+        self.betting_structure.set_game(self)
         self.dealer = dealer_factory(DeckWithoutJokers(), game=self)
         table_factory = partial(self._create_table, max_players, seating=seating)
         super(PokerGame, self).__init__(
             table_factory=table_factory, first_player_strategy=first_player_strategy
         )
-
-        # This class is starting to look like an AbstractGameEngine;
-        # Everything below belongs either in injected rules, or in a subclass
 
         # This should become a "hidden" card collection of sorts
         # This only matters to the dealer. Used when switching cards, dealing
@@ -122,7 +113,6 @@ class PokerGame(GameEngine):
         self._pot_factory = pot_factory
 
         # See comments in .join()
-        self._chips_per_player = 500 if chips_per_player is None else chips_per_player
         self.id = None
 
     @property
@@ -155,19 +145,8 @@ class PokerGame(GameEngine):
             # It would be nice to allow joining a table mid-game
             raise PlayerCannotJoin("The game has started.")
 
-        # This should be a configuration of the game; Do players come in
-        # with their own chips or are they given chips upon joining?
-
-        # When instantiating the game, maybe we should specify a callable to apply joining logic.
-
-        # We could distribute the chips on start (and we should probably also have a
-        # callable to apply logic when the game starts), but when players sit down for
-        # the poker game, I'd like them to get their chips right away
         if player.purse is None:
-            self._distribute_chips(
-                [player],
-                self._chips_per_player,
-            )
+            self.betting_structure.buy_in(player)
 
         try:
             self._table.join(player, seat=seat)
@@ -176,39 +155,15 @@ class PokerGame(GameEngine):
         except TableIsFull:
             raise PlayerCannotJoin("There are no free seats in the game.")
 
-    def _distribute_chips(self, players: List[AbstractPokerPlayer], chips_per_player: int) -> None:
-        for p in players:
-            p.add_to_purse(chips_per_player)
-
-    # This could be on the step and raise if the action cannot be done
-    # def _get_action(self, action_name: PokerActionName) -> AbstractAction:
-    #     self.current_step.get_action(action_name)
-    #     action_map = {
-    #         PokerActionName.CHECK: PokerCheck,
-    #         PokerActionName.ALLIN: PokerAllIn,
-    #         PokerActionName.FOLD: PokerFold,
-    #         PokerActionName.BET: PokerBet,
-    #         PokerActionName.CALL: PokerCall,
-    #         PokerActionName.RAISE: PokerRaise,
-    #         PokerActionName.SWITCH: PokerSwitchCards,
-    #     }
-
-    #     action_class = action_map.get(action_name)
-
-    #     if action_class is None:
-    #         raise IllegalActionException(action_name)
-
-    #     return action_class(self)
-
     def do(self, action_name: PokerActionName, player: AbstractPokerPlayer, **kwargs) -> None:
         if player not in self.get_players():
             raise PlayerNotInGame()
 
         action = self.current_step.get_action(action_name, self)
-        # action = self._get_action(action_name)
 
         with TurnManager(self, player, action_name):
-            self.is_last_player = self.current_player is self._table.get_nth_player(-1)
+            # nth player = 1 means the dealer
+            self.is_last_player = self.current_player is self._table.get_nth_player(1)
             action.do(player, **kwargs)
             self.all_players_played = self.is_last_player or self.all_players_played
 
@@ -351,7 +306,10 @@ def get_round_steps(game_type: str, game: PokerGame, **kwargs) -> list:
     return []
 
 
-def create_poker_game(game_type: str = PokerTypes.STUD, **kwargs) -> PokerGame:
-    game = PokerGame(**kwargs)
+def create_poker_game(
+    game_type: str = PokerTypes.STUD, betting_structure: AbstractBettingStructure = None, **kwargs
+) -> PokerGame:
+    betting_structure = betting_structure or BasicBettingStructure()
+    game = PokerGame(betting_structure, **kwargs)
     game.steps = get_round_steps(game_type, game, **kwargs)
     return game
