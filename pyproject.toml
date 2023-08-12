@@ -11,8 +11,9 @@ pokerapi = "api.main:start"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-fastapi = "^0.86.0"
+fastapi = "^0"
 uvicorn = "^0.19.0"
+pydantic = "^2.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"
@@ -26,6 +27,9 @@ pylint = "^2.14.5"
 httpx = "^0.23.1"
 requests = "^2.28.1"
 isort = "^5.10.1"
+
+[tool.poetry.group.dev.dependencies]
+bump-pydantic = "^0.6.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
