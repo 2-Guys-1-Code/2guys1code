@@ -1,10 +1,20 @@
+from game_engine.player import AbstractPlayer
+
+
 class GameException(Exception):
     def __str__(self) -> str:
         return self.args[0]
 
 
 class PlayerOutOfOrderException(GameException):
-    pass
+    def __init__(self, current_player: AbstractPlayer, attempted_player: AbstractPlayer) -> None:
+        self.current_player = current_player
+        self.attempted_player = attempted_player
+
+    def __str__(self) -> str:
+        return (
+            f"{self.attempted_player} attempted to play, but it is {self.current_player}'s turn."
+        )
 
 
 class TooManyPlayers(GameException):

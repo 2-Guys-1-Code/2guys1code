@@ -21,7 +21,7 @@ class TurnManager:
             raise GameException("The game has not started")
 
         if self.game.current_player != self.player:
-            raise PlayerOutOfOrderException()
+            raise PlayerOutOfOrderException(self.game.current_player, self.player)
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         if exc_value is not None:

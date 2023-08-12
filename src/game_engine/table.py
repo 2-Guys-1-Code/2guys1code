@@ -44,6 +44,10 @@ class InvalidNumber(Exception):
     pass
 
 
+class InvalidPosition(Exception):
+    pass
+
+
 class CannotCreateTable(Exception):
     pass
 
@@ -58,9 +62,8 @@ class GameDirection(Enum):
 
 
 class Seat:
-    # TODO: The seat should hold its seat number after all
     def __init__(self, position: int, player: AbstractPlayer = None, active: bool = True) -> None:
-        self.position = position
+        self._position = position
         self._player = player
         self._active = active
 
@@ -76,12 +79,22 @@ class Seat:
         self._active = state
 
     @property
+    def position(self) -> int:
+        return self._position
+
+    @property
     def player(self) -> AbstractPlayer:
         return self._player
 
     @player.setter
     def player(self, player: AbstractPlayer):
         self._player = player
+
+    def __repr__(self) -> str:
+        if self._player is None:
+            return f"{self._position} - Empty "
+
+        return f"{self._position} - {self._player}"
 
 
 class GameTable:
@@ -94,7 +107,7 @@ class GameTable:
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[Seat] = [Seat(i + 1) for i in range(size)]
 
-    # We only need this as a dict to avoid having to do this manually in the api layer;
+    # TODO: We only need this as a dict to avoid having to do this manually in the api layer;
     # I'd like to find a way for Pydantic to do this
     @property
     def seats(self) -> dict[int, AbstractPlayer]:
@@ -190,14 +203,14 @@ class GameTable:
 
         self._active_seat = seat_number
 
-    def _get_next_player(
-        self, starting_player: AbstractPlayer, skip: int = 0
-    ) -> AbstractPlayer | None:
-        starting_seat = self.get_seat(starting_player)
-        seats = self._get_ordered_seats(starting_seat)
+    def _get_next_player(self, starting_seat: int, skip: int = 0) -> AbstractPlayer | None:
+        # starting_seat = self.get_seat(starting_player)
+        starting_player = self.get_at_seat(starting_seat)
+        seats = self._get_ordered_players(starting_seat)
         if len(seats) == 0:
             raise TableIsEmpty()
 
+        # I don't remember what this means
         index = 0 if seats[0].player is not starting_player else (skip + 1) % len(seats)
         return seats[index].player
 
@@ -205,7 +218,7 @@ class GameTable:
         if self.current_player is None:
             raise NoCurrentPlayer()
 
-        self.current_player = self._get_next_player(self.current_player, skip=skip)
+        self.current_player = self._get_next_player(self._active_seat, skip=skip)
         return self.current_player
 
     def skip_player(self, number: int = 1) -> AbstractPlayer | None:
@@ -239,10 +252,10 @@ class GameTable:
         for s in self._seats:
             s.active = True
 
-    def __iter__(self) -> tuple[int, AbstractPlayer]:
-        seats = self._get_ordered_seats(only_active=True)
+    def __iter__(self) -> Seat:
+        seats = self._get_ordered_players(only_active=True)
         for s in seats:
-            yield (s.position, s.player)
+            yield s
 
     def __getitem__(self, index: int) -> AbstractPlayer | None:
         pass
@@ -258,7 +271,7 @@ class GameTable:
         if not isinstance(number, int) or number < 0:
             raise InvalidNumber()
 
-        player = self._get_next_player(self.get_at_seat(self._dealer_seat), skip=number - 1)
+        player = self._get_next_player(self._dealer_seat, skip=number - 1)
         self._dealer_seat = self.get_seat(player)
 
     def _validate_player_position(self, number: int) -> None:
@@ -295,20 +308,34 @@ class GameTable:
 
         seats.rotate(-rotation)
 
-        return [s for s in seats if s.player is not None and (not only_active or s.active is True)]
-        # return [s for s in seats if s.player is not None]
+        return [s for s in seats if (not only_active or s.active is True)]
 
-    def get_nth_player(self, number: int) -> AbstractPlayer | None:
-        seats = self._get_ordered_seats(self._dealer_seat, only_active=True)
+    def _get_ordered_players(
+        self, starting_seat_number: int = None, only_active: bool = True
+    ) -> list[Seat]:
+        seats = self._get_ordered_seats(
+            starting_seat_number=starting_seat_number, only_active=only_active
+        )
+
+        return [s for s in seats if s.player is not None]
+
+    def get_nth_player(self, number: int) -> Seat | None:
+        seats = self._get_ordered_players(self._dealer_seat, only_active=True)
         if len(seats) == 0:
             raise TableIsEmpty()
-        return seats[self._get_1_indexed(number)].player
+        try:
+            return seats[self._get_1_indexed(number)]
+        except IndexError:
+            raise InvalidPosition()
 
     def get_nth_seat(self, number: int) -> Seat | None:
         seats = self._get_ordered_seats(self._dealer_seat, only_active=False)
         if len(seats) == 0:
             raise TableIsEmpty()
-        return seats[self._get_1_indexed(number)]
+        try:
+            return seats[self._get_1_indexed(number)]
+        except IndexError:
+            raise InvalidPosition()
 
 
 class FreePickTable(GameTable):

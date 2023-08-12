@@ -194,13 +194,13 @@ class GameEngine(AbstractGameEngine):
     # We have to deal with this whole .get_players() vs .players thing
     # We agreed to keep the property, but make it a list
     def get_players(self) -> List[AbstractPlayer]:
-        return [p for _, p in self._table]
+        return [s.player for s in self._table]
 
     # We only need this to avoid having to do this manually in the api layer;
     # I'd like to find a way for Pydantic to do this
     @property
     def players(self) -> dict:
-        return {p.id: p for _, p in self._table}
+        return {s.player.id: s.player for s in self._table}
 
     @property
     def table(self) -> GameTable:

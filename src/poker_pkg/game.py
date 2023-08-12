@@ -21,6 +21,7 @@ from .errors import (
     InvalidAmountMissing,
     InvalidAmountNegative,
     InvalidAmountNotAnInteger,
+    NotEnoughPlayers,
     PlayerNotInGame,
 )
 from .player import AbstractPokerPlayer, PokerPlayer
@@ -48,11 +49,11 @@ class PokerTypes(Enum):
 
 class HighestCardStarts(AbstractStartingPlayerStrategy):
     def get_first_player_index(self) -> int:
-        for _, p in self.game.table:
-            p.hand = PokerHand(max_length=1)
+        for s in self.game.table:
+            s.player.hand = PokerHand(max_length=1)
 
         self.game.dealer.shuffle()
-        self.game.dealer.deal([p.hand for _, p in self.game.table], count=1)
+        self.game.dealer.deal([s.player.hand for s in self.game.table], count=1)
         winners = self._find_winnners(self.game.get_players())
         winner = winners[0][0]
         return self.game.table.get_seat(winner)
@@ -101,6 +102,9 @@ class PokerGame(GameEngine):
             table_factory=table_factory, first_player_strategy=first_player_strategy
         )
 
+        # I dont like this
+        self.minimum_players: int = 2
+
         # This should become a "hidden" card collection of sorts
         # This only matters to the dealer. Used when switching cards, dealing
         # community cards and returning cards at the end of the round
@@ -137,6 +141,14 @@ class PokerGame(GameEngine):
             raise TooManyPlayers()
 
     def start(self) -> None:
+        # TODO: Add a test for this! Without this, we keep starting a new round and dealing cards
+        if self.started:
+            return
+
+        nb_players = len(self.table)
+        if nb_players < self.minimum_players:
+            raise NotEnoughPlayers(self.minimum_players, nb_players)
+
         self.pot = self._pot_factory()
         super().start()
 
@@ -157,13 +169,13 @@ class PokerGame(GameEngine):
 
     def do(self, action_name: PokerActionName, player: AbstractPokerPlayer, **kwargs) -> None:
         if player not in self.get_players():
-            raise PlayerNotInGame()
+            raise PlayerNotInGame(player)
 
         action = self.current_step.get_action(action_name, self)
 
         with TurnManager(self, player, action_name):
             # nth player = 1 means the dealer
-            self.is_last_player = self.current_player is self._table.get_nth_player(1)
+            self.is_last_player = self.current_player is self._table.get_nth_player(1).player
             action.do(player, **kwargs)
             self.all_players_played = self.is_last_player or self.all_players_played
 
@@ -184,7 +196,7 @@ class PokerGame(GameEngine):
         # We could use pydantic models here too;
         # Or the API could allow for specifying more accurate models
         if amount is None:
-            raise InvalidAmountMissing("field required", ["bet_amount"], "value_error.missing")
+            raise InvalidAmountMissing("Field required", ["bet_amount"], "value_error.missing")
 
         if type(amount) is not int:
             raise InvalidAmountNotAnInteger(

@@ -1,3 +1,4 @@
+from collections import deque
 from typing import List
 
 from card_pkg.card_collection import CardCollection
@@ -22,7 +23,8 @@ from .shuffler import AbstractShuffler, Shuffler
 class PlayerStep(AbstractRoundStep):
     def start(self) -> None:
         self.game.all_players_played = False
-        self.game.current_player = self.game.table.get_nth_player(2)
+        self.game.table.move_chip(0)
+        self.game.current_player = self.game.table.get_nth_player(2).player
 
     def end(self) -> None:
         if self.maybe_end():
@@ -34,7 +36,9 @@ class PlayerStep(AbstractRoundStep):
 
     def _get_players_left_to_talk(self) -> List[AbstractPokerPlayer]:
         return [
-            p for _, p in self.game.table if self.game.pot.player_owed(p) != 0 and p.purse != 0
+            s.player
+            for s in self.game.table
+            if self.game.pot.player_owed(s.player) != 0 and s.player.purse != 0
         ]
 
     def maybe_end(self) -> bool:
@@ -78,7 +82,7 @@ class BlindBettingStep(BettingStep):
 
         if self.game_has_blinds:
             if len(self.game.get_players()) == 2:
-                self.game.current_player = self.game.table.get_nth_player(1)
+                self.game.current_player = self.game.table.get_nth_player(1).player
 
             self.game.bet(self.game.current_player, self.game.betting_structure.small_blind)
             self.game.bet(self.game.current_player, self.game.betting_structure.big_blind)
@@ -95,7 +99,7 @@ class BlindBettingStep(BettingStep):
         big_blind_player = self.game.table.get_nth_seat(3).player
         bbp_bets = self.game.pot.bets[big_blind_player]
         if self.game.current_player != big_blind_player and len(bbp_bets) < 2:
-            return [self.game.table.get_nth_player(2)]
+            return [self.game.table.get_nth_player(2).player]
 
         return []
 
@@ -143,7 +147,7 @@ class EndRoundStep(PlayerStep):
         pass
 
     def _distribute_pot(self) -> None:
-        winners = self._find_winnners([p for _, p in self.game.table])
+        winners = self._find_winnners([s.player for s in self.game.table])
         self.game.pot.distribute(winners)
 
     # This is super weird... figure out why and fix
@@ -174,9 +178,9 @@ class EndRoundStep(PlayerStep):
         self.game.dealer.return_cards(collections)
 
     def _remove_broke_players(self):
-        for _, p in self.game.table:
-            if p.purse == 0:
-                self.game.table.leave(p)
+        for s in self.game.table:
+            if s.player.purse == 0:
+                self.game.table.leave(s.player)
 
 
 class DealStep(AbstractRoundStep):
@@ -186,7 +190,12 @@ class DealStep(AbstractRoundStep):
 
     def start(self) -> None:
         self.game.dealer.shuffle()
-        self._deal([p.hand for _, p in self.game.table], count=self.count)
+        seats = deque(
+            self.game.table._get_ordered_players(self.game.table._dealer_seat)
+        )  # TODO: This is private!
+        seats.rotate(-1)
+
+        self._deal([s.player.hand for s in seats], count=self.count)
         self.game.end_step()
 
     def end(self) -> None:

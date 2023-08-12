@@ -2,6 +2,58 @@ from abc import ABC, abstractmethod
 
 from game_engine.engine import AbstractGameEngine
 from game_engine.player import AbstractPlayer
+from game_engine.round_manager import AbstractRoundManager
+
+
+class AbstractBlindFormula(ABC):
+    def __init__(self, round_manager: AbstractRoundManager) -> None:
+        self._round_manager: AbstractRoundManager = round_manager
+
+    @abstractmethod
+    def get_value(self) -> int:
+        pass
+
+
+class StaticBlindFormula(AbstractBlindFormula):
+    def __init__(self, blind: int) -> None:
+        self._blind: int = blind
+
+    def get_value(self) -> int:
+        return self._blind
+
+
+class TimeBasedBlindFormula(AbstractBlindFormula):
+    def __init__(self, round_manager: AbstractRoundManager, rules: list) -> None:
+        self._round_manager: AbstractRoundManager = round_manager
+        self._rules: list = rules
+
+    def get_value(self) -> int:
+        round = self._round_manager.current_round
+        if round is None:
+            return None  # raise?
+
+        for t, b in reversed(self._rules):
+            if round._start_time >= t:
+                return b
+
+        return 0
+
+
+class RoundBasedBlindFormula(AbstractBlindFormula):
+    def __init__(self, round_manager: AbstractRoundManager, rules: list) -> None:
+        self._round_manager: AbstractRoundManager = round_manager
+        self._rules: list = rules
+
+    def get_value(self) -> int:
+        round = self._round_manager.current_round
+        if round is None:
+            return None  # raise?
+
+        for n, b in reversed(self._rules):
+            if round._number >= n:
+                return b
+
+        return 0
 
 
 class AbstractBettingStructure(ABC):
@@ -51,9 +103,9 @@ class AbstractBettingFormula(ABC):
 class BasicBettingStructure(AbstractBettingStructure):
     def __init__(
         self,
-        small_blind: int = 0,
-        big_blind: int = 0,
-        ante: int = 0,
+        small_blind: AbstractBlindFormula = StaticBlindFormula(0),
+        big_blind: AbstractBlindFormula = StaticBlindFormula(0),
+        ante: AbstractBlindFormula = StaticBlindFormula(0),
         starting_chips: int = 500,
         bet_formula: AbstractBettingFormula | None = None,
         raise_formula: AbstractBettingFormula | None = None,
@@ -67,19 +119,19 @@ class BasicBettingStructure(AbstractBettingStructure):
 
     @property
     def small_blind(self) -> int:
-        return self._small_blind
+        return self._small_blind.get_value()
 
     @property
     def big_blind(self) -> int:
-        return self._big_blind
+        return self._big_blind.get_value()
 
     @property
     def ante(self) -> int:
-        return self._ante
+        return self._ante.get_value()
 
     @property
     def minimum_bet(self) -> int:
-        return self._big_blind if self._bet_formula is None else self._bet_formula(self)
+        return self.big_blind if self._bet_formula is None else self._bet_formula(self)
 
     @property
     def minimum_raise(self) -> int:

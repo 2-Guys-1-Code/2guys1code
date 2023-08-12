@@ -10,6 +10,7 @@ from game_engine.table import (
     GameTable,
     InvalidNumber,
     InvalidPlayer,
+    InvalidPosition,
     InvalidSeat,
     NoCurrentPlayer,
     PlayerNotSeated,
@@ -494,7 +495,7 @@ def test_get_nth_player(chip_seat, n, expected_player):
     table.set_chip_to_seat(chip_seat)
     table.deactivate_seat(2)
 
-    assert table.get_nth_player(n) == players[expected_player]
+    assert table.get_nth_player(n).player == players[expected_player]
 
 
 @pytest.mark.parametrize(
@@ -529,8 +530,121 @@ def test_get_nth_player__counter_clockwise(chip_seat, n, expected_player):
     table.deactivate_seat(2)
     table.direction = GameDirection.COUNTER_CLOCKWISE
 
-    result = table.get_nth_player(n)
-    assert result == players[expected_player]
+    assert table.get_nth_player(n).player == players[expected_player]
+
+
+def test_get_nth_player__n_is_too_high():
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+
+    table.deactivate_seat(2)
+
+    with pytest.raises(InvalidPosition):
+        table.get_nth_player(2)
+
+    with pytest.raises(InvalidPosition):
+        table.get_nth_player(5)
+
+    with pytest.raises(InvalidPosition):
+        table.get_nth_player(-2)
+
+
+@pytest.mark.parametrize(
+    "chip_seat, n, expected_player",
+    [
+        [1, 1, "player_1"],
+        [1, 3, "player_3"],
+        [1, -1, "player_4"],
+        [1, -3, "player_2"],
+        [2, 1, "player_2"],
+        [2, 3, "player_4"],
+        [2, -1, "player_1"],
+        [2, -3, "player_3"],
+    ],
+)
+def test_get_nth_seat(chip_seat, n, expected_player):
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Al"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.set_chip_to_seat(chip_seat)
+    table.deactivate_seat(2)
+
+    assert table.get_nth_seat(n).player == players[expected_player]
+
+
+@pytest.mark.parametrize(
+    "chip_seat, n, expected_player",
+    [
+        [1, 1, "player_1"],
+        [1, 3, "player_3"],
+        [1, -1, "player_2"],
+        [1, -3, "player_4"],
+        [2, 1, "player_2"],
+        [2, 3, "player_4"],
+        [2, -1, "player_3"],
+        [2, -3, "player_1"],
+    ],
+)
+def test_get_nth_seat__counter_clockwise(chip_seat, n, expected_player):
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+        "player_3": AbstractPlayer(name="Allistair"),
+        "player_4": AbstractPlayer(name="Al"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+    table.join(players["player_3"])
+    table.join(players["player_4"])
+
+    table.set_chip_to_seat(chip_seat)
+    table.deactivate_seat(2)
+    table.direction = GameDirection.COUNTER_CLOCKWISE
+
+    assert table.get_nth_seat(n).player == players[expected_player]
+
+
+def test_get_nth_seat__n_is_too_high():
+    table = GameTable(4)
+
+    players = {
+        "player_1": AbstractPlayer(name="Alfred"),
+        "player_2": AbstractPlayer(name="Albert"),
+    }
+
+    table.join(players["player_1"])
+    table.join(players["player_2"])
+
+    table.deactivate_seat(2)
+
+    assert table.get_nth_seat(4).player is None
+
+    with pytest.raises(InvalidPosition):
+        table.get_nth_seat(5)
+
+    with pytest.raises(InvalidPosition):
+        table.get_nth_seat(-5)
 
 
 def test_iterate_table():
@@ -546,7 +660,7 @@ def test_iterate_table():
     table.join(player_3)
     table.join(player_4)
 
-    assert [p for _, p in table] == [player_1, player_2, player_3, player_4]
+    assert [s.player for s in table] == [player_1, player_2, player_3, player_4]
 
 
 def test_iterate_table__counter_clockwise():
@@ -564,7 +678,7 @@ def test_iterate_table__counter_clockwise():
 
     table.direction = GameDirection.COUNTER_CLOCKWISE
 
-    assert [p for _, p in table] == [player_4, player_3, player_2, player_1]
+    assert [s.player for s in table] == [player_4, player_3, player_2, player_1]
 
 
 def test_iterate_table__counter_clockwise_with_deactivated():
@@ -583,7 +697,7 @@ def test_iterate_table__counter_clockwise_with_deactivated():
     table.deactivate_seat(2)
     table.direction = GameDirection.COUNTER_CLOCKWISE
 
-    assert [p for _, p in table] == [player_4, player_3, player_1]
+    assert [s.player for s in table] == [player_4, player_3, player_1]
 
 
 def test_move_chip():

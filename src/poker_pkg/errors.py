@@ -1,4 +1,5 @@
 from game_engine.errors import IllegalActionException
+from game_engine.player import AbstractPlayer
 
 
 class PokerException(Exception):
@@ -14,8 +15,23 @@ class ValidationException(PokerException):
 
 
 class PlayerNotInGame(PokerException):
+    def __init__(self, player: AbstractPlayer) -> None:
+        self.player = player
+
     def __str__(self) -> str:
-        return "player not in game"
+        return f"{self.player} attempted to play but they are not in game"
+
+
+class NotEnoughPlayers(PokerException):
+    def __init__(self, minimum: int, current: int) -> str:
+        self.minimum: int = minimum
+        self.current: int = current
+
+    def __str__(self) -> str:
+        msg = f"Cannot start a game with fewer than {self.minimum} players."
+        if self.current > 1:
+            return f"{msg} The game currently has {self.current} players."
+        return f"{msg} The game currently has 1 player."
 
 
 class NotEnoughChips(PokerException):
@@ -34,7 +50,7 @@ class InvalidAmountMissing(TransferToPotException, ValidationException):
     type = "value_error.missing"
 
     def __str__(self) -> str:
-        return "field required"
+        return "Field required"
 
 
 class InvalidAmountNegative(TransferToPotException, ValidationException):

@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from betting_structure import BasicBettingStructure
+from betting_structure import BasicBettingStructure, StaticBlindFormula
 
 from card_pkg.card import Card
 from card_pkg.constants import ALL_CARDS_NO_JOKERS
@@ -551,9 +551,9 @@ def test_game__two_rounds__more_coverage():
 def test_game__two_rounds__more_coverage_v2():
     hand1 = ["1H", "13H", "12H", "11H", "10H"]
     hand2 = ["1C", "13C", "12C", "11C", "10C"]
-    hand3 = ["7D", "7S", "4H", "5C", "3S"]
+    hand3 = ["7D", "7S", "4H", "5C", "3S"]  # worse hand
 
-    fake_shuffler = shuffler_factory([[hand1, hand2, hand3], [hand1, hand3, hand2]])
+    fake_shuffler = shuffler_factory([[hand1, hand2, hand3], [hand1, hand3]])
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
@@ -563,20 +563,17 @@ def test_game__two_rounds__more_coverage_v2():
 
     game.all_in(player1)
     game.all_in(player2)
-    game.all_in(player3)
+    game.all_in(player3)  # player3 is out after this due to their bad hand
 
-    # Start the next round automatically?
-    game.start()
+    game.start_round()
 
-    game.all_in(player1)
     game.all_in(player2)
-    # game.fold(player3)
+    game.all_in(player1)
 
-    # assert game.winners == [player1]
     assert game.round_count == 2
 
-    assert player1.purse == 1500
-    assert player2.purse == 0
+    assert player1.purse == 0
+    assert player2.purse == 1500
     assert player3.purse == 0
 
 
@@ -599,7 +596,7 @@ def test_game__players_without_money_are_out_of_the_game():
 
     game.start()
 
-    assert [p for _, p in game.table] == [player1, player3]
+    assert [s.player for s in game.table] == [player1, player3]
 
 
 def test_bet():
@@ -832,7 +829,9 @@ def test_start_game_with_blinds():
             player2,
             player3,
         ],
-        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
     )
 
     game.start()
@@ -851,7 +850,9 @@ def test_start_game_with_blinds__only_2_players():
             player1,
             player2,
         ],
-        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
         first_player_strategy=FirstPlayerStarts,
     )
 
@@ -873,7 +874,9 @@ def test_big_blind_can_play_again_when_called():
             player2,
             player3,
         ],
-        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
     )
 
     game.start()
@@ -900,7 +903,9 @@ def test_big_blind_can_play_again_when_called__v2():
             player2,
             player3,
         ],
-        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
     )
 
     game.start()
@@ -926,7 +931,9 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
             player2,
             player3,
         ],
-        betting_structure=BasicBettingStructure(small_blind=1, big_blind=2),
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
     )
 
     game.start()

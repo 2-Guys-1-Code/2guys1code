@@ -14,6 +14,7 @@ from poker_pkg.app import (
     create_poker_app,
     get_poker_config,
 )
+from poker_pkg.errors import NotEnoughPlayers
 from poker_pkg.game import PokerGame
 from poker_pkg.player import PokerPlayer
 from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
@@ -90,7 +91,7 @@ class ProxyAPI(FastAPI):
 
     def create_game(self, game_data: NewGameData) -> PokerGame:
         try:
-            game = self.poker_app.start_game(
+            game = self.poker_app.create_game(
                 game_data.current_player_id,
                 max_players=game_data.number_of_players,
                 seating=game_data.seating,
@@ -98,6 +99,7 @@ class ProxyAPI(FastAPI):
                 game_type=game_data.game_type,
                 chips_per_player=500,
             )
+
             return game
         except PlayerNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
@@ -106,9 +108,11 @@ class ProxyAPI(FastAPI):
 
     def update_game(self, game_id: int, game_data: UpdateGameData) -> PokerGame:
         try:
-            return self.poker_app.update_game(game_id, **game_data.dict())
+            return self.poker_app.update_game(game_id, **game_data.model_dump())
         except GameNotFound as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
+        except NotEnoughPlayers as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
     def join_game(self, game_id: int, game_data: NewGameData) -> PokerGame:
         try:
