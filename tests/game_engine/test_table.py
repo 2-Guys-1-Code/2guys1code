@@ -98,7 +98,9 @@ def test_pick_seat__seat_taken():
 
 
 @pytest.mark.parametrize(
-    "seat_number, seats_in_table", [(-1, 2), (4, 3)], ids=["negative seat", "seat larger than max"]
+    "seat_number, seats_in_table",
+    [(-1, 2), (4, 3)],
+    ids=["negative seat", "seat larger than max"],
 )
 def test_pick_seat__invalid_seat_raises_exception(seat_number, seats_in_table):
     table = FreePickTable(size=seats_in_table)
@@ -660,7 +662,12 @@ def test_iterate_table():
     table.join(player_3)
     table.join(player_4)
 
-    assert [s.player for s in table] == [player_1, player_2, player_3, player_4]
+    assert [s.player for s in table] == [
+        player_1,
+        player_2,
+        player_3,
+        player_4,
+    ]
 
 
 def test_iterate_table__counter_clockwise():
@@ -678,7 +685,12 @@ def test_iterate_table__counter_clockwise():
 
     table.direction = GameDirection.COUNTER_CLOCKWISE
 
-    assert [s.player for s in table] == [player_4, player_3, player_2, player_1]
+    assert [s.player for s in table] == [
+        player_4,
+        player_3,
+        player_2,
+        player_1,
+    ]
 
 
 def test_iterate_table__counter_clockwise_with_deactivated():

@@ -17,7 +17,10 @@ from poker_pkg.app import (
 from poker_pkg.errors import NotEnoughPlayers
 from poker_pkg.game import PokerGame
 from poker_pkg.player import PokerPlayer
-from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
+from poker_pkg.repositories import (
+    AbstractPlayerRepository,
+    MemoryPlayerRepository,
+)
 
 
 def get_player_repository() -> AbstractPlayerRepository:
@@ -44,10 +47,17 @@ class ProxyAPI(FastAPI):
     #     return JSONResponse({"detail:": jsonable_encoder(exc), "message": "endpoint not found"})
 
     def register_routes(self) -> None:
-        self.add_api_route(path="/app_id", endpoint=self.get_instance_id, methods=["GET"])
-        self.add_api_route(path="/app_version", endpoint=self.get_app_version, methods=["GET"])
         self.add_api_route(
-            path="/games", endpoint=self.get_all_games, methods=["GET"], response_model=List[Game]
+            path="/app_id", endpoint=self.get_instance_id, methods=["GET"]
+        )
+        self.add_api_route(
+            path="/app_version", endpoint=self.get_app_version, methods=["GET"]
+        )
+        self.add_api_route(
+            path="/games",
+            endpoint=self.get_all_games,
+            methods=["GET"],
+            response_model=List[Game],
         )
         self.add_api_route(
             path="/games",
@@ -102,27 +112,49 @@ class ProxyAPI(FastAPI):
 
             return game
         except PlayerNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Player not found.",
+            )
         except TooManyGames as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=str(e)
+            )
 
-    def update_game(self, game_id: int, game_data: UpdateGameData) -> PokerGame:
+    def update_game(
+        self, game_id: int, game_data: UpdateGameData
+    ) -> PokerGame:
         try:
-            return self.poker_app.update_game(game_id, **game_data.model_dump())
+            return self.poker_app.update_game(
+                game_id, **game_data.model_dump()
+            )
         except GameNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Game not found."
+            )
         except NotEnoughPlayers as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=str(e)
+            )
 
     def join_game(self, game_id: int, game_data: NewGameData) -> PokerGame:
         try:
-            return self.poker_app.join_game(game_id, game_data.current_player_id, game_data.seat)
+            return self.poker_app.join_game(
+                game_id, game_data.current_player_id, game_data.seat
+            )
         except GameNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Game not found."
+            )
         except PlayerNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Player not found.",
+            )
         except PlayerCannotJoin as e:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=str(e)
+            )
 
     def do(self, game_id: int, action_data: NewActionData) -> PokerGame:
         # Move this to the app?
@@ -130,18 +162,28 @@ class ProxyAPI(FastAPI):
         player_id = action_data.player_id
 
         try:
-            return self.poker_app.do(game_id, player_id, action, **action_data.action_data)
+            return self.poker_app.do(
+                game_id, player_id, action, **action_data.action_data
+            )
         except GameNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Game not found."
+            )
         except PlayerNotFound as e:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Player not found.",
+            )
         except ActionDoesNotExist as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=[
                     {
                         "loc": ["body", "action_name"],
-                        "msg": f'The action "{action_data.action_name}" is invalid',
+                        "msg": (
+                            f'The action "{action_data.action_name}" is'
+                            " invalid"
+                        ),
                         "type": "game_action.invalid",
                     }
                 ],
@@ -171,6 +213,8 @@ def create_app() -> ProxyAPI:
 
     player_repository = get_player_repository()
     poker_config = get_poker_config()
-    poker_app = create_poker_app(player_repository=player_repository, **poker_config)
+    poker_app = create_poker_app(
+        player_repository=player_repository, **poker_config
+    )
 
     return ProxyAPI(poker_app)

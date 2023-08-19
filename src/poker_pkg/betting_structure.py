@@ -23,7 +23,9 @@ class StaticBlindFormula(AbstractBlindFormula):
 
 
 class TimeBasedBlindFormula(AbstractBlindFormula):
-    def __init__(self, round_manager: AbstractRoundManager, rules: list) -> None:
+    def __init__(
+        self, round_manager: AbstractRoundManager, rules: list
+    ) -> None:
         self._round_manager: AbstractRoundManager = round_manager
         self._rules: list = rules
 
@@ -40,7 +42,9 @@ class TimeBasedBlindFormula(AbstractBlindFormula):
 
 
 class RoundBasedBlindFormula(AbstractBlindFormula):
-    def __init__(self, round_manager: AbstractRoundManager, rules: list) -> None:
+    def __init__(
+        self, round_manager: AbstractRoundManager, rules: list
+    ) -> None:
         self._round_manager: AbstractRoundManager = round_manager
         self._rules: list = rules
 
@@ -131,11 +135,19 @@ class BasicBettingStructure(AbstractBettingStructure):
 
     @property
     def minimum_bet(self) -> int:
-        return self.big_blind if self._bet_formula is None else self._bet_formula(self)
+        return (
+            self.big_blind
+            if self._bet_formula is None
+            else self._bet_formula(self)
+        )
 
     @property
     def minimum_raise(self) -> int:
-        return self.minimum_bet if self._raise_formula is None else self._raise_formula(self)
+        return (
+            self.minimum_bet
+            if self._raise_formula is None
+            else self._raise_formula(self)
+        )
 
     def buy_in(self, player: AbstractPlayer) -> None:
         player.add_to_purse(self._starting_chips)

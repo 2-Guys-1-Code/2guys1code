@@ -111,7 +111,9 @@ def test_game__player_can_switch_4_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
+    shuffler = shuffler_factory(
+        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
+    )
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 
@@ -138,7 +140,9 @@ def test_game__player_cannot_switch_5_cards_if_has_ace():
     hand1 = ["1S", "3C", "4C", "5C", "6C"]
     hand2 = ["13D", "3H", "4H", "5H", "6H"]
 
-    shuffler = shuffler_factory([hand1, hand2], padding=["7S", "10H", "4D", "8H"])
+    shuffler = shuffler_factory(
+        [hand1, hand2], padding=["7S", "10H", "4D", "8H"]
+    )
 
     game = game_factory(players=[player1, player2], shuffler=shuffler)
 

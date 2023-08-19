@@ -84,7 +84,9 @@ class Pot:
 
         return side_pots
 
-    def _assign_players_to_side_pots(self, side_pots: list[SidePot], player_totals: dict) -> list:
+    def _assign_players_to_side_pots(
+        self, side_pots: list[SidePot], player_totals: dict
+    ) -> list:
         total = 0
         for p in side_pots:
             total += p.value

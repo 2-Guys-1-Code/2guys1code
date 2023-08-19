@@ -29,7 +29,9 @@ def test_get_app_version(api_client: TestClient) -> None:
 
 def test_create_game(api_client: TestClient) -> None:
     try:
-        response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 8})
+        response = api_client.post(
+            "/games", json={"number_of_players": 3, "current_player_id": 8}
+        )
     except Exception as e:
         pass
 
@@ -37,7 +39,13 @@ def test_create_game(api_client: TestClient) -> None:
     parsed_response = response.json()
     assert parsed_response == {
         "id": 1,
-        "table": {"seats": {"1": {"id": 8, "name": "Steve", "purse": 500}, "2": None, "3": None}},
+        "table": {
+            "seats": {
+                "1": {"id": 8, "name": "Steve", "purse": 500},
+                "2": None,
+                "3": None,
+            }
+        },
         "players": {"8": {"id": 8, "name": "Steve", "purse": 500}},
         "started": False,
         "current_player_id": None,
@@ -60,7 +68,9 @@ def test_cannot_create_game_without_player(api_client: TestClient) -> None:
 
 
 def test_cannot_create_game_with_bad_player(api_client: TestClient) -> None:
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 99})
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 99}
+    )
 
     assert (
         response.status_code == 404
@@ -69,16 +79,25 @@ def test_cannot_create_game_with_bad_player(api_client: TestClient) -> None:
     assert parsed_response["detail"] == "Player not found."
 
 
-def test_cannot_create_game_when_max_games_reached(api_client: TestClient) -> None:
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+def test_cannot_create_game_when_max_games_reached(
+    api_client: TestClient,
+) -> None:
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 9})
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 9}
+    )
 
     assert response.status_code == status.HTTP_409_CONFLICT
     parsed_response = response.json()
-    assert parsed_response["detail"] == "The maximum number of games has been reached."
+    assert (
+        parsed_response["detail"]
+        == "The maximum number of games has been reached."
+    )
 
 
 def test_can_create_games_up_to_the_max() -> None:
@@ -90,11 +109,15 @@ def test_can_create_games_up_to_the_max() -> None:
         )
     )
 
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 9})
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 9}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -105,7 +128,9 @@ def test_get_games(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
-    response = api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -114,16 +139,26 @@ def test_get_games(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response[0]["id"] == 1
-    assert parsed_response[0]["players"] == {"3": {"id": 3, "name": "Bob", "purse": 500}}
+    assert parsed_response[0]["players"] == {
+        "3": {"id": 3, "name": "Bob", "purse": 500}
+    }
     assert parsed_response[0]["table"] == {
-        "seats": {"1": {"id": 3, "name": "Bob", "purse": 500}, "2": None, "3": None}
+        "seats": {
+            "1": {"id": 3, "name": "Bob", "purse": 500},
+            "2": None,
+            "3": None,
+        }
     }
 
 
 def test_join_game(api_client: TestClient) -> None:
-    api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
 
-    response = api_client.post("/games/1/players", json={"current_player_id": 9})
+    response = api_client.post(
+        "/games/1/players", json={"current_player_id": 9}
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
     # What should the response be? The whole game state?
@@ -131,7 +166,9 @@ def test_join_game(api_client: TestClient) -> None:
 
 
 def test_cannot_join_a_nonexistent_game(api_client: TestClient) -> None:
-    response = api_client.post("/games/1/players", json={"current_player_id": 3})
+    response = api_client.post(
+        "/games/1/players", json={"current_player_id": 3}
+    )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     parsed_response = response.json()
@@ -139,9 +176,13 @@ def test_cannot_join_a_nonexistent_game(api_client: TestClient) -> None:
 
 
 def test_cannot_join_a_game_with_bad_player(api_client: TestClient) -> None:
-    api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
 
-    response = api_client.post("/games/1/players", json={"current_player_id": 29})
+    response = api_client.post(
+        "/games/1/players", json={"current_player_id": 29}
+    )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     parsed_response = response.json()
@@ -149,10 +190,14 @@ def test_cannot_join_a_game_with_bad_player(api_client: TestClient) -> None:
 
 
 def test_cannot_join_a_full_game(api_client: TestClient) -> None:
-    api_client.post("/games", json={"number_of_players": 2, "current_player_id": 3})
+    api_client.post(
+        "/games", json={"number_of_players": 2, "current_player_id": 3}
+    )
     api_client.post("/games/1/players", json={"current_player_id": 8})
 
-    response = api_client.post("/games/1/players", json={"current_player_id": 9})
+    response = api_client.post(
+        "/games/1/players", json={"current_player_id": 9}
+    )
 
     assert response.status_code == status.HTTP_409_CONFLICT
     parsed_response = response.json()
@@ -160,12 +205,16 @@ def test_cannot_join_a_full_game(api_client: TestClient) -> None:
 
 
 def test_cannot_join_a_started_game(api_client: TestClient) -> None:
-    api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
     api_client.post("/games/1/players", json={"current_player_id": 8})
 
     api_client.patch("/games/1", json={"started": True})
 
-    response = api_client.post("/games/1/players", json={"current_player_id": 9})
+    response = api_client.post(
+        "/games/1/players", json={"current_player_id": 9}
+    )
 
     assert response.status_code == status.HTTP_409_CONFLICT
     parsed_response = response.json()
@@ -173,7 +222,9 @@ def test_cannot_join_a_started_game(api_client: TestClient) -> None:
 
 
 def test_start_game(api_client: TestClient) -> None:
-    api_client.post("/games", json={"number_of_players": 3, "current_player_id": 3})
+    api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
     api_client.post("/games/1/players", json={"current_player_id": 8})
 
     response = api_client.patch("/games/1", json={"started": True})
@@ -235,9 +286,16 @@ def test_start_game__game_is_started() -> None:
 def test_join_a_game_with_picked_seats(api_client: TestClient) -> None:
     api_client.post(
         "/games",
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
 
     response = api_client.patch("/games/1", json={"started": True})
 
@@ -253,9 +311,16 @@ def test_add_action_to_game__check(api_client: TestClient) -> None:
     # Create a "started game" factory fixture
     api_client.post(
         "/games",
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
     api_client.patch("/games/1", json={"started": True})
 
     response = api_client.post(
@@ -272,7 +337,11 @@ def test_add_action_to_game__check(api_client: TestClient) -> None:
     "data, expected_call_args, expected_call_kwargs",
     [
         (
-            {"action_name": "BET", "player_id": 3, "action_data": {"bet_amount": 20}},
+            {
+                "action_name": "BET",
+                "player_id": 3,
+                "action_data": {"bet_amount": 20},
+            },
             [1, 3, "bet"],
             {"bet_amount": 20},
         ),
@@ -287,9 +356,9 @@ def test_add_action_to_game__check(api_client: TestClient) -> None:
         ),
     ],
 )
-@mock.patch("poker_pkg.app.PokerApp.do", return_value=mock.MagicMock(id=1, started=True))
+# @mock.patch("poker_pkg.app.PokerApp.do", return_value=mock.MagicMock(id=1, started=True))
 def test_add_action_to_game__parameters_are_passed_correctly(
-    patcher,
+    # patcher,
     api_client: TestClient,
     data: dict,
     expected_call_args: list,
@@ -299,9 +368,16 @@ def test_add_action_to_game__parameters_are_passed_correctly(
     api_client.post(
         "/games",
         # TODO: this like in 98 chars long! pyproject.toml specifies 79 as the max length in black config
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
     api_client.patch("/games/1", json={"started": True})
 
     # TODO: This fails after pydantic migration because it doesn't
@@ -350,7 +426,11 @@ def test_add_action_to_game__parameters_are_passed_correctly(
             },
         ),
         (
-            {"action_name": "BET", "player_id": 3, "action_data": {"bet_amount": "string"}},
+            {
+                "action_name": "BET",
+                "player_id": 3,
+                "action_data": {"bet_amount": "string"},
+            },
             422,
             {
                 "detail": [
@@ -373,9 +453,16 @@ def test_invalid_action_to_game_raises_error(
     # Create a "started game" factory fixture
     api_client.post(
         "/games",
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
     api_client.patch("/games/1", json={"started": True})
 
     response = api_client.post(
@@ -394,7 +481,11 @@ def test_invalid_action_to_game_raises_error(
 def test_add_action_to_a_nonexistent_game_game(api_client: TestClient) -> None:
     response = api_client.post(
         "/games/1/actions",
-        json={"action_name": "BET", "player_id": 3, "action_data": {"bet_amount": 20}},
+        json={
+            "action_name": "BET",
+            "player_id": 3,
+            "action_data": {"bet_amount": 20},
+        },
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -408,14 +499,25 @@ def test_cannot_add_action_to_a_game_with_bad_player__player_does_not_exist(
     # Create a "started game" factory fixture
     api_client.post(
         "/games",
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
     api_client.patch("/games/1", json={"started": True})
 
     response = api_client.post(
         "/games/1/actions",
-        json={"action_name": "BET", "player_id": 29, "action_data": {"bet_amount": 20}},
+        json={
+            "action_name": "BET",
+            "player_id": 29,
+            "action_data": {"bet_amount": 20},
+        },
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -429,14 +531,25 @@ def test_cannot_add_action_to_a_game_with_bad_player__existing_player_not_in_gam
     # Create a "started game" factory fixture
     api_client.post(
         "/games",
-        json={"number_of_players": 3, "current_player_id": 3, "seating": "free_pick", "seat": 2},
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
     )
-    api_client.post("/games/1/players", json={"current_player_id": 8, "seat": 3})
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
     api_client.patch("/games/1", json={"started": True})
 
     response = api_client.post(
         "/games/1/actions",
-        json={"action_name": "BET", "player_id": 9, "action_data": {"bet_amount": 20}},
+        json={
+            "action_name": "BET",
+            "player_id": 9,
+            "action_data": {"bet_amount": 20},
+        },
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND

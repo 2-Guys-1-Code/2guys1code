@@ -10,7 +10,10 @@ from game_engine.engine import AbstractStartingPlayerStrategy
 from poker_pkg.app import PokerApp, create_poker_app
 from poker_pkg.game import create_poker_game
 from poker_pkg.player import PokerPlayer
-from poker_pkg.repositories import AbstractPlayerRepository, MemoryPlayerRepository
+from poker_pkg.repositories import (
+    AbstractPlayerRepository,
+    MemoryPlayerRepository,
+)
 
 
 def player_repository_factory():
@@ -29,7 +32,11 @@ class LastPlayerStarts(AbstractStartingPlayerStrategy):
         return self.game.table.get_seat(player)
 
 
-@mock.patch.multiple("api.api", get_player_repository=mock.DEFAULT, get_poker_config=mock.DEFAULT)
+@mock.patch.multiple(
+    "api.api",
+    get_player_repository=mock.DEFAULT,
+    get_poker_config=mock.DEFAULT,
+)
 def api_app_factory(
     get_player_repository,
     get_poker_config,
@@ -50,7 +57,11 @@ def api_app_factory(
     return create_app()
 
 
-@mock.patch.multiple("api.api", get_player_repository=mock.DEFAULT, get_poker_config=mock.DEFAULT)
+@mock.patch.multiple(
+    "api.api",
+    get_player_repository=mock.DEFAULT,
+    get_poker_config=mock.DEFAULT,
+)
 def app_factory(
     get_player_repository,
     get_poker_config,
@@ -68,7 +79,9 @@ def app_factory(
     get_player_repository.return_value = player_repository
     get_poker_config.return_value = poker_config
 
-    return create_poker_app(player_repository=player_repository, **poker_config)
+    return create_poker_app(
+        player_repository=player_repository, **poker_config
+    )
 
 
 def api_client_factory(app):

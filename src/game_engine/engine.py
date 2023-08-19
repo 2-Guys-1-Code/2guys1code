@@ -26,7 +26,9 @@ class AbstractGameEngine(ABC):
         pass
 
     @abstractmethod
-    def do(self, action_name: AbstractActionName, player: AbstractPlayer) -> None:
+    def do(
+        self, action_name: AbstractActionName, player: AbstractPlayer
+    ) -> None:
         pass
 
     @abstractmethod
@@ -145,7 +147,9 @@ class GameEngine(AbstractGameEngine):
         return self.round_count > 0
 
     def _set_first_player(self) -> None:
-        self._table.set_chip_to_seat(self._first_player_strategy.get_first_player_index())
+        self._table.set_chip_to_seat(
+            self._first_player_strategy.get_first_player_index()
+        )
 
     def start(self) -> None:
         self._set_first_player()

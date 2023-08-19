@@ -1,6 +1,10 @@
 from typing import TYPE_CHECKING
 
-from game_engine.errors import EndOfStep, GameException, PlayerOutOfOrderException
+from game_engine.errors import (
+    EndOfStep,
+    GameException,
+    PlayerOutOfOrderException,
+)
 
 from .player import AbstractPokerPlayer
 
@@ -9,7 +13,9 @@ if TYPE_CHECKING:
 
 
 class TurnManager:
-    def __init__(self, game: "PokerGame", player: AbstractPokerPlayer, action: str) -> None:
+    def __init__(
+        self, game: "PokerGame", player: AbstractPokerPlayer, action: str
+    ) -> None:
         self.game = game
         self.player = player
         self.action = action
@@ -21,7 +27,9 @@ class TurnManager:
             raise GameException("The game has not started")
 
         if self.game.current_player != self.player:
-            raise PlayerOutOfOrderException(self.game.current_player, self.player)
+            raise PlayerOutOfOrderException(
+                self.game.current_player, self.player
+            )
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         if exc_value is not None:

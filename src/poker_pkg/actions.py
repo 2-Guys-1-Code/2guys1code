@@ -58,7 +58,9 @@ class PokerBet(AbstractAction):
         # Add more validation; there are rules around minimum
         # bet amounts (maybe even maximums sometimes)
 
-    def _transfer_to_pot(self, player: AbstractPokerPlayer, amount: int) -> None:
+    def _transfer_to_pot(
+        self, player: AbstractPokerPlayer, amount: int
+    ) -> None:
         self.game.pot.add_bet(player, amount)
 
 
@@ -76,7 +78,9 @@ class PokerRaise(PokerBet):
         # bet amounts (maybe even maximums sometimes)
         self._validate_amount(amount)
         self._validate_bet(amount, player)
-        self._transfer_to_pot(player, self.game.pot.player_owed(player) + amount)
+        self._transfer_to_pot(
+            player, self.game.pot.player_owed(player) + amount
+        )
 
     def _validate_bet(self, amount: int, player: AbstractPokerPlayer) -> None:
         pass
@@ -90,7 +94,12 @@ class PokerAllIn(PokerBet):
 
 
 class PokerSwitchCards(AbstractAction):
-    def do(self, player: AbstractPokerPlayer, cards_to_switch: list[Card], **kwargs) -> None:
+    def do(
+        self,
+        player: AbstractPokerPlayer,
+        cards_to_switch: list[Card],
+        **kwargs
+    ) -> None:
         if not self._can_switch_cards(player.hand, cards_to_switch):
             raise IllegalCardSwitch()
 
@@ -105,7 +114,9 @@ class PokerSwitchCards(AbstractAction):
             Card("1S"),
             Card("1C"),
         }.intersection({c for c in hand})
-        if (not has_ace and len(cards_to_switch) > 3) or len(cards_to_switch) > 4:
+        if (not has_ace and len(cards_to_switch) > 3) or len(
+            cards_to_switch
+        ) > 4:
             return False
 
         for card in cards_to_switch:

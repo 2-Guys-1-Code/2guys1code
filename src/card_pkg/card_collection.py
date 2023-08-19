@@ -36,14 +36,18 @@ class CardCollection:
         cards: list[Card] = None,
         max_length: int = None,
     ) -> None:
-        self.max_length = max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
+        self.max_length = (
+            max_length if max_length is not None else self.DEFAULT_MAX_LENGTH
+        )
         self._cards = [] if cards is None else [c for c in cards]
 
         if self._has_too_many_cards():
             raise NotEnoughSpace()
 
     def _has_too_many_cards(self) -> bool:
-        return self.max_length is not None and len(self._cards) > self.max_length
+        return (
+            self.max_length is not None and len(self._cards) > self.max_length
+        )
 
     def __hash__(self) -> int:
         return hash(repr(self))
@@ -53,26 +57,37 @@ class CardCollection:
 
     def _can_add(self, other: Union[Card, "CardCollection"]) -> bool:
         other_length = 1 if isinstance(other, Card) else len(other)
-        return self.max_length is None or len(self) + other_length <= self.max_length
+        return (
+            self.max_length is None
+            or len(self) + other_length <= self.max_length
+        )
 
     def clone(self) -> "CardCollection":
         return self.__class__(cards=self._cards, max_length=self.max_length)
 
-    def __add__(self, other: Union[Card, "CardCollection"]) -> "CardCollection":
+    def __add__(
+        self, other: Union[Card, "CardCollection"]
+    ) -> "CardCollection":
         new = self.clone()
         new.insert_at_end(other)
         return new
 
-    def __iadd__(self, other: Union[Card, "CardCollection"]) -> "CardCollection":
+    def __iadd__(
+        self, other: Union[Card, "CardCollection"]
+    ) -> "CardCollection":
         self.insert_at_end(other)
         return self
 
-    def __sub__(self, other: Union[Card, "CardCollection"]) -> "CardCollection":
+    def __sub__(
+        self, other: Union[Card, "CardCollection"]
+    ) -> "CardCollection":
         new = self.clone()
         new.pull_card(other)
         return new
 
-    def __isub__(self, other: Union[Card, "CardCollection"]) -> "CardCollection":
+    def __isub__(
+        self, other: Union[Card, "CardCollection"]
+    ) -> "CardCollection":
         self.pull_card(other)
         return self
 
@@ -96,7 +111,10 @@ class CardCollection:
 
     def _slice(self, slice: slice) -> list:
         return CardCollection(
-            cards=[self._cards[i] for i in range(slice.start, slice.stop + 1, slice.step or 1)]
+            cards=[
+                self._cards[i]
+                for i in range(slice.start, slice.stop + 1, slice.step or 1)
+            ]
         )
 
     def __getitem__(self, index: int | slice) -> Card | list:
@@ -140,7 +158,9 @@ class CardCollection:
         raise ValueError()
 
     def pull_card(self, pullee: Card) -> Union[Card, "CardCollection", None]:
-        if not (isinstance(pullee, Card) or isinstance(pullee, CardCollection)):
+        if not (
+            isinstance(pullee, Card) or isinstance(pullee, CardCollection)
+        ):
             raise NotACard()
 
         if isinstance(pullee, CardCollection):
@@ -154,7 +174,9 @@ class CardCollection:
 
         return pullee
 
-    def insert_at(self, position: int, insert: Union[Card, "CardCollection"]) -> None:
+    def insert_at(
+        self, position: int, insert: Union[Card, "CardCollection"]
+    ) -> None:
         self._validate_insert_position(position)
         self._insert(position - 1, insert)
 
@@ -168,8 +190,12 @@ class CardCollection:
         if not (0 < position <= len(self._cards) + 1):
             raise InvalidCardPosition()
 
-    def _insert(self, position: int, insert: Union[Card, "CardCollection"]) -> None:
-        if not (isinstance(insert, Card) or isinstance(insert, CardCollection)):
+    def _insert(
+        self, position: int, insert: Union[Card, "CardCollection"]
+    ) -> None:
+        if not (
+            isinstance(insert, Card) or isinstance(insert, CardCollection)
+        ):
             raise NotACard()
 
         if not self._can_add(insert):

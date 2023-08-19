@@ -7,7 +7,10 @@ from card_pkg.card import Card
 from card_pkg.constants import ALL_CARDS_NO_JOKERS
 from card_pkg.deck import Deck
 from card_pkg.hand import Hand, PokerHand
-from game_engine.engine import AbstractStartingPlayerStrategy, FirstPlayerStarts
+from game_engine.engine import (
+    AbstractStartingPlayerStrategy,
+    FirstPlayerStarts,
+)
 from game_engine.errors import (
     IllegalActionException,
     PlayerCannotJoin,
@@ -148,7 +151,9 @@ def test_first_player_strategy(strategy, shuffler, expected_starting_player):
 
 
 def test_game_can_set_chips_per_player():
-    game = game_factory(players=2, betting_structure=BasicBettingStructure(starting_chips=1500))
+    game = game_factory(
+        players=2, betting_structure=BasicBettingStructure(starting_chips=1500)
+    )
     assert len(game.get_players()) == 2
     assert game.get_players()[0].purse == 1500
     assert game.get_players()[1].purse == 1500
@@ -366,7 +371,11 @@ def test_find_winners():
     player3.hand = hand3
 
     step = EndRoundStep(game)
-    assert step._find_winnners([player1, player2, player3]) == [[player1], [player2], [player3]]
+    assert step._find_winnners([player1, player2, player3]) == [
+        [player1],
+        [player2],
+        [player3],
+    ]
 
 
 def test_find_winners__tied_hands():
@@ -385,7 +394,10 @@ def test_find_winners__tied_hands():
     player3.hand = hand3
 
     step = EndRoundStep(game)
-    assert step._find_winnners([player1, player2, player3]) == [[player1, player3], [player2]]
+    assert step._find_winnners([player1, player2, player3]) == [
+        [player1, player3],
+        [player2],
+    ]
 
 
 def test_game__all_players_all_in__best_hand_is_the_winner():
@@ -399,7 +411,9 @@ def test_game__all_players_all_in__best_hand_is_the_winner():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -423,7 +437,9 @@ def test_game__all_players_all_in__three_way_tie():
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
     player4 = PokerPlayer(purse=500, name="Albert")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3, player4])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3, player4]
+    )
 
     game.start()
 
@@ -451,7 +467,9 @@ def test_game__side_pots_are_accounted_for():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=1000, name="Geordie")
     player3 = PokerPlayer(purse=1000, name="Eugene")
-    game = game_factory(players=[player1, player2, player3], shuffler=fake_shuffler)
+    game = game_factory(
+        players=[player1, player2, player3], shuffler=fake_shuffler
+    )
 
     game.start()
 
@@ -472,7 +490,9 @@ def test_game__first_player_all_in_others_fold():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -493,7 +513,9 @@ def test_game__two_rounds():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -525,7 +547,9 @@ def test_game__two_rounds__more_coverage():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -557,7 +581,9 @@ def test_game__two_rounds__more_coverage_v2():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -586,7 +612,9 @@ def test_game__players_without_money_are_out_of_the_game():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Geordie")
     player3 = PokerPlayer(purse=500, name="Eugene")
-    game = game_factory(shuffler=fake_shuffler, players=[player1, player2, player3])
+    game = game_factory(
+        shuffler=fake_shuffler, players=[player1, player2, player3]
+    )
 
     game.start()
 
@@ -719,7 +747,9 @@ def test_call():
 
     # This must currently be done this way because rounds end automatically
     # and the pot gets distributed before we can check its total
-    with mock.patch.object(game.pot, "add_bet", wraps=game.pot.add_bet) as wrapped:
+    with mock.patch.object(
+        game.pot, "add_bet", wraps=game.pot.add_bet
+    ) as wrapped:
         game.call(player2)
 
         wrapped.assert_called_with(player2, 200)
@@ -739,7 +769,9 @@ def test_raise():
 
     game.bet(player1, 200)
 
-    with mock.patch.object(game.pot, "add_bet", wraps=game.pot.add_bet) as wrapped:
+    with mock.patch.object(
+        game.pot, "add_bet", wraps=game.pot.add_bet
+    ) as wrapped:
         game.raise_bet(player2, 100)
 
         wrapped.assert_called_with(player2, 300)

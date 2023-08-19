@@ -13,7 +13,12 @@ from game_engine.engine import (
     GameEngine,
 )
 from game_engine.errors import PlayerCannotJoin, TooManyPlayers
-from game_engine.table import AlreadySeated, FreePickTable, GameTable, TableIsFull
+from game_engine.table import (
+    AlreadySeated,
+    FreePickTable,
+    GameTable,
+    TableIsFull,
+)
 
 from .actions import PokerActionName
 from .dealer import Dealer
@@ -53,7 +58,9 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
             s.player.hand = PokerHand(max_length=1)
 
         self.game.dealer.shuffle()
-        self.game.dealer.deal([s.player.hand for s in self.game.table], count=1)
+        self.game.dealer.deal(
+            [s.player.hand for s in self.game.table], count=1
+        )
         winners = self._find_winnners(self.game.get_players())
         winner = winners[0][0]
         return self.game.table.get_seat(winner)
@@ -97,9 +104,12 @@ class PokerGame(GameEngine):
         self.betting_structure = betting_structure
         self.betting_structure.set_game(self)
         self.dealer = dealer_factory(DeckWithoutJokers(), game=self)
-        table_factory = partial(self._create_table, max_players, seating=seating)
+        table_factory = partial(
+            self._create_table, max_players, seating=seating
+        )
         super(PokerGame, self).__init__(
-            table_factory=table_factory, first_player_strategy=first_player_strategy
+            table_factory=table_factory,
+            first_player_strategy=first_player_strategy,
         )
 
         # I dont like this
@@ -127,7 +137,9 @@ class PokerGame(GameEngine):
     def table(self) -> CardCollection:
         return self._table
 
-    def _create_table(self, max_players: int, seating: str = "sequential") -> GameTable:
+    def _create_table(
+        self, max_players: int, seating: str = "sequential"
+    ) -> GameTable:
         self._validate_max_players(max_players)
 
         # Make a table factory
@@ -152,7 +164,9 @@ class PokerGame(GameEngine):
         self.pot = self._pot_factory()
         super().start()
 
-    def join(self, player: AbstractPokerPlayer, seat: int | None = None) -> None:
+    def join(
+        self, player: AbstractPokerPlayer, seat: int | None = None
+    ) -> None:
         if self.started:
             # It would be nice to allow joining a table mid-game
             raise PlayerCannotJoin("The game has started.")
@@ -167,7 +181,12 @@ class PokerGame(GameEngine):
         except TableIsFull:
             raise PlayerCannotJoin("There are no free seats in the game.")
 
-    def do(self, action_name: PokerActionName, player: AbstractPokerPlayer, **kwargs) -> None:
+    def do(
+        self,
+        action_name: PokerActionName,
+        player: AbstractPokerPlayer,
+        **kwargs,
+    ) -> None:
         if player not in self.get_players():
             raise PlayerNotInGame(player)
 
@@ -175,9 +194,13 @@ class PokerGame(GameEngine):
 
         with TurnManager(self, player, action_name):
             # nth player = 1 means the dealer
-            self.is_last_player = self.current_player is self._table.get_nth_player(1).player
+            self.is_last_player = (
+                self.current_player is self._table.get_nth_player(1).player
+            )
             action.do(player, **kwargs)
-            self.all_players_played = self.is_last_player or self.all_players_played
+            self.all_players_played = (
+                self.is_last_player or self.all_players_played
+            )
 
     # Wire everything directly to .do() from the poker app?
     def check(self, player: AbstractPokerPlayer) -> None:
@@ -196,15 +219,21 @@ class PokerGame(GameEngine):
         # We could use pydantic models here too;
         # Or the API could allow for specifying more accurate models
         if amount is None:
-            raise InvalidAmountMissing("Field required", ["bet_amount"], "value_error.missing")
+            raise InvalidAmountMissing(
+                "Field required", ["bet_amount"], "value_error.missing"
+            )
 
         if type(amount) is not int:
             raise InvalidAmountNotAnInteger(
-                "value is not a valid integer", ["bet_amount"], "type_error.integer"
+                "value is not a valid integer",
+                ["bet_amount"],
+                "type_error.integer",
             )
 
         if amount < 0:
-            raise InvalidAmountNegative("negative amount", ["bet_amount"], "type_error.negative")
+            raise InvalidAmountNegative(
+                "negative amount", ["bet_amount"], "type_error.negative"
+            )
 
     def bet(self, player: AbstractPokerPlayer, bet_amount: int = None) -> None:
         # Rework this... Right now, self._validate_amount catches everything and raises expected exceptions
@@ -229,7 +258,9 @@ class PokerGame(GameEngine):
         return
 
     def switch_cards(self, player: PokerPlayer, cards_to_switch: list) -> None:
-        self.do(PokerActionName.SWITCH, player, cards_to_switch=cards_to_switch)
+        self.do(
+            PokerActionName.SWITCH, player, cards_to_switch=cards_to_switch
+        )
         return
 
     def next_player(self) -> None:
@@ -245,7 +276,9 @@ def get_stud_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
                 "count": 5,
             },
         ),
-        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
+        BlindBettingStep(
+            game, config={"blinds_factory": kwargs.get("blinds_factory")}
+        ),
         EndRoundStep(game),
     ]
 
@@ -260,7 +293,9 @@ def get_holdem_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
             },
         ),
         # Blinds & Antes? or make it part of the betting step?
-        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
+        BlindBettingStep(
+            game, config={"blinds_factory": kwargs.get("blinds_factory")}
+        ),
         CommunityCardStep(
             game,
             config={
@@ -298,7 +333,9 @@ def get_draw_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
                 "count": 5,
             },
         ),
-        BlindBettingStep(game, config={"blinds_factory": kwargs.get("blinds_factory")}),
+        BlindBettingStep(
+            game, config={"blinds_factory": kwargs.get("blinds_factory")}
+        ),
         SwitchingStep(game),
         BettingStep(game),
         EndRoundStep(game),
@@ -319,7 +356,9 @@ def get_round_steps(game_type: str, game: PokerGame, **kwargs) -> list:
 
 
 def create_poker_game(
-    game_type: str = PokerTypes.STUD, betting_structure: AbstractBettingStructure = None, **kwargs
+    game_type: str = PokerTypes.STUD,
+    betting_structure: AbstractBettingStructure = None,
+    **kwargs,
 ) -> PokerGame:
     betting_structure = betting_structure or BasicBettingStructure()
     game = PokerGame(betting_structure, **kwargs)

@@ -125,12 +125,16 @@ def test_add__too_many_cards():
         "higher three of kind beats lower three of a kind",
         "high card wins when three of a kinds are equal (Cheat alert!!)",
         "lowest straight (not flush!) beats highest three of a kind",
-        "lowest straight (not flush!) beats highest three of a kind (inversed \
-            order)",
+        (
+            "lowest straight (not flush!) beats highest three of a kind"
+            " (inversed             order)"
+        ),
         "straight (not flush!) beats a pair",
         "straight (not flush, with full parsing) beats a pair",
-        "straight (not flush, with full parsing, and different order) beats a \
-            pair",
+        (
+            "straight (not flush, with full parsing, and different order)"
+            " beats a             pair"
+        ),
         "flush beats a pair",
         "Full House beats three of kind",
         "lowest Full House beats highest flush (not straight)",

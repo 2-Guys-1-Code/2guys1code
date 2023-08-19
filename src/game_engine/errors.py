@@ -7,13 +7,16 @@ class GameException(Exception):
 
 
 class PlayerOutOfOrderException(GameException):
-    def __init__(self, current_player: AbstractPlayer, attempted_player: AbstractPlayer) -> None:
+    def __init__(
+        self, current_player: AbstractPlayer, attempted_player: AbstractPlayer
+    ) -> None:
         self.current_player = current_player
         self.attempted_player = attempted_player
 
     def __str__(self) -> str:
         return (
-            f"{self.attempted_player} attempted to play, but it is {self.current_player}'s turn."
+            f"{self.attempted_player} attempted to play, but it is"
+            f" {self.current_player}'s turn."
         )
 
 
@@ -35,7 +38,10 @@ class IllegalActionException(GameException):
 
     def __str__(self) -> str:
         if self.action_name is not None:
-            return f'The action "{self.action_name}" is not available at the moment'
+            return (
+                f'The action "{self.action_name}" is not available at the'
+                " moment"
+            )
 
         return "The action is not available at the moment"
 

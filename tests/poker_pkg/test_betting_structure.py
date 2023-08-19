@@ -34,7 +34,13 @@ class BetBigBlindTimesXFormula(AbstractBettingFormula):
     [
         (StaticBlindFormula(1), StaticBlindFormula(2), None, None, 2),
         (StaticBlindFormula(1), StaticBlindFormula(3), None, None, 3),
-        (StaticBlindFormula(1), StaticBlindFormula(3), BetBigBlindPlusXFormula(1), None, 4),
+        (
+            StaticBlindFormula(1),
+            StaticBlindFormula(3),
+            BetBigBlindPlusXFormula(1),
+            None,
+            4,
+        ),
         (
             StaticBlindFormula(1),
             StaticBlindFormula(3),
@@ -42,10 +48,18 @@ class BetBigBlindTimesXFormula(AbstractBettingFormula):
             BetBigBlindPlusXFormula(2),
             6,
         ),
-        (StaticBlindFormula(1), StaticBlindFormula(3), BetBigBlindTimesXFormula(3), None, 9),
+        (
+            StaticBlindFormula(1),
+            StaticBlindFormula(3),
+            BetBigBlindTimesXFormula(3),
+            None,
+            9,
+        ),
     ],
 )
-def test_minimum_bet(small_blind, big_blind, bet_formula, raise_formula, expected):
+def test_minimum_bet(
+    small_blind, big_blind, bet_formula, raise_formula, expected
+):
     structure = BasicBettingStructure(
         small_blind=small_blind,
         big_blind=big_blind,
@@ -61,7 +75,13 @@ def test_minimum_bet(small_blind, big_blind, bet_formula, raise_formula, expecte
     [
         (StaticBlindFormula(1), StaticBlindFormula(2), None, None, 2),
         (StaticBlindFormula(1), StaticBlindFormula(3), None, None, 3),
-        (StaticBlindFormula(1), StaticBlindFormula(3), BetBigBlindPlusXFormula(1), None, 4),
+        (
+            StaticBlindFormula(1),
+            StaticBlindFormula(3),
+            BetBigBlindPlusXFormula(1),
+            None,
+            4,
+        ),
         (
             StaticBlindFormula(1),
             StaticBlindFormula(3),
@@ -71,7 +91,9 @@ def test_minimum_bet(small_blind, big_blind, bet_formula, raise_formula, expecte
         ),
     ],
 )
-def test_minimum_raise(small_blind, big_blind, bet_formula, raise_formula, expected):
+def test_minimum_raise(
+    small_blind, big_blind, bet_formula, raise_formula, expected
+):
     structure = BasicBettingStructure(
         small_blind=small_blind,
         big_blind=big_blind,
@@ -128,7 +150,9 @@ def test_time_based_blinds():
 def test_round_based_blinds():
     clock = FakeClock()
     round_manager = RoundManager(clock=clock, round_factory=Round)
-    blind_formula = RoundBasedBlindFormula(round_manager, [(1, 1), (3, 2)])  # round nb, value
+    blind_formula = RoundBasedBlindFormula(
+        round_manager, [(1, 1), (3, 2)]
+    )  # round nb, value
 
     structure = BasicBettingStructure(
         small_blind=blind_formula,

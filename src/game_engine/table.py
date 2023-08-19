@@ -62,7 +62,9 @@ class GameDirection(Enum):
 
 
 class Seat:
-    def __init__(self, position: int, player: AbstractPlayer = None, active: bool = True) -> None:
+    def __init__(
+        self, position: int, player: AbstractPlayer = None, active: bool = True
+    ) -> None:
         self._position = position
         self._player = player
         self._active = active
@@ -175,7 +177,10 @@ class GameTable:
         self._seats[seat_number - 1].player = entity
 
     def join(self, entity: AbstractPlayer, **kwargs) -> None:
-        seat_number = next((i + 1 for i, s in enumerate(self._seats) if s.player is None), None)
+        seat_number = next(
+            (i + 1 for i, s in enumerate(self._seats) if s.player is None),
+            None,
+        )
 
         self._join(entity, seat_number)
 
@@ -184,7 +189,11 @@ class GameTable:
         self._seats[seat_number - 1].player = None
 
     def _validate_seat(self, seat_number: int) -> None:
-        if seat_number is None or seat_number < 1 or seat_number > len(self._seats):
+        if (
+            seat_number is None
+            or seat_number < 1
+            or seat_number > len(self._seats)
+        ):
             raise InvalidSeat()
 
     def leave_by_seat(self, seat_number: int) -> None:
@@ -203,7 +212,9 @@ class GameTable:
 
         self._active_seat = seat_number
 
-    def _get_next_player(self, starting_seat: int, skip: int = 0) -> AbstractPlayer | None:
+    def _get_next_player(
+        self, starting_seat: int, skip: int = 0
+    ) -> AbstractPlayer | None:
         # starting_seat = self.get_seat(starting_player)
         starting_player = self.get_at_seat(starting_seat)
         seats = self._get_ordered_players(starting_seat)
@@ -211,14 +222,20 @@ class GameTable:
             raise TableIsEmpty()
 
         # I don't remember what this means
-        index = 0 if seats[0].player is not starting_player else (skip + 1) % len(seats)
+        index = (
+            0
+            if seats[0].player is not starting_player
+            else (skip + 1) % len(seats)
+        )
         return seats[index].player
 
     def next_player(self, skip: int = 0) -> AbstractPlayer | None:
         if self.current_player is None:
             raise NoCurrentPlayer()
 
-        self.current_player = self._get_next_player(self._active_seat, skip=skip)
+        self.current_player = self._get_next_player(
+            self._active_seat, skip=skip
+        )
         return self.current_player
 
     def skip_player(self, number: int = 1) -> AbstractPlayer | None:
@@ -261,7 +278,9 @@ class GameTable:
         pass
 
     def __len__(self) -> AbstractPlayer:
-        return len([s.player for s in self._seats if s.player and s.active is True])
+        return len(
+            [s.player for s in self._seats if s.player and s.active is True]
+        )
 
     def set_chip_to_seat(self, seat_number: int) -> None:
         self._validate_seat(seat_number)
@@ -296,7 +315,9 @@ class GameTable:
 
         if starting_seat_number is None:
             starting_seat_number = (
-                len(seats) if self.direction == GameDirection.COUNTER_CLOCKWISE else 1
+                len(seats)
+                if self.direction == GameDirection.COUNTER_CLOCKWISE
+                else 1
             )
 
         rotation = starting_seat_number - 1

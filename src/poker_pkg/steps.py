@@ -64,7 +64,9 @@ class BettingStep(PlayerStep):
     }
 
     def _set_config(self, blinds_factory=None, **config) -> None:
-        self.blinds_factory = blinds_factory(self.game) if blinds_factory else None
+        self.blinds_factory = (
+            blinds_factory(self.game) if blinds_factory else None
+        )
 
 
 class BlindBettingStep(BettingStep):
@@ -82,14 +84,24 @@ class BlindBettingStep(BettingStep):
 
         if self.game_has_blinds:
             if len(self.game.get_players()) == 2:
-                self.game.current_player = self.game.table.get_nth_player(1).player
+                self.game.current_player = self.game.table.get_nth_player(
+                    1
+                ).player
 
-            self.game.bet(self.game.current_player, self.game.betting_structure.small_blind)
-            self.game.bet(self.game.current_player, self.game.betting_structure.big_blind)
+            self.game.bet(
+                self.game.current_player,
+                self.game.betting_structure.small_blind,
+            )
+            self.game.bet(
+                self.game.current_player, self.game.betting_structure.big_blind
+            )
 
     @property
     def game_has_blinds(self) -> bool:
-        return self.game.betting_structure.small_blind or self.game.betting_structure.big_blind
+        return (
+            self.game.betting_structure.small_blind
+            or self.game.betting_structure.big_blind
+        )
 
     def _get_players_left_to_talk(self) -> List[AbstractPokerPlayer]:
         players = super()._get_players_left_to_talk()
@@ -184,7 +196,9 @@ class EndRoundStep(PlayerStep):
 
 
 class DealStep(AbstractRoundStep):
-    def _set_config(self, shuffler: AbstractShuffler = None, count: int = 5, **config) -> None:
+    def _set_config(
+        self, shuffler: AbstractShuffler = None, count: int = 5, **config
+    ) -> None:
         self.shuffler = shuffler or Shuffler()
         self.count = count
 
@@ -209,7 +223,9 @@ class DealStep(AbstractRoundStep):
 
 
 class CommunityCardStep(DealStep):
-    def _set_config(self, cards_to_burn: int = 0, cards_to_reveal: int = 0, **config) -> None:
+    def _set_config(
+        self, cards_to_burn: int = 0, cards_to_reveal: int = 0, **config
+    ) -> None:
         self.cards_to_burn = cards_to_burn
         self.cards_to_reveal = cards_to_reveal
 

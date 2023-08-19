@@ -124,13 +124,17 @@ def test_joker_wildcard_is_equal_to_anything():
     assert wildcard == Card("13D", comparator=comparator)
     assert wildcard == Card("2S", comparator=comparator)
     assert Card("1D", comparator=comparator) == wildcard
-    assert Card("5D", comparator=comparator) != Card("2S", comparator=comparator)
+    assert Card("5D", comparator=comparator) != Card(
+        "2S", comparator=comparator
+    )
 
     assert wildcard_2 == Card("1D", comparator=comparator)
     assert wildcard_2 == Card("5D", comparator=comparator)
     assert wildcard_2 == Card("2S", comparator=comparator)
     assert Card("1D", comparator=comparator) == wildcard_2
-    assert Card("5D", comparator=comparator) != Card("2S", comparator=comparator)
+    assert Card("5D", comparator=comparator) != Card(
+        "2S", comparator=comparator
+    )
 
     assert wildcard == wildcard_2
 
@@ -150,7 +154,9 @@ def test_joker_wildcard_is_greater_than_anything_but_wildcards_and_aces():
     assert not (Card("1S", comparator=comparator) > wildcard)
     assert not (wildcard_2 > wildcard)
 
-    assert Card("5D", comparator=comparator) > Card("2S", comparator=comparator)
+    assert Card("5D", comparator=comparator) > Card(
+        "2S", comparator=comparator
+    )
 
 
 def test_joker_wildcard_is_not_less_than_anything():
@@ -168,7 +174,9 @@ def test_joker_wildcard_is_not_less_than_anything():
     assert not (wildcard < Card("1S", comparator=comparator))
     assert not (wildcard < wildcard_2)
 
-    assert Card("2S", comparator=comparator) < Card("5D", comparator=comparator)
+    assert Card("2S", comparator=comparator) < Card(
+        "5D", comparator=comparator
+    )
 
 
 # Jokers are wild
