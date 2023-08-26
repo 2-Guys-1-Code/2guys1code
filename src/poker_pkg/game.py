@@ -53,7 +53,7 @@ class PokerTypes(Enum):
 
 
 class HighestCardStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
+    def get_first_player_index(self) -> (int, dict):
         for s in self.game.table:
             s.player.hand = PokerHand(max_length=1)
 
@@ -63,7 +63,7 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
         )
         winners = self._find_winnners(self.game.get_players())
         winner = winners[0][0]
-        return self.game.table.get_seat(winner)
+        return self.game.table.get_seat(winner), {}
 
     # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(
@@ -128,6 +128,10 @@ class PokerGame(GameEngine):
 
         # See comments in .join()
         self.id = None
+
+    @property
+    def first_player_metadata(self) -> dict:
+        return self._metadata.get("starting_player")
 
     @property
     def deck(self) -> CardCollection:

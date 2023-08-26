@@ -10,15 +10,12 @@ from game_engine.engine import AbstractStartingPlayerStrategy
 from poker_pkg.app import PokerApp, create_poker_app
 from poker_pkg.game import create_poker_game
 from poker_pkg.player import PokerPlayer
-from poker_pkg.repositories import (
-    AbstractPlayerRepository,
-    MemoryPlayerRepository,
-)
+from poker_pkg.repositories import AbstractRepository, MemoryRepository
 
 
 def player_repository_factory():
-    return MemoryPlayerRepository(
-        players=[
+    return MemoryRepository(
+        data=[
             PokerPlayer(id=3, name="Bob"),
             PokerPlayer(id=8, name="Steve"),
             PokerPlayer(id=9, name="Janis"),
@@ -26,10 +23,14 @@ def player_repository_factory():
     )
 
 
+def game_repository_factory():
+    return MemoryRepository()
+
+
 class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
+    def get_first_player_index(self) -> (int, dict):
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat(player)
+        return self.game.table.get_seat(player), {}
 
 
 @mock.patch.multiple(
@@ -41,7 +42,7 @@ def api_app_factory(
     get_player_repository,
     get_poker_config,
     poker_config: dict = None,
-    player_repository: AbstractPlayerRepository = None,
+    player_repository: AbstractRepository = None,
     game_factory: Callable = None,
 ) -> ProxyAPI:
     player_repository = player_repository or player_repository_factory()
@@ -66,10 +67,12 @@ def app_factory(
     get_player_repository,
     get_poker_config,
     poker_config: dict = None,
-    player_repository: AbstractPlayerRepository = None,
+    player_repository: AbstractRepository = None,
+    game_repository: AbstractRepository = None,
     game_factory: Callable = None,
 ) -> PokerApp:
     player_repository = player_repository or player_repository_factory()
+    game_repository = game_repository or game_repository_factory()
     poker_config = poker_config or {
         "max_games": 1,
         "game_factory": game_factory
@@ -80,7 +83,9 @@ def app_factory(
     get_poker_config.return_value = poker_config
 
     return create_poker_app(
-        player_repository=player_repository, **poker_config
+        player_repository=player_repository,
+        game_repository=game_repository,
+        **poker_config
     )
 
 

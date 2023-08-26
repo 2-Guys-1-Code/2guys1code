@@ -125,8 +125,8 @@ def test_start_game__initial_state():
 
 
 class SecondPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
-        return 2
+    def get_first_player_index(self) -> (int, dict):
+        return 2, dict
 
 
 @pytest.mark.parametrize(
@@ -982,3 +982,7 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
 # test when blinds are larger than players' purses
 # test big blind player can only talk again on the first betting step
 # test increasing blinds (by time, by round count)
+
+
+def test_leave_game():
+    assert 1 == 2

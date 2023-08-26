@@ -17,20 +17,21 @@ from poker_pkg.app import (
 from poker_pkg.errors import NotEnoughPlayers
 from poker_pkg.game import PokerGame
 from poker_pkg.player import PokerPlayer
-from poker_pkg.repositories import (
-    AbstractPlayerRepository,
-    MemoryPlayerRepository,
-)
+from poker_pkg.repositories import AbstractRepository, MemoryRepository
 
 
-def get_player_repository() -> AbstractPlayerRepository:
-    return MemoryPlayerRepository(
-        players=[
+def get_player_repository() -> AbstractRepository:
+    return MemoryRepository(
+        data=[
             PokerPlayer(id=13, name="Bobby"),
             PokerPlayer(id=18, name="Stevie"),
             PokerPlayer(id=19, name="Janus"),
         ]
     )
+
+
+def get_game_repository() -> AbstractRepository:
+    return MemoryRepository()
 
 
 class ProxyAPI(FastAPI):
@@ -70,6 +71,12 @@ class ProxyAPI(FastAPI):
             path="/games/{game_id}",
             endpoint=self.update_game,
             methods=["PATCH"],
+            response_model=Game,
+        )
+        self.add_api_route(
+            path="/games/{game_id}",
+            endpoint=self.get_game,
+            methods=["GET"],
             response_model=Game,
         )
         self.add_api_route(
@@ -135,6 +142,14 @@ class ProxyAPI(FastAPI):
         except NotEnoughPlayers as e:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=str(e)
+            )
+
+    def get_game(self, game_id: int) -> PokerGame:
+        try:
+            return self.poker_app.get_game_by_id(game_id)
+        except GameNotFound as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Game not found."
             )
 
     def join_game(self, game_id: int, game_data: NewGameData) -> PokerGame:
@@ -212,9 +227,12 @@ def create_app() -> ProxyAPI:
     # factory_register_routes(app)
 
     player_repository = get_player_repository()
+    game_repository = get_game_repository()
     poker_config = get_poker_config()
     poker_app = create_poker_app(
-        player_repository=player_repository, **poker_config
+        player_repository=player_repository,
+        game_repository=game_repository,
+        **poker_config,
     )
 
     return ProxyAPI(poker_app)

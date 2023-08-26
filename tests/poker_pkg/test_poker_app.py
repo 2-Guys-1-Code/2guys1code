@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from repositories import AbstractPlayerRepository
+from repositories import AbstractRepository
 
 from poker_pkg.app import PlayerNotFound, PokerApp
 from poker_pkg.player import PokerPlayer
@@ -14,7 +14,7 @@ def test_get_games_when_none_started(poker_app: PokerApp) -> None:
 
 
 def test_get_games_returns_games(
-    poker_app: PokerApp, memory_player_repository: AbstractPlayerRepository
+    poker_app: PokerApp, memory_player_repository: AbstractRepository
 ) -> None:
     games = poker_app.get_games()
     assert games == []

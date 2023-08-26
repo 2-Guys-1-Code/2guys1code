@@ -9,30 +9,35 @@ from poker_pkg.game import PokerTypes
 
 
 class Player(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     purse: int
-    model_config = ConfigDict(from_attributes=True)
 
 
 class Table(BaseModel):
-    seats: Dict[int, Player | None]
     model_config = ConfigDict(from_attributes=True)
+
+    seats: Dict[int, Player | None]
 
 
 class Pot(BaseModel):
-    total: int
     model_config = ConfigDict(from_attributes=True)
+
+    total: int
 
 
 class Game(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     players: Dict[int, Player]
     table: Table
     started: bool = None
     current_player_id: int | None = None
     pot: Pot = None
-    model_config = ConfigDict(from_attributes=True)
+    first_player_metadata: Dict | None = None
 
 
 class NewGameData(BaseModel):

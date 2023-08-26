@@ -1,11 +1,15 @@
+from functools import partial
 from unittest import mock
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from poker_pkg.repositories import MemoryPlayerRepository
+from poker_pkg.app import PokerApp
+from poker_pkg.dealer import Dealer
+from poker_pkg.game import create_poker_game
 from tests.api.conftest import api_app_factory, api_client_factory, app_factory
+from tests.poker_pkg.conftest import shuffler_factory
 
 
 @mock.patch("poker_pkg.app.uuid.uuid4", return_value="someUUID")
@@ -49,6 +53,7 @@ def test_create_game(api_client: TestClient) -> None:
         "players": {"8": {"id": 8, "name": "Steve", "purse": 500}},
         "started": False,
         "current_player_id": None,
+        "first_player_metadata": None,
         "pot": None,
     }
 
@@ -128,11 +133,9 @@ def test_get_games(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
-    response = api_client.post(
+    api_client.post(
         "/games", json={"number_of_players": 3, "current_player_id": 3}
     )
-
-    assert response.status_code == status.HTTP_201_CREATED
 
     response = api_client.get("/games")
 
@@ -143,6 +146,36 @@ def test_get_games(api_client: TestClient) -> None:
         "3": {"id": 3, "name": "Bob", "purse": 500}
     }
     assert parsed_response[0]["table"] == {
+        "seats": {
+            "1": {"id": 3, "name": "Bob", "purse": 500},
+            "2": None,
+            "3": None,
+        }
+    }
+
+
+def test_get_game(api_client: TestClient) -> None:
+    response = api_client.get("/games/1")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    parsed_response = response.json()
+    assert parsed_response["detail"] == "Game not found."
+
+    response = api_client.post(
+        "/games", json={"number_of_players": 3, "current_player_id": 3}
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = api_client.get("/games/1")
+
+    assert response.status_code == status.HTTP_200_OK
+    parsed_response = response.json()
+    assert parsed_response["id"] == 1
+    assert parsed_response["players"] == {
+        "3": {"id": 3, "name": "Bob", "purse": 500}
+    }
+    assert parsed_response["table"] == {
         "seats": {
             "1": {"id": 3, "name": "Bob", "purse": 500},
             "2": None,
@@ -233,6 +266,7 @@ def test_start_game(api_client: TestClient) -> None:
     parsed_response = response.json()
     assert parsed_response["started"] == True
     assert parsed_response["pot"] == {"total": 0}
+    assert parsed_response["current_player_id"] == 3
 
 
 def test_start_game__game_doesnt_exist(api_client: TestClient) -> None:
@@ -281,6 +315,37 @@ def test_start_game__game_is_started() -> None:
     # assert parsed_response["pot"] == {"total": 0}
     assert game.started is True
     # TODO: more assertions
+
+
+def test_start_game__highest_card_starts() -> None:
+    app: PokerApp = app_factory(
+        poker_config={
+            "max_games": 1,
+            "game_factory": create_poker_game,
+        }
+    )
+    api_client = api_client_factory(app)
+
+    def dealer_factory(deck, game):
+        shuffler = shuffler_factory([["2H"], ["1H"]])
+        return Dealer(deck, game=game, shuffler=shuffler)
+
+    game = app.create_game(
+        3, number_of_players=3, dealer_factory=dealer_factory
+    )
+    app.join_game(game.id, 9)
+
+    try:
+        response = api_client.patch(
+            f"/games/{game.id}", json={"started": True}
+        )
+    except Exception as e:
+        pass
+
+    assert response.status_code == status.HTTP_200_OK
+    parsed_response = response.json()
+    assert parsed_response["current_player_id"] == 3
+    assert parsed_response["first_player_metadata"] == {}
 
 
 def test_join_a_game_with_picked_seats(api_client: TestClient) -> None:
@@ -356,9 +421,9 @@ def test_add_action_to_game__check(api_client: TestClient) -> None:
         ),
     ],
 )
-# @mock.patch("poker_pkg.app.PokerApp.do", return_value=mock.MagicMock(id=1, started=True))
+@mock.patch("poker_pkg.app.PokerApp.do")
 def test_add_action_to_game__parameters_are_passed_correctly(
-    # patcher,
+    patcher,
     api_client: TestClient,
     data: dict,
     expected_call_args: list,
@@ -380,16 +445,14 @@ def test_add_action_to_game__parameters_are_passed_correctly(
     )
     api_client.patch("/games/1", json={"started": True})
 
-    # TODO: This fails after pydantic migration because it doesn't
-    # like receiving a Mock for game.players (which comes from the
-    # game being a Mock object and all of its attributes as well)
-    try:
-        response = api_client.post(
-            "/games/1/actions",
-            json=data,
-        )
-    except Exception as e:
-        pass
+    game = create_poker_game()
+    game.id = 1
+    patcher.return_value = game
+
+    response = api_client.post(
+        "/games/1/actions",
+        json=data,
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
 

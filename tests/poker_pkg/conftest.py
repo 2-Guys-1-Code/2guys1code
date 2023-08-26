@@ -10,10 +10,7 @@ from poker_pkg.dealer import Dealer
 from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.pot import Pot
-from poker_pkg.repositories import (
-    AbstractPlayerRepository,
-    MemoryPlayerRepository,
-)
+from poker_pkg.repositories import AbstractRepository, MemoryRepository
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
 
@@ -42,9 +39,9 @@ def make_pot(bets=None):
 
 
 class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
+    def get_first_player_index(self) -> (int, dict):
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat(player)
+        return self.game.table.get_seat(player), dict
 
 
 def game_factory(
@@ -176,20 +173,24 @@ def player9() -> AbstractPokerPlayer:
 
 def poker_app_factory(
     poker_config: dict = None,
-    player_repository: AbstractPlayerRepository = None,
+    player_repository: AbstractRepository = None,
+    game_repository: AbstractRepository = None,
 ) -> PokerApp:
     player_repository = player_repository or player_repository_factory()
+    game_repository = game_repository or game_repository_factory()
     poker_config = poker_config or {
         "max_games": 1,
     }
     return create_poker_app(
-        player_repository=player_repository, **poker_config
+        player_repository=player_repository,
+        game_repository=game_repository,
+        **poker_config,
     )
 
 
-def player_repository_factory() -> AbstractPlayerRepository:
-    return MemoryPlayerRepository(
-        players=[
+def player_repository_factory() -> AbstractRepository:
+    return MemoryRepository(
+        data=[
             PokerPlayer(id=3, name="Bob"),
             PokerPlayer(id=8, name="Steve"),
             PokerPlayer(id=9, name="Janis"),
@@ -197,8 +198,12 @@ def player_repository_factory() -> AbstractPlayerRepository:
     )
 
 
+def game_repository_factory() -> AbstractRepository:
+    return MemoryRepository()
+
+
 @pytest.fixture
-def memory_player_repository() -> AbstractPlayerRepository:
+def memory_player_repository() -> AbstractRepository:
     return player_repository_factory()
 
 

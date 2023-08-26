@@ -49,13 +49,13 @@ class AbstractStartingPlayerStrategy(ABC):
         self.game = game
 
     @abstractmethod
-    def get_first_player_index(self) -> int:
+    def get_first_player_index(self) -> (int, dict):
         pass
 
 
 class FirstPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> int:
-        return 1
+    def get_first_player_index(self) -> (int, dict):
+        return 1, {}
 
 
 class AbstractAction(ABC):
@@ -123,6 +123,7 @@ class GameEngine(AbstractGameEngine):
         self.steps = []
         self.round_count = 0
         self.current_step = None
+        self._metadata = {}
 
     @property
     def dealer_player(self) -> AbstractPlayer | None:
@@ -147,9 +148,9 @@ class GameEngine(AbstractGameEngine):
         return self.round_count > 0
 
     def _set_first_player(self) -> None:
-        self._table.set_chip_to_seat(
-            self._first_player_strategy.get_first_player_index()
-        )
+        index, metadata = self._first_player_strategy.get_first_player_index()
+        self._metadata["starting_player"] = metadata
+        self._table.set_chip_to_seat(index)
 
     def start(self) -> None:
         self._set_first_player()

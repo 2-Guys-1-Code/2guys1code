@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from game_engine.engine import AbstractGameEngine
 from poker_pkg.player import AbstractPokerPlayer
 
 
-class AbstractPlayerRepository(ABC):
+class AbstractRepository(ABC):
     @abstractmethod
     def get_by_id(self, id: int) -> AbstractPokerPlayer:
         pass
@@ -22,27 +23,27 @@ class AbstractPlayerRepository(ABC):
         pass
 
 
-class MemoryPlayerRepository(AbstractPlayerRepository):
-    def __init__(self, players: List[AbstractPokerPlayer] = None) -> None:
-        self._players = {p.id: p for p in (players or [])}
+class MemoryRepository(AbstractRepository):
+    def __init__(self, data: List[object] = None) -> None:
+        self._data = {d.id: d for d in (data or [])}
 
-    def get_by_id(self, id: int) -> AbstractPokerPlayer:
-        return self._players.get(id)
+    def get_by_id(self, id: int) -> object:
+        return self._data.get(id)
 
-    def get_all(self) -> List[AbstractPokerPlayer]:
-        return list(self._players.values())
+    def get_all(self) -> List[object]:
+        return list(self._data.values())
 
     def _get_new_id(self):
-        return max(self._players.keys(), default=0) + 1
+        return max(self._data.keys(), default=0) + 1
 
-    def add(self, player: AbstractPokerPlayer) -> None:
-        if player.id is None:
-            player.id = self._get_new_id()
+    def add(self, obj: object) -> None:
+        if obj.id is None:
+            obj.id = self._get_new_id()
 
-        self._players[player.id] = player
+        self._data[obj.id] = obj
 
-        return player
+        return obj
 
     def remove(self, id: int) -> None:
-        if id in self._players:
-            self._players[id] = None
+        if id in self._data:
+            self._data[id] = None

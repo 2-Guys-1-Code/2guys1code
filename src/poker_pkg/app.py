@@ -4,7 +4,7 @@ from typing import Callable, List
 from .actions import PokerActionName
 from .errors import PlayerNotInGame, PokerException, ValidationException
 from .game import PokerGame, PokerPlayer, create_poker_game
-from .repositories import AbstractPlayerRepository
+from .repositories import AbstractRepository
 
 
 class TooManyGames(Exception):
@@ -37,52 +37,57 @@ class ValidationError(Exception):
 class PokerApp:
     def __init__(
         self,
-        player_repository: AbstractPlayerRepository,
+        player_repository: AbstractRepository,
+        game_repository: AbstractRepository,
         max_games: int = 2,
         game_factory: Callable = create_poker_game,
     ) -> None:
         self._id = str(uuid.uuid4())
-        self.games = []
-        self.player_repository = player_repository
-        self.max_games = max_games
-        self.game_factory = game_factory
+        self._player_repository = player_repository
+        self._game_repository = game_repository
+        self._max_games = max_games
+        self._game_factory = game_factory
 
     def get_id(self) -> str:
         return self._id
 
     def get_games(self) -> List[PokerGame]:
-        return self.games
+        return self._game_repository.get_all()
 
-    def _get_game_by_id(self, id: int) -> PokerGame:
-        return next((g for g in self.games if g.id == id), None)
+    def get_game_by_id(self, id: int) -> PokerGame:
+        game = self._game_repository.get_by_id(id)
 
-    def _get_player_by_id(self, id: int) -> PokerPlayer:
-        return self.player_repository.get_by_id(id)
+        if game is None:
+            raise GameNotFound()
+
+        return game
+
+    def get_player_by_id(self, id: int) -> PokerPlayer:
+        player = self._player_repository.get_by_id(id)
+
+        if player is None:
+            raise PlayerNotFound()
+
+        return player
 
     def create_game(
         self, host_id: int, seat: int = None, **kwargs
     ) -> PokerGame:
-        host = self._get_player_by_id(host_id)
-        if host is None:
-            raise PlayerNotFound()
+        host = self.get_player_by_id(host_id)
 
-        if len(self.games) >= self.max_games:
+        # TODO: probably want to add a count method to the repository to avoid returning everything
+        if len(self._game_repository.get_all()) >= self._max_games:
             raise TooManyGames("The maximum number of games has been reached.")
 
-        game = self.game_factory(**kwargs)
-        game.id = self.games[-1].id + 1 if len(self.games) else 1
-
+        game = self._game_factory(**kwargs)
         game.join(host, seat=seat)
 
-        self.games.append(game)
+        self._game_repository.add(game)
 
         return game
 
     def update_game(self, game_id: int, started=None, **kwargs) -> PokerGame:
-        game = self._get_game_by_id(game_id)
-
-        if game is None:
-            raise GameNotFound()
+        game = self.get_game_by_id(game_id)
 
         if started is not None:
             game.start()
@@ -92,15 +97,9 @@ class PokerApp:
     def join_game(
         self, game_id: int, player_id: int, seat: int | None = None
     ) -> PokerGame:
-        game = self._get_game_by_id(game_id)
+        game = self.get_game_by_id(game_id)
 
-        if game is None:
-            raise GameNotFound()
-
-        player = self._get_player_by_id(player_id)
-
-        if player is None:
-            raise PlayerNotFound()
+        player = self.get_player_by_id(player_id)
 
         game.join(player, seat=seat)
 
@@ -129,15 +128,8 @@ class PokerApp:
         action_name: PokerActionName,
         **kwargs
     ) -> PokerGame:
-        game = self._get_game_by_id(game_id)
-
-        if game is None:
-            raise GameNotFound()
-
-        player = self._get_player_by_id(player_id)
-
-        if player is None:
-            raise PlayerNotFound()
+        game = self.get_game_by_id(game_id)
+        player = self.get_player_by_id(player_id)
 
         try:
             func = getattr(game, action_name)
@@ -155,5 +147,5 @@ def create_poker_app(**kwargs) -> PokerApp:
 
 def get_poker_config() -> dict:
     return {
-        "max_games": 2,
+        "max_games": 20,
     }
