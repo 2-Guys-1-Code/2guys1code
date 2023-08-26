@@ -3,6 +3,7 @@ from functools import partial
 from typing import Callable, List
 
 from betting_structure import AbstractBettingStructure, BasicBettingStructure
+from card_pkg.card import Card
 
 from card_pkg.card_collection import CardCollection
 from card_pkg.deck import DeckWithoutJokers
@@ -19,6 +20,7 @@ from game_engine.table import (
     GameTable,
     TableIsFull,
 )
+
 
 from .actions import PokerActionName
 from .dealer import Dealer
@@ -63,7 +65,22 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
         )
         winners = self._find_winnners(self.game.get_players())
         winner = winners[0][0]
-        return self.game.table.get_seat(winner), {}
+        return self.game.table.get_seat(winner), {
+            "strategy": "highest card",
+            "test": {
+                # "cards": [str(c) for c in s.player.hand],
+                "cards": PokerHand(cards=[Card("2H")]),
+                "seat": 1,
+            },
+            "data": {
+                str(s.player.id): {
+                    # "cards": [str(c) for c in s.player.hand],
+                    "cards": s.player.hand,
+                    "seat": s.position,
+                }
+                for s in self.game.table
+            },
+        }
 
     # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(

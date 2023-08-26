@@ -1,6 +1,14 @@
-from typing import Any, Dict
+from typing import Any, Dict, Annotated, List
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import (
+    BaseModel,
+    RootModel,
+    ConfigDict,
+    computed_field,
+    WrapSerializer,
+)
+from card_pkg.card import Card
+from card_pkg.hand import Hand
 
 from poker_pkg.actions import PokerActionName
 from poker_pkg.game import PokerTypes
@@ -28,6 +36,61 @@ class Pot(BaseModel):
     total: int
 
 
+# class Card(BaseModel):
+#     model_config = ConfigDict(from_attributes=True)
+#     suit: str
+#     rank: int
+
+
+class CardAsString(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    suit: str
+    rank: int
+
+
+CardCollection = RootModel[
+    List[Annotated[str, WrapSerializer(lambda x, _: str(x), when_used="json")]]
+]
+# class CardCollection(BaseModel):
+#     __root__: List[Card]
+
+
+class HighestCardStartsDataDetails(BaseModel):
+    # seat: int
+    cards: CardCollection
+
+    # @computed_field
+    # def cards(self):
+    #     pass
+
+
+HighestCardStartsData = RootModel[Dict[str, HighestCardStartsDataDetails]]
+# class HighestCardStartsData(RootModel):
+#     __root__: Dict[str, HighestCardStartsDataDetails]
+
+
+def fpm_serializer(fpm, _):
+    rv = fpm
+    if fpm.get("strategy") == "highest card":
+        # rv["data"] = HighestCardStartsData(fpm["data"])
+        rv["test"] = HighestCardStartsDataDetails(**fpm["test"])
+
+    return rv
+
+
+FPM = Annotated[dict, WrapSerializer(fpm_serializer, when_used="json")]
+
+# class FPM(BaseModel):
+#     strategy: str
+#     data: FPMData
+
+
+# @computed_field
+# def computed(self):
+#     if self.data["strategy"] == "highest card":
+#         return
+
+
 class Game(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -37,7 +100,7 @@ class Game(BaseModel):
     started: bool = None
     current_player_id: int | None = None
     pot: Pot = None
-    first_player_metadata: Dict | None = None
+    first_player_metadata: FPM | None = None
 
 
 class NewGameData(BaseModel):

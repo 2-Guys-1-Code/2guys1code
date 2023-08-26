@@ -345,7 +345,19 @@ def test_start_game__highest_card_starts() -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response["current_player_id"] == 3
-    assert parsed_response["first_player_metadata"] == {}
+    assert parsed_response["first_player_metadata"] == {
+        "strategy": "highest card",
+        "data": {
+            "3": {
+                "cards": ["2H"],
+                "seat": 1,
+            },
+            "9": {
+                "cards": ["1H"],
+                "seat": 2,
+            },
+        },
+    }
 
 
 def test_join_a_game_with_picked_seats(api_client: TestClient) -> None:

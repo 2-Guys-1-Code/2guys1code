@@ -149,6 +149,8 @@ class GameEngine(AbstractGameEngine):
 
     def _set_first_player(self) -> None:
         index, metadata = self._first_player_strategy.get_first_player_index()
+        # I think it might be best to just store the metadata in the
+        # _first_player_strategy instance and reach into it from the model
         self._metadata["starting_player"] = metadata
         self._table.set_chip_to_seat(index)
 
