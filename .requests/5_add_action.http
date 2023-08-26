@@ -1,0 +1,8 @@
+PATCH http://0.0.0.0:8000/games/1 HTTP/1.1
+content-type: application/json
+
+{
+    "player_id": int
+    "action_data": Dict[str, Any]
+    "action_name": str
+}
