@@ -360,6 +360,12 @@ class Card:
     # def get_difference(self, b: "Card") -> int:
     #     return self._comparator.get_difference(self, b)
 
+    def __str__(self) -> str:
+        if self.rank is None:
+            return self.suit
+
+        return f"{self.rank}{self.suit}"
+
     def __repr__(self) -> str:
         if self.rank is None:
             return self.suit

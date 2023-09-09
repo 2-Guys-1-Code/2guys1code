@@ -6,8 +6,11 @@ from pydantic import (
     ConfigDict,
     computed_field,
     WrapSerializer,
+    model_validator,
+    root_validator,
 )
 from card_pkg.card import Card
+from card_pkg.card_collection import CardCollection
 from card_pkg.hand import Hand
 
 from poker_pkg.actions import PokerActionName
@@ -48,16 +51,26 @@ class CardAsString(BaseModel):
     rank: int
 
 
-CardCollection = RootModel[
-    List[Annotated[str, WrapSerializer(lambda x, _: str(x), when_used="json")]]
-]
+# CardCollection = RootModel[
+#     List[Annotated[str, WrapSerializer(lambda x, _: str(x), when_used="json")]]
+# ]
 # class CardCollection(BaseModel):
-#     __root__: List[Card]
+#     cards: List
+
+#     @model_validator(mode="after")
+#     def make_data(cls, values):
+#         values["cards"] = [str(c) for c in values["cards"]]
+#         return values
 
 
 class HighestCardStartsDataDetails(BaseModel):
-    # seat: int
-    cards: CardCollection
+    seat: int
+    cards: List[str]
+
+    # @model_validator(mode="before")
+    # def make_data(cls, values):
+    #     values["cards"] = [str(c) for c in values["cards"]]
+    #     return values
 
     # @computed_field
     # def cards(self):
@@ -78,11 +91,18 @@ def fpm_serializer(fpm, _):
     return rv
 
 
-FPM = Annotated[dict, WrapSerializer(fpm_serializer, when_used="json")]
+# FPM = Annotated[dict, WrapSerializer(fpm_serializer, when_used="json")]
 
-# class FPM(BaseModel):
-#     strategy: str
-#     data: FPMData
+
+class FPM(BaseModel):
+    strategy: str
+    data: Dict
+
+    @model_validator(mode="after")
+    def make_data(cls, values):
+        if values.get("strategy") == "highest card":
+            values["data"] = {}
+        return values
 
 
 # @computed_field
