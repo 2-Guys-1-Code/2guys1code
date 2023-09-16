@@ -192,6 +192,8 @@ class PokerGame(GameEngine):
             # It would be nice to allow joining a table mid-game
             raise PlayerCannotJoin("The game has started.")
 
+        # That condition should be moved inside the betting structure;
+        # It will decide if you get to keep the chips you brought
         if player.purse is None:
             self.betting_structure.buy_in(player)
 
@@ -201,6 +203,14 @@ class PokerGame(GameEngine):
             return
         except TableIsFull:
             raise PlayerCannotJoin("There are no free seats in the game.")
+
+    def leave(self, player: AbstractPokerPlayer) -> None:
+        if self.started:
+            # we'll need to mark the player as wanting to leave
+            return
+
+        self.betting_structure.cash_out(player)
+        self._table.leave(player)
 
     def do(
         self,

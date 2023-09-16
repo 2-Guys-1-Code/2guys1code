@@ -171,11 +171,12 @@ class GameEngine(AbstractGameEngine):
         # Guard against first player strategy conflicting with the number of players
         # i.e. catch a somewhat generic error (like FirstPlayerError) and raise something else? or not.
         self._set_first_player()
+
+        # Add a round manager to move from round to round
+        # Current logic requires triggering the next round manually;
+        # It would be nice to be able to control this (e.g. manually for tests, after a short delay for a real game)
         self.start_round()
 
-    # Add a round manager to move from round to round
-    # Current logic requires triggering the next round manually;
-    # It would be nice to be able to control this (e.g. manually for tests, after a short delay for a real game)
     def start_round(self) -> None:
         self.round_count += 1
 

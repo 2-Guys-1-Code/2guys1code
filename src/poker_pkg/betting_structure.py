@@ -93,6 +93,10 @@ class AbstractBettingStructure(ABC):
     def buy_in(self, player: AbstractPlayer) -> None:
         pass
 
+    @abstractmethod
+    def cash_out(self, player: AbstractPlayer) -> None:
+        pass
+
 
 class AbstractBettingFormula(ABC):
     @abstractmethod
@@ -151,6 +155,9 @@ class BasicBettingStructure(AbstractBettingStructure):
 
     def buy_in(self, player: AbstractPlayer) -> None:
         player.add_to_purse(self._starting_chips)
+
+    def cash_out(self, player: AbstractPlayer) -> None:
+        player.take_from_purse(player.purse)
 
 
 # class BlindStuctureCalulator:

@@ -986,5 +986,79 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
 # test increasing blinds (by time, by round count)
 
 
-def test_leave_game():
-    assert 1 == 2
+# use cases for leaving a game:
+# Tournament:
+# - disconnected: stay in game as long as possible; AI takes over
+# - forfeit: lose your chips and your seat
+# Cash game:
+# - disconnect vs. leave is the same; stay in game for the round, then return remaining chips and lose seat
+# Modifiers:
+# - Wait mode: poll players on whether to wait or continue (or boot?)
+
+# Test cases:
+# - leave before game starts
+# - leave after game starts
+#  - leave between rounds
+#  - leave during round
+# all players leave... short circuit and cancel the whole round? nah!
+
+
+def test_leave_game_before_game_starts():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        betting_structure=BasicBettingStructure(
+            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
+        ),
+    )
+
+    game.leave(player2)
+
+    assert game.get_players() == [player1, player3]
+    assert player2.purse == 0
+
+
+def test_leave_game_after_game_starts():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        betting_structure=BasicBettingStructure(),
+    )
+
+    game.start()
+
+    game.leave(player2)
+
+    # I guess this is also false; player2 is still in because the round started
+    assert game.get_players() == [player1, player2, player3]
+    assert player2.purse == 500  # only if no blinds
+
+    # finish the round
+    game.check(player3)
+    game.check(player1)
+
+    # player2 needs to check; and we need to assert that it happened; Just check that round count is now 2
+
+    assert game.round_count == 2
+    assert game.get_players() == [player1, player3]
+    assert player2.purse == 0
+
+    # game.check(player2) # ILLEGAL; they left, they cannot take action - another test for this
+
+    # Assert some more;
+    # Make sure player 2 only checked or folded (probably setup different tests)
+    # Make sure they ended up with the expected purse (no less than they had at
+    # the time of leaving - so test leaving before & after making a bet) but
+    # potentially more if they won the round after leaving
