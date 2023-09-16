@@ -55,23 +55,11 @@ class PokerTypes(Enum):
 
 
 class HighestCardStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> (int, dict):
-        for s in self.game.table:
-            s.player.hand = PokerHand(max_length=1)
+    name: str = "highest_card_starts"
 
-        self.game.dealer.shuffle()
-        self.game.dealer.deal(
-            [s.player.hand for s in self.game.table], count=1
-        )
-        winners = self._find_winnners(self.game.get_players())
-        winner = winners[0][0]
-        return self.game.table.get_seat(winner), {
-            "strategy": "highest card",
-            "test": {
-                # "cards": [str(c) for c in s.player.hand],
-                "cards": PokerHand(cards=[Card("2H")]),
-                "seat": 1,
-            },
+    def _get_metadata(self):
+        return {
+            "strategy": self.name,
             "data": {
                 str(s.player.id): {
                     # "cards": [str(c) for c in s.player.hand],
@@ -81,6 +69,18 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
                 for s in self.game.table
             },
         }
+
+    def _get_index(self):
+        for s in self.game.table:
+            s.player.hand = PokerHand(max_length=1)
+
+        self.game.dealer.shuffle()
+        self.game.dealer.deal(
+            [s.player.hand for s in self.game.table], count=1
+        )
+        winners = self._find_winnners(self.game.get_players())
+        winner = winners[0][0]
+        return self.game.table.get_seat(winner)
 
     # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(

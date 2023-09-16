@@ -125,8 +125,10 @@ def test_start_game__initial_state():
 
 
 class SecondPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> (int, dict):
-        return 2, dict
+    name: str = "second_player_starts"
+
+    def _get_index(self):
+        return 2
 
 
 @pytest.mark.parametrize(

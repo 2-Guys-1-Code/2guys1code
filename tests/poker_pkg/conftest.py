@@ -39,9 +39,11 @@ def make_pot(bets=None):
 
 
 class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> (int, dict):
+    name: str = "last_player_starts"  # TODO: This is duplicated
+
+    def _get_index(self):
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat(player), dict
+        return self.game.table.get_seat(player)
 
 
 def game_factory(

@@ -1,7 +1,10 @@
-from typing import Any, Dict, Annotated, List
+from typing import Any, Dict, Annotated, List, Literal, Union
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
+    Field,
+    PlainSerializer,
     RootModel,
     ConfigDict,
     computed_field,
@@ -22,7 +25,7 @@ from poker_pkg.game import PokerTypes
 class Player(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: int | None = None
     name: str
     purse: int
 
@@ -39,76 +42,58 @@ class Pot(BaseModel):
     total: int
 
 
-# class Card(BaseModel):
-#     model_config = ConfigDict(from_attributes=True)
-#     suit: str
-#     rank: int
-
-
 class CardAsString(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     suit: str
     rank: int
 
 
-# CardCollection = RootModel[
-#     List[Annotated[str, WrapSerializer(lambda x, _: str(x), when_used="json")]]
-# ]
-# class CardCollection(BaseModel):
-#     cards: List
+def str_serializer(x):
+    return str(x)
 
-#     @model_validator(mode="after")
-#     def make_data(cls, values):
-#         values["cards"] = [str(c) for c in values["cards"]]
-#         return values
+
+ToString = Annotated[
+    str,
+    BeforeValidator(str_serializer),
+]
 
 
 class HighestCardStartsDataDetails(BaseModel):
     seat: int
-    cards: List[str]
-
-    # @model_validator(mode="before")
-    # def make_data(cls, values):
-    #     values["cards"] = [str(c) for c in values["cards"]]
-    #     return values
-
-    # @computed_field
-    # def cards(self):
-    #     pass
+    cards: List[ToString]
 
 
 HighestCardStartsData = RootModel[Dict[str, HighestCardStartsDataDetails]]
-# class HighestCardStartsData(RootModel):
-#     __root__: Dict[str, HighestCardStartsDataDetails]
 
 
-def fpm_serializer(fpm, _):
-    rv = fpm
-    if fpm.get("strategy") == "highest card":
-        # rv["data"] = HighestCardStartsData(fpm["data"])
-        rv["test"] = HighestCardStartsDataDetails(**fpm["test"])
-
-    return rv
+class HighestCardStartsStrategy(BaseModel):
+    strategy: Literal[
+        "highest_card_starts"
+    ]  # Can we somehow use the value from the class?
+    data: HighestCardStartsData
 
 
-# FPM = Annotated[dict, WrapSerializer(fpm_serializer, when_used="json")]
+class FirstPlayerStartsStrategy(BaseModel):
+    strategy: Literal[
+        "first_player_starts"
+    ]  # Can we somehow use the value from the class?
 
 
-class FPM(BaseModel):
-    strategy: str
-    data: Dict
-
-    @model_validator(mode="after")
-    def make_data(cls, values):
-        if values.get("strategy") == "highest card":
-            values["data"] = {}
-        return values
+class SomeOtherTypeStrategy(BaseModel):
+    # I cannot just define as "Literal" or "str" to cover all other cases,
+    # but I think it could be an enum if we list all stretegies somewhere
+    strategy: Literal["other", "second_player_starts", "last_player_starts"]
 
 
-# @computed_field
-# def computed(self):
-#     if self.data["strategy"] == "highest card":
-#         return
+Strategy = Annotated[
+    Union[
+        HighestCardStartsStrategy,
+        FirstPlayerStartsStrategy,
+        SomeOtherTypeStrategy,
+    ],
+    Field(discriminator="strategy"),
+]
+FirstPlayerMetadata = RootModel[Strategy]
 
 
 class Game(BaseModel):
@@ -120,7 +105,7 @@ class Game(BaseModel):
     started: bool = None
     current_player_id: int | None = None
     pot: Pot = None
-    first_player_metadata: FPM | None = None
+    first_player_metadata: FirstPlayerMetadata | None = None
 
 
 class NewGameData(BaseModel):

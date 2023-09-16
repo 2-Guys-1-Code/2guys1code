@@ -45,17 +45,30 @@ class AbstractGameEngine(ABC):
 
 
 class AbstractStartingPlayerStrategy(ABC):
+    # TODO: Make this a @property method so it breaks if not implemented?
+    name: str = "starting_player_strategy"
+
     def __init__(self, game: AbstractGameEngine) -> None:
         self.game = game
 
+    def _get_metadata(self):
+        return {
+            "strategy": self.name,
+        }
+
     @abstractmethod
-    def get_first_player_index(self) -> (int, dict):
+    def _get_index(self):
         pass
+
+    def get_first_player_index(self) -> (int, dict):
+        return self._get_index(), self._get_metadata()
 
 
 class FirstPlayerStarts(AbstractStartingPlayerStrategy):
-    def get_first_player_index(self) -> (int, dict):
-        return 1, {}
+    name: str = "first_player_starts"
+
+    def _get_index(self):
+        return 1
 
 
 class AbstractAction(ABC):
@@ -155,6 +168,8 @@ class GameEngine(AbstractGameEngine):
         self._table.set_chip_to_seat(index)
 
     def start(self) -> None:
+        # Guard against first player strategy conflicting with the number of players
+        # i.e. catch a somewhat generic error (like FirstPlayerError) and raise something else? or not.
         self._set_first_player()
         self.start_round()
 
