@@ -1,22 +1,13 @@
-from typing import Any, Dict, Annotated, List, Literal, Union
+from typing import Any, Callable, Dict, Annotated, List, Literal, Union
 
 from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
-    PlainSerializer,
     RootModel,
     ConfigDict,
-    computed_field,
-    WrapSerializer,
-    model_validator,
-    root_validator,
 )
-from card_pkg.card import Card
-from card_pkg.card_collection import CardCollection
-from card_pkg.hand import Hand
 
-from poker_pkg.actions import PokerActionName
 from poker_pkg.game import PokerTypes
 
 # TODO: do we want to specify integers even if it will be jsonified into strings???
@@ -30,10 +21,28 @@ class Player(BaseModel):
     purse: int
 
 
+def list_to_dict_factory(
+    dict_definition: type, key_getter: Callable, value_getter: Callable
+):
+    def serializer(lst):
+        return {key_getter(x): value_getter(x) for x in lst}
+
+    ListToDict = Annotated[
+        dict_definition,
+        BeforeValidator(serializer),
+    ]
+
+    return ListToDict
+
+
 class Table(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    seats: Dict[int, Player | None]
+    seats: list_to_dict_factory(
+        Dict[int, Player | None],
+        lambda seat: seat.position,
+        lambda seat: seat.player,
+    )
 
 
 class Pot(BaseModel):
@@ -100,7 +109,11 @@ class Game(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    players: Dict[int, Player]
+    players: list_to_dict_factory(
+        Dict[int, Player],
+        lambda player: player.id,
+        lambda player: player,
+    )
     table: Table
     started: bool = None
     current_player_id: int | None = None
@@ -126,11 +139,3 @@ class NewActionData(BaseModel):
     player_id: int
     action_data: Dict[str, Any]
     action_name: str
-
-
-# class UserResource(BaseModel):
-#     id: int = Field(alias="identifier")
-#     name: str = Field(alias="fullname")
-
-#     class Config:
-#         allow_population_by_field_name = True

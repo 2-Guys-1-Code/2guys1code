@@ -97,10 +97,10 @@ def test_pot__get_side_pots():
     side_pots = pot.get_side_pots()
 
     assert side_pots[0].get_value() == 200
-    assert side_pots[0].get_players() == [player1, player2, player3]
+    assert side_pots[0].players == [player1, player2, player3]
 
     assert side_pots[1].get_value() == 100
-    assert side_pots[1].get_players() == [player2, player3]
+    assert side_pots[1].players == [player2, player3]
 
     assert side_pots[2].get_value() == 100
-    assert side_pots[2].get_players() == [player3]
+    assert side_pots[2].players == [player3]

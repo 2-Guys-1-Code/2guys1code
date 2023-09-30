@@ -1,5 +1,6 @@
 from collections import deque
 from enum import Enum
+from typing import List
 
 from .player import AbstractPlayer
 
@@ -68,6 +69,8 @@ class Seat:
         self._position = position
         self._player = player
         self._active = active
+        # Can _active and leaving be mushed into a status?
+        self.leaving = False
 
     def deactivate(self) -> None:
         self.active = False
@@ -91,6 +94,9 @@ class Seat:
     @player.setter
     def player(self, player: AbstractPlayer):
         self._player = player
+        if self._player is None:
+            self.leaving = False
+            # self.active = True
 
     def __repr__(self) -> str:
         if self._player is None:
@@ -109,11 +115,9 @@ class GameTable:
         self._direction: GameDirection = GameDirection.CLOCKWISE
         self._seats: list[Seat] = [Seat(i + 1) for i in range(size)]
 
-    # TODO: We only need this as a dict to avoid having to do this manually in the api layer;
-    # I'd like to find a way for Pydantic to do this
     @property
-    def seats(self) -> dict[int, AbstractPlayer]:
-        return {(i + 1): s.player for i, s in enumerate(self._seats)}
+    def seats(self) -> List[Seat]:
+        return self._seats
 
     @property
     def players(self) -> list[AbstractPlayer]:
@@ -136,7 +140,7 @@ class GameTable:
             self._active_seat = None
             return
 
-        seat_number = self.get_seat(player)
+        seat_number = self.get_seat_position(player)
 
         if seat_number is None:
             raise PlayerNotSeated()
@@ -154,18 +158,25 @@ class GameTable:
 
         self._direction = direction
 
-    def get_seat(self, entity: AbstractPlayer) -> int:
+    def get_seat(self, entity: AbstractPlayer) -> Seat:
         if entity is None:
             raise InvalidPlayer()
 
-        for key, value in enumerate(self._seats):
-            if value.player is entity:
-                return key + 1
+        for s in self._seats:
+            if s.player is entity:
+                return s
+
+        return None
+
+    def get_seat_position(self, entity: AbstractPlayer) -> int:
+        seat = self.get_seat(entity)
+        if seat:
+            return seat.position
 
         return None
 
     def _join(self, entity: AbstractPlayer, seat_number: int) -> None:
-        if self.get_seat(entity) is not None:
+        if self.get_seat_position(entity) is not None:
             raise AlreadySeated()
 
         if seat_number is None:
@@ -185,8 +196,12 @@ class GameTable:
         self._join(entity, seat_number)
 
     def leave(self, entity: AbstractPlayer) -> None:
-        seat_number = self.get_seat(entity)
+        seat_number = self.get_seat_position(entity)
         self._seats[seat_number - 1].player = None
+
+    def mark_for_leave(self, entity: AbstractPlayer) -> None:
+        seat_number = self.get_seat_position(entity)
+        self._seats[seat_number - 1].leaving = True
 
     def _validate_seat(self, seat_number: int) -> None:
         if (
@@ -215,7 +230,7 @@ class GameTable:
     def _get_next_player(
         self, starting_seat: int, skip: int = 0
     ) -> AbstractPlayer | None:
-        # starting_seat = self.get_seat(starting_player)
+        # starting_seat = self.get_seat_position(starting_player)
         starting_player = self.get_at_seat(starting_seat)
         seats = self._get_ordered_players(starting_seat)
         if len(seats) == 0:
@@ -258,11 +273,11 @@ class GameTable:
         self._seats[seat_number - 1].active = False
 
     def activate_player(self, entity: AbstractPlayer) -> None:
-        seat_number = self.get_seat(entity)
+        seat_number = self.get_seat_position(entity)
         self._seats[seat_number - 1].active = True
 
     def deactivate_player(self, entity: AbstractPlayer) -> None:
-        seat_number = self.get_seat(entity)
+        seat_number = self.get_seat_position(entity)
         self._seats[seat_number - 1].active = False
 
     def activate_all(self) -> None:
@@ -291,7 +306,7 @@ class GameTable:
             raise InvalidNumber()
 
         player = self._get_next_player(self._dealer_seat, skip=number - 1)
-        self._dealer_seat = self.get_seat(player)
+        self._dealer_seat = self.get_seat_position(player)
 
     def _validate_player_position(self, number: int) -> None:
         number_of_seats = len(self._seats)

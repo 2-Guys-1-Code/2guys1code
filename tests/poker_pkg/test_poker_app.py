@@ -26,7 +26,7 @@ def test_get_games_returns_games(
 
     games = poker_app.get_games()
     assert len(games) == 1
-    assert games[0].get_players() == [player]
+    assert games[0].players == [player]
 
 
 def test_create_game__host_player_does_not_exist(poker_app: PokerApp) -> None:

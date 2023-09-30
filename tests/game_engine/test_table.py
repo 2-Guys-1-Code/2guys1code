@@ -343,7 +343,7 @@ def test_activate_all():
     assert [s.active for s in table._seats] == [True, True, True]
 
 
-def test_get_seat():
+def test_get_seat_position():
     table = GameTable(3)
 
     player_1 = AbstractPlayer(name="Alfred")
@@ -352,12 +352,12 @@ def test_get_seat():
     table.join(player_1)
     table.join(player_2)
 
-    seat_number = table.get_seat(player_2)
+    seat_number = table.get_seat_position(player_2)
 
     assert seat_number == 2
 
 
-def test_get_seat__invalid_seat():
+def test_get_seat_position__invalid_seat():
     table = GameTable(3)
 
     player_1 = AbstractPlayer(name="Alfred")
@@ -367,7 +367,7 @@ def test_get_seat__invalid_seat():
     table.join(player_2)
 
     with pytest.raises(InvalidPlayer):
-        table.get_seat(None)
+        table.get_seat_position(None)
 
 
 # skip negative? Raise I think

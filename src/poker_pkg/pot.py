@@ -28,7 +28,7 @@ class SidePot:
         except IndexError:
             return []
 
-        elligible = list(set(self.get_players()).intersection(winners))
+        elligible = list(set(self.players).intersection(winners))
 
         if not elligible:
             return self.get_elligible_players(all_winners)

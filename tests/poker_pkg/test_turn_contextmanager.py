@@ -2,7 +2,11 @@ from typing import List
 
 import pytest
 
-from game_engine.engine import AbstractGameEngine, AbstractRoundStep
+from game_engine.engine import (
+    AbstractGameEngine,
+    AbstractRoundStep,
+    GameEngine,
+)
 from game_engine.errors import (
     GameException,
     IllegalActionException,
@@ -40,9 +44,12 @@ class FakeStep(PlayerStep):
 
 class FakeGame:
     def __init__(self, player_list, steps: list = None) -> None:
+        super().__init__()
+
         self.logic_called = 0
         self.step_count = 0
         self.steps = steps or [FakeStep(["action"], self)]
+        self.current_step = self.steps[self.step_count]
         self.started = False
         self.all_players_played = False
 

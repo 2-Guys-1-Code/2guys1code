@@ -43,7 +43,7 @@ class LastPlayerStarts(AbstractStartingPlayerStrategy):
 
     def _get_index(self):
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat(player)
+        return self.game.table.get_seat_position(player)
 
 
 def game_factory(

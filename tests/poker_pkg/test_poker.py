@@ -36,7 +36,7 @@ from .conftest import LastPlayerStarts, game_factory, shuffler_factory
 def test_create_game():
     game = PokerGame(BasicBettingStructure(), max_players=3)
 
-    assert len(game.get_players()) == 0
+    assert len(game.players) == 0
     assert game.get_free_seats() == 3
 
 
@@ -49,7 +49,7 @@ def test_join_game():
     game.join(player1)
     game.join(player2)
 
-    assert game.get_players() == [player1, player2]
+    assert game.players == [player1, player2]
     assert player1.purse == 500
     assert player2.purse == 500
     assert game.get_free_seats() == 1
@@ -63,7 +63,7 @@ def test_player_cannot_join_more_than_once():
     game.join(player)
     game.join(player)
 
-    assert game.get_players() == [player]
+    assert game.players == [player]
     assert game.get_free_seats() == 2
 
 
@@ -84,7 +84,7 @@ def test_player_cannot_join_when_no_free_seat():
 
     assert str(e.value) == "There are no free seats in the game."
 
-    assert game.get_players() == [player1, player2]
+    assert game.players == [player1, player2]
     assert game.get_free_seats() == 0
 
 
@@ -111,17 +111,17 @@ def test_start_game__initial_state():
 
     game.start()
 
-    assert len(game.get_players()) == 3
+    assert len(game.players) == 3
     assert game.pot.kitty == 0
 
-    assert game.get_players()[0].purse == 500
-    assert game.get_players()[1].purse == 500
-    assert game.get_players()[2].purse == 500
+    assert game.players[0].purse == 500
+    assert game.players[1].purse == 500
+    assert game.players[2].purse == 500
 
     assert Card("RJ") not in game.deck
     assert Card("BJ") not in game.deck
 
-    assert game.current_player == game.get_players()[0]
+    assert game.current_player == game.players[0]
 
 
 class SecondPlayerStarts(AbstractStartingPlayerStrategy):
@@ -149,16 +149,16 @@ def test_first_player_strategy(strategy, shuffler, expected_starting_player):
 
     game.start()
 
-    assert game.dealer_player == game.get_players()[expected_starting_player]
+    assert game.dealer_player == game.players[expected_starting_player]
 
 
 def test_game_can_set_chips_per_player():
     game = game_factory(
         players=2, betting_structure=BasicBettingStructure(starting_chips=1500)
     )
-    assert len(game.get_players()) == 2
-    assert game.get_players()[0].purse == 1500
-    assert game.get_players()[1].purse == 1500
+    assert len(game.players) == 2
+    assert game.players[0].purse == 1500
+    assert game.players[1].purse == 1500
 
 
 def test_start_round__initial_state():
@@ -172,7 +172,7 @@ def test_start_round__initial_state():
         assert isinstance(game.table.get_at_seat(x).hand[0], Card)
 
     assert len(game.deck) == 37
-    assert game.current_player == game.get_players()[0]
+    assert game.current_player == game.players[0]
     assert game.round_count == 1
 
 
@@ -186,8 +186,8 @@ def test_start_round_shuffles_deck_and_deals():
     # fmt: on
     game = game_factory(shuffler=fake_shuffler, players=2)
     game.start()
-    assert str(game.get_players()[0].hand) == "1H 2H 3H 4H 5H"
-    assert str(game.get_players()[1].hand) == "RJ BJ 1S 2S 3S"
+    assert str(game.players[0].hand) == "1H 2H 3H 4H 5H"
+    assert str(game.players[1].hand) == "RJ BJ 1S 2S 3S"
 
 
 def test_deal_cycles_hands():
@@ -250,14 +250,14 @@ def test_check():
     game = game_factory(players=2)
     game.start()
 
-    assert game.current_player == game.get_players()[0]
-    game.check(game.get_players()[0])
-    assert game.current_player == game.get_players()[1]
-    game.check(game.get_players()[1])
+    assert game.current_player == game.players[0]
+    game.check(game.players[0])
+    assert game.current_player == game.players[1]
+    game.check(game.players[1])
     assert game.current_player == None
 
-    assert game.get_players()[0].purse == 500
-    assert game.get_players()[1].purse == 500
+    assert game.players[0].purse == 500
+    assert game.players[1].purse == 500
 
 
 def test_all_in():
@@ -928,9 +928,9 @@ def test_big_blind_can_play_again_when_called():
 
 
 def test_big_blind_can_play_again_when_called__v2():
-    player1 = PokerPlayer(purse=500, name="Michael")
-    player2 = PokerPlayer(purse=500, name="Kichael")
-    player3 = PokerPlayer(purse=500, name="Kathy")
+    player1 = PokerPlayer(name="Michael")
+    player2 = PokerPlayer(name="Kichael")
+    player3 = PokerPlayer(name="Kathy")
     game = game_factory(
         players=[
             player1,
@@ -956,9 +956,9 @@ def test_big_blind_can_play_again_when_called__v2():
 
 
 def test_big_blind_cannot_play_again_when_extra_raised_is_called():
-    player1 = PokerPlayer(purse=500, name="Michael")
-    player2 = PokerPlayer(purse=500, name="Kichael")
-    player3 = PokerPlayer(purse=500, name="Kathy")
+    player1 = PokerPlayer(name="Michael")
+    player2 = PokerPlayer(name="Kichael")
+    player3 = PokerPlayer(name="Kathy")
     game = game_factory(
         players=[
             player1,
@@ -1004,27 +1004,34 @@ def test_big_blind_cannot_play_again_when_extra_raised_is_called():
 
 
 def test_leave_game_before_game_starts():
-    player1 = PokerPlayer(purse=500, name="Michael")
-    player2 = PokerPlayer(purse=500, name="Kichael")
-    player3 = PokerPlayer(purse=500, name="Kathy")
+    player1 = PokerPlayer(name="Michael")
+    player2 = PokerPlayer(name="Kichael")
+    player3 = PokerPlayer(name="Kathy")
     game = game_factory(
         players=[
             player1,
             player2,
             player3,
         ],
-        betting_structure=BasicBettingStructure(
-            small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
-        ),
+        betting_structure=BasicBettingStructure(),
     )
 
     game.leave(player2)
 
-    assert game.get_players() == [player1, player3]
+    assert game.players == [player1, player3]
     assert player2.purse == 0
 
+    game.start()
 
-def test_leave_game_after_game_starts():
+    # finish the round
+    game.check(player1)
+    game.check(player3)
+
+    assert game.round_count == 1
+    assert game.rounds[-1].status == "ENDED"
+
+
+def test_leave_game_after_game_starts__before_their_turn():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Kichael")
     player3 = PokerPlayer(purse=500, name="Kathy")
@@ -1041,24 +1048,125 @@ def test_leave_game_after_game_starts():
 
     game.leave(player2)
 
-    # I guess this is also false; player2 is still in because the round started
-    assert game.get_players() == [player1, player2, player3]
-    assert player2.purse == 500  # only if no blinds
+    assert game.players == [player1, player2, player3]
+    assert player2.purse == 500
+
+    # finish the round
+    game.check(player1)
+    # The AI checks for player 2
+    assert game._table.get_seat(player2).active == True
+    assert player2.purse == 500
+    game.check(player3)
+
+    assert game.round_count == 1
+    assert game.rounds[-1].status == "ENDED"
+    assert game.players == [player1, player3]
+    assert player2.purse == 0
+
+
+def test_leave_game_after_game_starts__before_their_turn__cannot_check():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        betting_structure=BasicBettingStructure(),
+    )
+
+    game.start()
+
+    game.leave(player2)
+
+    assert game.players == [player1, player2, player3]
+    assert player2.purse == 500
+
+    # finish the round
+    game.bet(player1, 1)
+    # The AI folds for player 2
+    assert game._table.get_seat(player2).active == False
+    assert player2.purse == 500
+    game.call(player3)
+
+    assert game.round_count == 1
+    assert game.rounds[-1].status == "ENDED"
+    assert game.players == [player1, player3]
+    assert player2.purse == 0
+
+
+def test_leave_game_after_game_starts__during_their_turn():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        betting_structure=BasicBettingStructure(),
+    )
+
+    game.start()
+
+    game.check(player1)
+    # IT is now player2's turn; The AI should fold for them
+    game.leave(player2)
+    assert game.players == [player1, player2, player3]
+    assert game._table.get_seat(player2).active == True
+    assert player2.purse == 500
 
     # finish the round
     game.check(player3)
-    game.check(player1)
 
-    # player2 needs to check; and we need to assert that it happened; Just check that round count is now 2
-
-    assert game.round_count == 2
-    assert game.get_players() == [player1, player3]
+    assert game.round_count == 1
+    assert game.rounds[-1].status == "ENDED"
+    assert game.players == [player1, player3]
     assert player2.purse == 0
 
-    # game.check(player2) # ILLEGAL; they left, they cannot take action - another test for this
+
+def test_leave_game_after_game_starts__after_betting():
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        betting_structure=BasicBettingStructure(),
+    )
+
+    game.start()
+
+    game.check(player1)
+    game.bet(player2, 1)
+    game.leave(player2)
+    assert game.players == [player1, player2, player3]
+    assert game._table.get_seat(player2).active == True
+    assert player2.purse == 499
+
+    # finish the round
+    game.fold(player3)
+    game.fold(player1)
+
+    # How to assert player2's purse before they are removed from the game?
+    # Maybe remove players at the start of the next round?
+    # OR... Players leave with their chips if they came in with their chips...
+    # player2 won the pot before leaving
+    assert player2.purse == 500
+
+    assert game.round_count == 1
+    assert game.rounds[-1].status == "ENDED"
+    game.table.activate_all()  # I don't love this...
+    assert game.players == [player1, player3]
+    assert player2.purse == 0
 
     # Assert some more;
-    # Make sure player 2 only checked or folded (probably setup different tests)
     # Make sure they ended up with the expected purse (no less than they had at
     # the time of leaving - so test leaving before & after making a bet) but
     # potentially more if they won the round after leaving

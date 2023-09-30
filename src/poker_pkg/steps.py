@@ -83,7 +83,7 @@ class BlindBettingStep(BettingStep):
         super().start()
 
         if self.game_has_blinds:
-            if len(self.game.get_players()) == 2:
+            if len(self.game.players) == 2:
                 self.game.current_player = self.game.table.get_nth_player(
                     1
                 ).player
@@ -146,10 +146,13 @@ class EndRoundStep(PlayerStep):
     def start(self) -> None:
         self._distribute_pot()
         self._return_cards(
-            [p.hand for p in self.game.table.seats.values() if p is not None]
+            [
+                s.player.hand
+                for s in self.game.table.seats
+                if s.player is not None
+            ]
             + [self.game._community_pile, self.game._discard_pile]
         )
-        self._remove_broke_players()
         self.game.end_step()
 
     def end(self) -> None:
@@ -188,11 +191,6 @@ class EndRoundStep(PlayerStep):
 
     def _return_cards(self, collections: List[CardCollection]) -> None:
         self.game.dealer.return_cards(collections)
-
-    def _remove_broke_players(self):
-        for s in self.game.table:
-            if s.player.purse == 0:
-                self.game.table.leave(s.player)
 
 
 class DealStep(AbstractRoundStep):

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List
 
-from .errors import IllegalActionException
+from .errors import GameException, IllegalActionException
 from .player import AbstractPlayer
 from .table import GameTable
 
@@ -12,6 +12,7 @@ class AbstractActionName(Enum):
         return self.value
 
 
+# TODO: Many abstract methods are missing
 class AbstractGameEngine(ABC):
     @abstractmethod
     def join(self, player: AbstractPlayer, seat: int | None = None) -> None:
@@ -29,10 +30,6 @@ class AbstractGameEngine(ABC):
     def do(
         self, action_name: AbstractActionName, player: AbstractPlayer
     ) -> None:
-        pass
-
-    @abstractmethod
-    def get_players(self) -> List[AbstractPlayer]:
         pass
 
     @abstractmethod
@@ -88,7 +85,7 @@ class AbstractRoundStep(ABC):
     _action_map: dict = {}
 
     def __init__(self, game: AbstractGameEngine, config: dict = None) -> None:
-        self.game = game
+        self.game: AbstractGameEngine = game
         self._set_config(**(config or {}))
 
     def _set_config(self, **config) -> None:
@@ -124,6 +121,21 @@ class AbstractRoundStep(ABC):
         return action_class(game)
 
 
+class AbstractRound(ABC):
+    STATUS_STARTED = "STARTED"
+    STATUS_ENDED = "ENDED"
+
+    def __init__(self) -> None:
+        self.status = self.STATUS_STARTED
+
+    def end(self) -> None:
+        self.status = self.STATUS_ENDED
+
+
+class Round(AbstractRound):
+    pass
+
+
 class GameEngine(AbstractGameEngine):
     def __init__(
         self,
@@ -131,11 +143,14 @@ class GameEngine(AbstractGameEngine):
         first_player_strategy: AbstractStartingPlayerStrategy = FirstPlayerStarts,
         **kwargs,
     ) -> None:
-        self._table = table_factory()
-        self._first_player_strategy = first_player_strategy(self)
-        self.steps = []
-        self.round_count = 0
-        self.current_step = None
+        self._table: GameTable = table_factory()
+        self._first_player_strategy: AbstractStartingPlayerStrategy = (
+            first_player_strategy(self)
+        )
+        self.steps: List[AbstractRoundStep] = []
+        self.rounds: List[AbstractRound] = []
+        # self.round_count = 0
+        self.current_step: AbstractRoundStep = None
         self._metadata = {}
 
     @property
@@ -155,6 +170,17 @@ class GameEngine(AbstractGameEngine):
         if self.current_player is None:
             return None
         return self._table.current_player.id
+
+    @property
+    def round_count(self) -> int:
+        return len(self.rounds)
+
+    @property
+    def current_round(self) -> AbstractRound | None:
+        if self.round_count:
+            return self.rounds[-1]
+
+        return None
 
     @property
     def started(self) -> bool:
@@ -178,22 +204,39 @@ class GameEngine(AbstractGameEngine):
         self.start_round()
 
     def start_round(self) -> None:
-        self.round_count += 1
+        # self.round_count += 1
+        round = Round()
+        self.rounds.append(round)
 
         self.step_count = 0
         self.init_step()
 
+    def end_round(self) -> None:
+        if self.round_count < 1:
+            raise GameException("There are no rounds to end.")
+
+        self.rounds[-1].end()
+
     # Add a step manager to move from step to step
     def init_step(self) -> None:
-        if self.step_count == len(self.steps):
-            return
-
-        self.current_step = self.steps[self.step_count]
+        self.step_count += 1
+        self.current_step = self.steps[self.step_count - 1]
         self.current_step.start()
 
     def end_step(self) -> None:
-        self.step_count += 1
+        if self.step_count == len(self.steps):
+            self.end_round()
+            return
+
         self.init_step()
+
+    def join(self, player: AbstractPlayer, seat: int | None = None) -> None:
+        pass
+
+    def do(
+        self, action_name: AbstractActionName, player: AbstractPlayer
+    ) -> None:
+        pass
 
     # This could be on the step and raise if the action cannot be done
     def _get_action(self, action_name: AbstractActionName) -> AbstractAction:
@@ -208,22 +251,9 @@ class GameEngine(AbstractGameEngine):
 
         return action_class(self)
 
-    # def do(self, action_name: AbstractActionName, player: AbstractPlayer, **kwargs) -> None:
-    #     action = self._get_action(action_name)
-
-    #     with TurnManager(self, player, action_name):
-    #         action.do(player, **kwargs)
-
-    # We have to deal with this whole .get_players() vs .players thing
-    # We agreed to keep the property, but make it a list
-    def get_players(self) -> List[AbstractPlayer]:
-        return [s.player for s in self._table]
-
-    # We only need this to avoid having to do this manually in the api layer;
-    # I'd like to find a way for Pydantic to do this
     @property
-    def players(self) -> dict:
-        return {s.player.id: s.player for s in self._table}
+    def players(self) -> List[AbstractPlayer]:
+        return [s.player for s in self._table]
 
     @property
     def table(self) -> GameTable:

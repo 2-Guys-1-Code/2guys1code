@@ -20,7 +20,7 @@ class TurnManager:
         self.player = player
         self.action = action
 
-        self.current_step = self.game.steps[self.game.step_count]
+        # self.current_step = self.game.steps[self.game.step_count]
 
     def __enter__(self) -> None:
         if not self.game.started:
@@ -39,6 +39,6 @@ class TurnManager:
             raise exc_value
 
         try:
-            self.current_step.end()
+            self.game.current_step.end()
         except EndOfStep:
             return

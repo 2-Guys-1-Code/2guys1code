@@ -13,7 +13,11 @@ from game_engine.engine import (
     AbstractStartingPlayerStrategy,
     GameEngine,
 )
-from game_engine.errors import PlayerCannotJoin, TooManyPlayers
+from game_engine.errors import (
+    IllegalActionException,
+    PlayerCannotJoin,
+    TooManyPlayers,
+)
 from game_engine.table import (
     AlreadySeated,
     FreePickTable,
@@ -78,9 +82,9 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
         self.game.dealer.deal(
             [s.player.hand for s in self.game.table], count=1
         )
-        winners = self._find_winnners(self.game.get_players())
+        winners = self._find_winnners(self.game.players)
         winner = winners[0][0]
-        return self.game.table.get_seat(winner)
+        return self.game.table.get_seat_position(winner)
 
     # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(
@@ -105,6 +109,15 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
                 winners.append([p2])
 
         return winners
+
+
+class PokerAI:
+    @classmethod
+    def play(cls, game: GameEngine, player: PokerPlayer) -> None:
+        try:
+            game.check(player)
+        except IllegalActionException:
+            game.fold(player)
 
 
 class PokerGame(GameEngine):
@@ -185,6 +198,11 @@ class PokerGame(GameEngine):
         self.pot = self._pot_factory()
         super().start()
 
+    def end_round(self) -> None:
+        super().end_round()
+        self.remove_broke_players()
+        self.remove_gone_players()
+
     def join(
         self, player: AbstractPokerPlayer, seat: int | None = None
     ) -> None:
@@ -205,8 +223,11 @@ class PokerGame(GameEngine):
             raise PlayerCannotJoin("There are no free seats in the game.")
 
     def leave(self, player: AbstractPokerPlayer) -> None:
-        if self.started:
-            # we'll need to mark the player as wanting to leave
+        # TODO: Use constant
+        if self.current_round and self.current_round.status == "STARTED":
+            self._table.mark_for_leave(player)
+            if self.current_player == player:
+                PokerAI.play(self, player)
             return
 
         self.betting_structure.cash_out(player)
@@ -218,7 +239,7 @@ class PokerGame(GameEngine):
         player: AbstractPokerPlayer,
         **kwargs,
     ) -> None:
-        if player not in self.get_players():
+        if player not in self.players:
             raise PlayerNotInGame(player)
 
         action = self.current_step.get_action(action_name, self)
@@ -295,7 +316,19 @@ class PokerGame(GameEngine):
         return
 
     def next_player(self) -> None:
-        self._table.next_player()
+        player = self._table.next_player()
+        if self._table.get_seat(player).leaving:
+            PokerAI.play(self, player)
+
+    def remove_broke_players(self):
+        for s in self._table.seats:
+            if s.player and s.player.purse == 0:
+                self.leave(s.player)
+
+    def remove_gone_players(self):
+        for s in self._table.seats:
+            if s.player and s.leaving:
+                self.leave(s.player)
 
 
 def get_stud_steps(game: PokerGame, **kwargs) -> List[AbstractRoundStep]:
