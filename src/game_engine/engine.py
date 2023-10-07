@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List
 
+from game_engine.round_manager import AbstractRound, RoundManager
+
 from .errors import GameException, IllegalActionException
 from .player import AbstractPlayer
 from .table import GameTable
@@ -121,21 +123,6 @@ class AbstractRoundStep(ABC):
         return action_class(game)
 
 
-class AbstractRound(ABC):
-    STATUS_STARTED = "STARTED"
-    STATUS_ENDED = "ENDED"
-
-    def __init__(self) -> None:
-        self.status = self.STATUS_STARTED
-
-    def end(self) -> None:
-        self.status = self.STATUS_ENDED
-
-
-class Round(AbstractRound):
-    pass
-
-
 class GameEngine(AbstractGameEngine):
     def __init__(
         self,
@@ -152,6 +139,7 @@ class GameEngine(AbstractGameEngine):
         # self.round_count = 0
         self.current_step: AbstractRoundStep = None
         self._metadata = {}
+        self._round_manager = RoundManager(game=self)
 
     @property
     def dealer_player(self) -> AbstractPlayer | None:
@@ -173,14 +161,16 @@ class GameEngine(AbstractGameEngine):
 
     @property
     def round_count(self) -> int:
-        return len(self.rounds)
+        return self._round_manager.round_count
+        # return len(self.rounds)
 
     @property
     def current_round(self) -> AbstractRound | None:
-        if self.round_count:
-            return self.rounds[-1]
+        return self._round_manager.current_round
+        # if self.round_count:
+        #     return self.rounds[-1]
 
-        return None
+        # return None
 
     @property
     def started(self) -> bool:
@@ -204,18 +194,21 @@ class GameEngine(AbstractGameEngine):
         self.start_round()
 
     def start_round(self) -> None:
+        self._round_manager.start_round()
         # self.round_count += 1
-        round = Round()
-        self.rounds.append(round)
+        # round = Round()
+        # self.rounds.append(round)
 
+        # Move inside round manager
         self.step_count = 0
         self.init_step()
 
     def end_round(self) -> None:
-        if self.round_count < 1:
-            raise GameException("There are no rounds to end.")
+        self._round_manager.end_round()
+        # if self.round_count < 1:
+        #     raise GameException("There are no rounds to end.")
 
-        self.rounds[-1].end()
+        # self.rounds[-1].end()
 
     # Add a step manager to move from step to step
     def init_step(self) -> None:
@@ -253,7 +246,9 @@ class GameEngine(AbstractGameEngine):
 
     @property
     def players(self) -> List[AbstractPlayer]:
-        return [s.player for s in self._table]
+        return self.table.players
+        # Actually grab all players, active or not
+        # return [s.player for s in self._table]
 
     @property
     def table(self) -> GameTable:

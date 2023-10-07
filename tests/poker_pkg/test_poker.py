@@ -593,6 +593,7 @@ def test_game__two_rounds__more_coverage_v2():
     game.all_in(player2)
     game.all_in(player3)  # player3 is out after this due to their bad hand
 
+    game._round_manager.inter_round()
     game.start_round()
 
     game.all_in(player2)
@@ -624,7 +625,8 @@ def test_game__players_without_money_are_out_of_the_game():
     game.all_in(player2)
     game.all_in(player3)
 
-    game.start()
+    game._round_manager.inter_round()
+    game.start_round()
 
     assert [s.player for s in game.table] == [player1, player3]
 
@@ -1016,7 +1018,7 @@ def test_leave_game_before_game_starts():
         betting_structure=BasicBettingStructure(),
     )
 
-    game.leave(player2)
+    game.try_to_leave(player2)
 
     assert game.players == [player1, player3]
     assert player2.purse == 0
@@ -1028,7 +1030,7 @@ def test_leave_game_before_game_starts():
     game.check(player3)
 
     assert game.round_count == 1
-    assert game.rounds[-1].status == "ENDED"
+    assert game.current_round.status == "ENDED"
 
 
 def test_leave_game_after_game_starts__before_their_turn():
@@ -1046,7 +1048,7 @@ def test_leave_game_after_game_starts__before_their_turn():
 
     game.start()
 
-    game.leave(player2)
+    game.try_to_leave(player2)
 
     assert game.players == [player1, player2, player3]
     assert player2.purse == 500
@@ -1054,12 +1056,14 @@ def test_leave_game_after_game_starts__before_their_turn():
     # finish the round
     game.check(player1)
     # The AI checks for player 2
-    assert game._table.get_seat(player2).active == True
-    assert player2.purse == 500
+    assert game._table.get_seat(player2).active == True  # The AI didn't fold
+    assert player2.purse == 500  # The AI didn't bet
     game.check(player3)
 
     assert game.round_count == 1
-    assert game.rounds[-1].status == "ENDED"
+    assert game.current_round.status == "ENDED"
+    assert game.players == [player1, player2, player3]
+    game._round_manager.inter_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
@@ -1079,7 +1083,7 @@ def test_leave_game_after_game_starts__before_their_turn__cannot_check():
 
     game.start()
 
-    game.leave(player2)
+    game.try_to_leave(player2)
 
     assert game.players == [player1, player2, player3]
     assert player2.purse == 500
@@ -1092,7 +1096,9 @@ def test_leave_game_after_game_starts__before_their_turn__cannot_check():
     game.call(player3)
 
     assert game.round_count == 1
-    assert game.rounds[-1].status == "ENDED"
+    assert game.current_round.status == "ENDED"
+    assert game.players == [player1, player2, player3]
+    game._round_manager.inter_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
@@ -1113,8 +1119,8 @@ def test_leave_game_after_game_starts__during_their_turn():
     game.start()
 
     game.check(player1)
-    # IT is now player2's turn; The AI should fold for them
-    game.leave(player2)
+    # It is now player2's turn; The AI should fold for them
+    game.try_to_leave(player2)
     assert game.players == [player1, player2, player3]
     assert game._table.get_seat(player2).active == True
     assert player2.purse == 500
@@ -1123,7 +1129,9 @@ def test_leave_game_after_game_starts__during_their_turn():
     game.check(player3)
 
     assert game.round_count == 1
-    assert game.rounds[-1].status == "ENDED"
+    assert game.current_round.status == "ENDED"
+    assert game.players == [player1, player2, player3]
+    game._round_manager.inter_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
@@ -1140,12 +1148,12 @@ def test_leave_game_after_game_starts__after_betting():
         ],
         betting_structure=BasicBettingStructure(),
     )
-
+    
     game.start()
 
     game.check(player1)
     game.bet(player2, 1)
-    game.leave(player2)
+    game.try_to_leave(player2)
     assert game.players == [player1, player2, player3]
     assert game._table.get_seat(player2).active == True
     assert player2.purse == 499
@@ -1161,8 +1169,9 @@ def test_leave_game_after_game_starts__after_betting():
     assert player2.purse == 500
 
     assert game.round_count == 1
-    assert game.rounds[-1].status == "ENDED"
-    game.table.activate_all()  # I don't love this...
+    assert game.current_round.status == "ENDED"
+    assert game.players == [player1, player2, player3]
+    game._round_manager.inter_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 

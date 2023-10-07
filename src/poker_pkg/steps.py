@@ -145,14 +145,6 @@ class StartRoundStep(PlayerStep):
 class EndRoundStep(PlayerStep):
     def start(self) -> None:
         self._distribute_pot()
-        self._return_cards(
-            [
-                s.player.hand
-                for s in self.game.table.seats
-                if s.player is not None
-            ]
-            + [self.game._community_pile, self.game._discard_pile]
-        )
         self.game.end_step()
 
     def end(self) -> None:
@@ -188,9 +180,6 @@ class EndRoundStep(PlayerStep):
                 winners.append([p2])
 
         return winners
-
-    def _return_cards(self, collections: List[CardCollection]) -> None:
-        self.game.dealer.return_cards(collections)
 
 
 class DealStep(AbstractRoundStep):

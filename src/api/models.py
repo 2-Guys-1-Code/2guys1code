@@ -23,8 +23,8 @@ class Player(BaseModel):
 
 def list_to_dict_factory(
     dict_definition: type, key_getter: Callable, value_getter: Callable
-):
-    def serializer(lst):
+) -> type:
+    def serializer(lst) -> dict:
         return {key_getter(x): value_getter(x) for x in lst}
 
     ListToDict = Annotated[

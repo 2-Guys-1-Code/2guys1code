@@ -156,7 +156,6 @@ class PokerGame(GameEngine):
         # Used in a bunch of places, very integral to a poker game
         self._pot_factory = pot_factory
 
-        # See comments in .join()
         self.id = None
 
     @property
@@ -200,8 +199,19 @@ class PokerGame(GameEngine):
 
     def end_round(self) -> None:
         super().end_round()
-        self.remove_broke_players()
-        self.remove_gone_players()
+        self._return_cards(
+            [
+                s.player.hand
+                for s in self.table.seats
+                if s.player is not None
+            ]
+            + [self._community_pile, self._discard_pile]
+        )
+        # self._remove_broke_players()
+        # self._remove_gone_players()
+
+    def _return_cards(self, collections: List[CardCollection]) -> None:
+        self.dealer.return_cards(collections)
 
     def join(
         self, player: AbstractPokerPlayer, seat: int | None = None
@@ -222,7 +232,7 @@ class PokerGame(GameEngine):
         except TableIsFull:
             raise PlayerCannotJoin("There are no free seats in the game.")
 
-    def leave(self, player: AbstractPokerPlayer) -> None:
+    def try_to_leave(self, player: AbstractPokerPlayer) -> None:
         # TODO: Use constant
         if self.current_round and self.current_round.status == "STARTED":
             self._table.mark_for_leave(player)
@@ -230,6 +240,10 @@ class PokerGame(GameEngine):
                 PokerAI.play(self, player)
             return
 
+        self.leave(player)
+
+
+    def leave(self, player: AbstractPokerPlayer) -> None:
         self.betting_structure.cash_out(player)
         self._table.leave(player)
 
@@ -320,12 +334,12 @@ class PokerGame(GameEngine):
         if self._table.get_seat(player).leaving:
             PokerAI.play(self, player)
 
-    def remove_broke_players(self):
+    def _remove_broke_players(self):
         for s in self._table.seats:
             if s.player and s.player.purse == 0:
                 self.leave(s.player)
 
-    def remove_gone_players(self):
+    def _remove_gone_players(self):
         for s in self._table.seats:
             if s.player and s.leaving:
                 self.leave(s.player)
