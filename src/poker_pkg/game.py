@@ -3,8 +3,8 @@ from functools import partial
 from typing import Callable, List
 
 from betting_structure import AbstractBettingStructure, BasicBettingStructure
-from card_pkg.card import Card
 
+from card_pkg.card import Card
 from card_pkg.card_collection import CardCollection
 from card_pkg.deck import DeckWithoutJokers
 from card_pkg.hand import PokerHand
@@ -25,7 +25,6 @@ from game_engine.table import (
     TableIsFull,
 )
 
-
 from .actions import PokerActionName
 from .dealer import Dealer
 from .errors import (
@@ -37,6 +36,7 @@ from .errors import (
 )
 from .player import AbstractPokerPlayer, PokerPlayer
 from .pot import Pot
+from .round_manager import PokerRound, PokerRoundManager
 from .steps import (
     BettingStep,
     BlindBettingStep,
@@ -137,7 +137,17 @@ class PokerGame(GameEngine):
         table_factory = partial(
             self._create_table, max_players, seating=seating
         )
+
+        def round_factory(*args, **kwargs):
+            return PokerRound(self, *args, **kwargs)
+
+        def round_manager_factory(*args, **kwargs):
+            return PokerRoundManager(
+                *args, round_factory=round_factory, **kwargs
+            )
+
         super(PokerGame, self).__init__(
+            round_manager_factory=round_manager_factory,
             table_factory=table_factory,
             first_player_strategy=first_player_strategy,
         )
@@ -170,6 +180,16 @@ class PokerGame(GameEngine):
     def table(self) -> CardCollection:
         return self._table
 
+    @property
+    def status(self) -> str:
+        if self.round_count == 0:
+            return "PENDING"
+
+        if len(self.players) < 2:
+            return "STARTED"
+
+        return "ENDED"
+
     def _create_table(
         self, max_players: int, seating: str = "sequential"
     ) -> GameTable:
@@ -200,11 +220,7 @@ class PokerGame(GameEngine):
     def end_round(self) -> None:
         super().end_round()
         self._return_cards(
-            [
-                s.player.hand
-                for s in self.table.seats
-                if s.player is not None
-            ]
+            [s.player.hand for s in self.table.seats if s.player is not None]
             + [self._community_pile, self._discard_pile]
         )
         # self._remove_broke_players()
@@ -241,7 +257,6 @@ class PokerGame(GameEngine):
             return
 
         self.leave(player)
-
 
     def leave(self, player: AbstractPokerPlayer) -> None:
         self.betting_structure.cash_out(player)

@@ -526,6 +526,7 @@ def test_game__two_rounds():
     game.check(player3)
 
     # Start the next round automatically?
+    game._round_manager.clean_round()
     game.start_round()
 
     game.all_in(player1)
@@ -560,6 +561,7 @@ def test_game__two_rounds__more_coverage():
     game.fold(player3)
 
     # Start the next round automatically?
+    game._round_manager.clean_round()
     game.start_round()
 
     game.all_in(player1)
@@ -593,7 +595,7 @@ def test_game__two_rounds__more_coverage_v2():
     game.all_in(player2)
     game.all_in(player3)  # player3 is out after this due to their bad hand
 
-    game._round_manager.inter_round()
+    game._round_manager.clean_round()
     game.start_round()
 
     game.all_in(player2)
@@ -625,7 +627,7 @@ def test_game__players_without_money_are_out_of_the_game():
     game.all_in(player2)
     game.all_in(player3)
 
-    game._round_manager.inter_round()
+    game._round_manager.clean_round()
     game.start_round()
 
     assert [s.player for s in game.table] == [player1, player3]
@@ -1063,7 +1065,8 @@ def test_leave_game_after_game_starts__before_their_turn():
     assert game.round_count == 1
     assert game.current_round.status == "ENDED"
     assert game.players == [player1, player2, player3]
-    game._round_manager.inter_round()
+    game._round_manager.clean_round()
+    game.start_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
@@ -1098,7 +1101,8 @@ def test_leave_game_after_game_starts__before_their_turn__cannot_check():
     assert game.round_count == 1
     assert game.current_round.status == "ENDED"
     assert game.players == [player1, player2, player3]
-    game._round_manager.inter_round()
+    game._round_manager.clean_round()
+    game.start_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
@@ -1131,12 +1135,58 @@ def test_leave_game_after_game_starts__during_their_turn():
     assert game.round_count == 1
     assert game.current_round.status == "ENDED"
     assert game.players == [player1, player2, player3]
-    game._round_manager.inter_round()
+    game._round_manager.clean_round()
+    game.start_round()
     assert game.players == [player1, player3]
     assert player2.purse == 0
 
 
 def test_leave_game_after_game_starts__after_betting():
+    hand1 = ["13D", "3H", "4H", "5H", "6H"]
+    hand2 = ["1H", "3C", "4C", "5C", "6C"]  # Winning hand
+    hand3 = ["13S", "3D", "4D", "5D", "6D"]
+
+    fake_shuffler = shuffler_factory([hand1, hand2, hand3])
+    player1 = PokerPlayer(purse=500, name="Michael")
+    player2 = PokerPlayer(purse=500, name="Kichael")
+    player3 = PokerPlayer(purse=500, name="Kathy")
+    game = game_factory(
+        players=[
+            player1,
+            player2,
+            player3,
+        ],
+        shuffler=fake_shuffler,
+        betting_structure=BasicBettingStructure(),
+    )
+
+    game.start()
+
+    game.check(player1)
+    game.bet(player2, 1)
+    game.try_to_leave(player2)
+    assert game.players == [player1, player2, player3]
+    assert game._table.get_seat(player2).active == True
+    assert player2.purse == 499
+
+    # finish the round
+    game.call(player3)
+    game.call(player1)
+
+    assert player2.purse == 502
+
+    assert game.round_count == 1
+    assert game.current_round.status == "ENDED"
+    assert game.players == [player1, player2, player3]
+
+    game._round_manager.clean_round()
+    game.start_round()
+
+    assert game.players == [player1, player3]
+    assert player2.purse == 0
+
+
+def test_leave_game_after_game_starts__after_end_of_turn():
     player1 = PokerPlayer(purse=500, name="Michael")
     player2 = PokerPlayer(purse=500, name="Kichael")
     player3 = PokerPlayer(purse=500, name="Kathy")
@@ -1148,34 +1198,19 @@ def test_leave_game_after_game_starts__after_betting():
         ],
         betting_structure=BasicBettingStructure(),
     )
-    
+
     game.start()
 
     game.check(player1)
-    game.bet(player2, 1)
-    game.try_to_leave(player2)
-    assert game.players == [player1, player2, player3]
-    assert game._table.get_seat(player2).active == True
-    assert player2.purse == 499
+    game.check(player2)
+    game.check(player3)
 
-    # finish the round
-    game.fold(player3)
-    game.fold(player1)
-
-    # How to assert player2's purse before they are removed from the game?
-    # Maybe remove players at the start of the next round?
-    # OR... Players leave with their chips if they came in with their chips...
-    # player2 won the pot before leaving
     assert player2.purse == 500
 
-    assert game.round_count == 1
-    assert game.current_round.status == "ENDED"
-    assert game.players == [player1, player2, player3]
-    game._round_manager.inter_round()
-    assert game.players == [player1, player3]
+    game.try_to_leave(player2)
+
     assert player2.purse == 0
 
-    # Assert some more;
-    # Make sure they ended up with the expected purse (no less than they had at
-    # the time of leaving - so test leaving before & after making a bet) but
-    # potentially more if they won the round after leaving
+    game._round_manager.clean_round()
+    game.start_round()
+    assert game.players == [player1, player3]

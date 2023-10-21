@@ -39,14 +39,18 @@ class Clock(AbstractClock):
         pass
 
 
-# Make this a dataclass?
 class AbstractRound(ABC):
     STATUS_PENDING = "PENDING"
+    STATUS_PREPARED = "PREPARED"
     STATUS_STARTED = "STARTED"
     STATUS_ENDED = "ENDED"
+    STATUS_CLEANED = "CLEANED"
 
     def __init__(self) -> None:
         self.status = self.STATUS_PENDING
+
+    def prepare(self) -> None:
+        self.status = self.STATUS_PREPARED
 
     def start(self) -> None:
         self.status = self.STATUS_STARTED
@@ -54,16 +58,19 @@ class AbstractRound(ABC):
     def end(self) -> None:
         self.status = self.STATUS_ENDED
 
-
-class Round(AbstractRound):
-    def __init__(self, start_time: timedelta, round_number: int) -> None:
-        super().__init__()
-        self._start_time: timedelta = start_time
-        self._number: int = round_number
-        self._data: dict = {}
+    def clean(self) -> None:
+        self.status = self.STATUS_CLEANED
 
 
 class RoundException(Exception):
+    pass
+
+
+class NoCurrentRoundException(Exception):
+    pass
+
+
+class ConsistencyException(Exception):
     pass
 
 
@@ -71,14 +78,12 @@ class AbstractRoundManager(ABC):
     def __init__(
         self,
         clock: AbstractClock = Clock,
-        round_factory: Callable = Round,
-        game: Union["GameEngine",  None] = None,
+        round_factory: Callable = AbstractRound,
         **kwargs,
     ) -> None:
         self._clock: AbstractClock = clock
         self._rounds: list = []
         self._round_factory = round_factory
-        self._game = game
 
     @property
     def round_count(self) -> int:
@@ -88,52 +93,25 @@ class AbstractRoundManager(ABC):
     def current_round(self) -> AbstractRound | None:
         if self.round_count:
             return self._rounds[-1]
-        
+
         return None
 
-    @abstractmethod
-    def start_round(self) -> None:
-        pass
-
-    @abstractmethod
-    def end_round(self) -> None:
-        pass
-
-    @abstractmethod
-    def inter_round(self) -> None:
-        pass
-
-
-class RoundManager(AbstractRoundManager):
-    def start_round(self) -> None:
-        round = self._round_factory(self._clock.time, len(self._rounds) + 1)
-        self._rounds.append(round)
-        round.start()
-
-    def end_round(self) -> None:
-        if self.round_count < 1:
-            raise RoundException("There are no rounds to end.")
-
-        self._rounds[-1].end()
-       
-
-    def inter_round(self) -> None:
-        self._game._remove_broke_players()
-        self._game._remove_gone_players()
-
-
-
-class AutoAdvanceRoundManager(RoundManager):
-    def start_round(self) -> None:
-        round = self._round_factory(self._clock.time, len(self._rounds) + 1)
-        self._rounds.append(round)
-        round.start()
-
-    def end_round(self) -> None:
-        super().end_round()
-        # We need to intercept this to check if the game is over before starting a new round
+    def __enter__(self) -> AbstractRound | None:
         self.start_round()
+        return self.current_round
 
-    def inter_round(self) -> None:
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.end_round()
+        self.clean_round()
+
+    @abstractmethod
+    def start_round(self) -> None:
         pass
 
+    @abstractmethod
+    def end_round(self) -> None:
+        pass
+
+    @abstractmethod
+    def clean_round(self) -> None:
+        pass

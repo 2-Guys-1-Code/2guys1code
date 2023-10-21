@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import pytest
 
-from game_engine.round_manager import AbstractClock, Round, RoundManager
+from game_engine.round_manager import AbstractClock
 from poker_pkg.betting_structure import (
     AbstractBettingFormula,
     AbstractBettingStructure,
@@ -11,6 +11,8 @@ from poker_pkg.betting_structure import (
     StaticBlindFormula,
     TimeBasedBlindFormula,
 )
+from poker_pkg.round_manager import PokerRound, PokerRoundManager
+from tests.poker_pkg.conftest import game_factory, round_factory
 
 
 class BetBigBlindPlusXFormula(AbstractBettingFormula):
@@ -116,8 +118,11 @@ class FakeClock(AbstractClock):
 
 
 def test_time_based_blinds():
+    game = game_factory()
     clock = FakeClock()
-    round_manager = RoundManager(clock=clock, round_factory=Round)
+    round_manager = PokerRoundManager(
+        clock=clock, round_factory=lambda *a: PokerRound(game, *a)
+    )
     small_blind_formula = TimeBasedBlindFormula(
         round_manager, [(timedelta(), 1), (timedelta(minutes=15), 2)]
     )
@@ -141,6 +146,7 @@ def test_time_based_blinds():
     assert structure.small_blind == 1
     assert structure.big_blind == 2
 
+    round_manager.clean_round()
     round_manager.start_round()
 
     assert structure.small_blind == 2
@@ -148,8 +154,11 @@ def test_time_based_blinds():
 
 
 def test_round_based_blinds():
+    game = game_factory()
     clock = FakeClock()
-    round_manager = RoundManager(clock=clock, round_factory=Round)
+    round_manager = PokerRoundManager(
+        clock=clock, round_factory=lambda *a: PokerRound(game, *a)
+    )
     blind_formula = RoundBasedBlindFormula(
         round_manager, [(1, 1), (3, 2)]
     )  # round nb, value
@@ -164,11 +173,13 @@ def test_round_based_blinds():
     assert structure.small_blind == 1
     assert structure.big_blind == 1
 
+    round_manager.clean_round()
     round_manager.start_round()
 
     assert structure.small_blind == 1
     assert structure.big_blind == 1
 
+    round_manager.clean_round()
     round_manager.start_round()
 
     assert structure.small_blind == 2

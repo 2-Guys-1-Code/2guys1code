@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List
 
-from game_engine.round_manager import AbstractRound, RoundManager
+from game_engine.round_manager import AbstractRound, AbstractRoundManager
 
-from .errors import GameException, IllegalActionException
+from .errors import IllegalActionException
 from .player import AbstractPlayer
 from .table import GameTable
 
@@ -18,6 +18,10 @@ class AbstractActionName(Enum):
 class AbstractGameEngine(ABC):
     @abstractmethod
     def join(self, player: AbstractPlayer, seat: int | None = None) -> None:
+        pass
+
+    @abstractmethod
+    def leave(self, player: AbstractPlayer) -> None:
         pass
 
     @abstractmethod
@@ -126,6 +130,7 @@ class AbstractRoundStep(ABC):
 class GameEngine(AbstractGameEngine):
     def __init__(
         self,
+        round_manager_factory: AbstractRoundManager,
         table_factory: Callable = GameTable,
         first_player_strategy: AbstractStartingPlayerStrategy = FirstPlayerStarts,
         **kwargs,
@@ -139,7 +144,7 @@ class GameEngine(AbstractGameEngine):
         # self.round_count = 0
         self.current_step: AbstractRoundStep = None
         self._metadata = {}
-        self._round_manager = RoundManager(game=self)
+        self._round_manager = round_manager_factory()
 
     @property
     def dealer_player(self) -> AbstractPlayer | None:
@@ -226,6 +231,9 @@ class GameEngine(AbstractGameEngine):
     def join(self, player: AbstractPlayer, seat: int | None = None) -> None:
         pass
 
+    def leave(self, player: AbstractPlayer) -> None:
+        pass
+
     def do(
         self, action_name: AbstractActionName, player: AbstractPlayer
     ) -> None:
@@ -256,3 +264,6 @@ class GameEngine(AbstractGameEngine):
 
     def get_free_seats(self) -> int:
         return len(self._table.get_free_seats())
+
+    def next_player(self) -> None:
+        self._table.next_player()

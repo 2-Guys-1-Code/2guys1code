@@ -11,6 +11,7 @@ from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
 from poker_pkg.player import AbstractPokerPlayer, PokerPlayer
 from poker_pkg.pot import Pot
 from poker_pkg.repositories import AbstractRepository, MemoryRepository
+from poker_pkg.round_manager import PokerRound
 from poker_pkg.shuffler import AbstractShuffler, FakeShuffler
 
 
@@ -212,3 +213,7 @@ def memory_player_repository() -> AbstractRepository:
 @pytest.fixture
 def poker_app(memory_player_repository) -> PokerApp:
     return poker_app_factory(player_repository=memory_player_repository)
+
+
+def round_factory(*args, **kwargs) -> PokerRound:
+    return PokerRound(None, *args, **kwargs)
