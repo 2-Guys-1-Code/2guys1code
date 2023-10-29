@@ -64,7 +64,10 @@ class GameDirection(Enum):
 
 class Seat:
     def __init__(
-        self, position: int, player: AbstractPlayer = None, active: bool = True
+        self,
+        position: int,
+        player: AbstractPlayer = None,
+        active: bool = None,
     ) -> None:
         self._position = position
         self._player = player
@@ -77,7 +80,7 @@ class Seat:
 
     @property
     def active(self) -> bool:
-        return self._active
+        return bool(self._active)
 
     @active.setter
     def active(self, state: bool) -> None:
@@ -96,7 +99,9 @@ class Seat:
         self._player = player
         if self._player is None:
             self.leaving = False
-            # self.active = True
+            self.active = False
+        else:
+            self.active = True
 
     def __repr__(self) -> str:
         if self._player is None:
@@ -126,6 +131,14 @@ class GameTable:
     @property
     def dealer(self) -> AbstractPlayer | None:
         return self.get_at_seat(self._dealer_seat)
+
+    @property
+    def dealer_seat(self) -> int | None:
+        return self._dealer_seat
+
+    @property
+    def active_seat(self) -> int | None:
+        return self._active_seat
 
     @property
     def current_player(self) -> AbstractPlayer | None:
@@ -282,7 +295,8 @@ class GameTable:
 
     def activate_all(self) -> None:
         for s in self._seats:
-            s.active = True
+            if s.player is not None:
+                s.active = True
 
     def __iter__(self) -> Seat:
         seats = self._get_ordered_players(only_active=True)

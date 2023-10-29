@@ -738,7 +738,7 @@ def test_move_chip():
 def test_seat_class():
     player_1 = AbstractPlayer(name="Alfred")
     seat = Seat(1, player=player_1)
-    assert seat.active == True
+    assert seat.active == False
     assert seat.player == player_1
 
     seat_2 = Seat(1, active=False, player=player_1)

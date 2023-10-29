@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import partial
-from typing import Callable, List
+from typing import Callable, List, Literal
 
 from betting_structure import AbstractBettingStructure, BasicBettingStructure
 
@@ -10,7 +10,7 @@ from card_pkg.deck import DeckWithoutJokers
 from card_pkg.hand import PokerHand
 from game_engine.engine import (
     AbstractRoundStep,
-    AbstractStartingPlayerStrategy,
+    AbstractSetDealerStrategy,
     GameEngine,
 )
 from game_engine.errors import (
@@ -58,23 +58,26 @@ class PokerTypes(Enum):
         return self.value
 
 
-class HighestCardStarts(AbstractStartingPlayerStrategy):
-    name: str = "highest_card_starts"
+class HighestCard(AbstractSetDealerStrategy):
+    name: Literal = "highest_card"
 
     def _get_metadata(self):
-        return {
-            "strategy": self.name,
-            "data": {
-                str(s.player.id): {
-                    # "cards": [str(c) for c in s.player.hand],
-                    "cards": s.player.hand,
-                    "seat": s.position,
-                }
-                for s in self.game.table
-            },
-        }
+        metadata = super()._get_metadata()
+        metadata.update(
+            {
+                "data": {
+                    str(s.player.id): {
+                        # "cards": [str(c) for c in s.player.hand],
+                        "cards": s.player.hand,
+                        "seat": s.position,
+                    }
+                    for s in self.game.table
+                },
+            }
+        )
+        return metadata
 
-    def _get_index(self):
+    def _find_dealer(self) -> None:
         for s in self.game.table:
             s.player.hand = PokerHand(max_length=1)
 
@@ -83,8 +86,10 @@ class HighestCardStarts(AbstractStartingPlayerStrategy):
             [s.player.hand for s in self.game.table], count=1
         )
         winners = self._find_winnners(self.game.players)
+        # TODO: Handle ties
         winner = winners[0][0]
-        return self.game.table.get_seat_position(winner)
+
+        self._dealer_seat = self.game.table.get_seat_position(winner)
 
     # Duplicated from EndRoundStep -- REFACTOR
     def _find_winnners(
@@ -127,7 +132,7 @@ class PokerGame(GameEngine):
         pot_factory: Pot = Pot,
         max_players: int = 9,
         seating: str = None,
-        first_player_strategy: Callable = HighestCardStarts,
+        set_dealer_strategy: Callable = HighestCard,
         dealer_factory: Dealer = Dealer,
         **kwargs,
     ) -> None:
@@ -149,7 +154,7 @@ class PokerGame(GameEngine):
         super(PokerGame, self).__init__(
             round_manager_factory=round_manager_factory,
             table_factory=table_factory,
-            first_player_strategy=first_player_strategy,
+            set_dealer_strategy=set_dealer_strategy,
         )
 
         # I dont like this
@@ -169,7 +174,7 @@ class PokerGame(GameEngine):
         self.id = None
 
     @property
-    def first_player_metadata(self) -> dict:
+    def set_dealer_metadata(self) -> dict:
         return self._metadata.get("starting_player")
 
     @property
@@ -214,7 +219,6 @@ class PokerGame(GameEngine):
         if nb_players < self.minimum_players:
             raise NotEnoughPlayers(self.minimum_players, nb_players)
 
-        self.pot = self._pot_factory()
         super().start()
 
     def end_round(self) -> None:

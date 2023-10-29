@@ -7,10 +7,7 @@ from card_pkg.card import Card
 from card_pkg.constants import ALL_CARDS_NO_JOKERS
 from card_pkg.deck import Deck
 from card_pkg.hand import Hand, PokerHand
-from game_engine.engine import (
-    AbstractStartingPlayerStrategy,
-    FirstPlayerStarts,
-)
+from game_engine.engine import AbstractSetDealerStrategy, FirstPlayer
 from game_engine.errors import (
     IllegalActionException,
     PlayerCannotJoin,
@@ -24,13 +21,13 @@ from poker_pkg.errors import (
     InvalidAmountNotAnInteger,
     InvalidAmountTooMuch,
 )
-from poker_pkg.game import HighestCardStarts, PokerGame, create_poker_game
+from poker_pkg.game import HighestCard, PokerGame, create_poker_game
 from poker_pkg.player import PokerPlayer
 from poker_pkg.shuffler import FakeShufflerByPosition
 from poker_pkg.steps import DealStep, EndRoundStep
 
 from ..conftest import make_cards
-from .conftest import LastPlayerStarts, game_factory, shuffler_factory
+from .conftest import LastPlayer, game_factory, shuffler_factory
 
 
 def test_create_game():
@@ -124,19 +121,19 @@ def test_start_game__initial_state():
     assert game.current_player == game.players[0]
 
 
-class SecondPlayerStarts(AbstractStartingPlayerStrategy):
-    name: str = "second_player_starts"
+class SecondPlayer(AbstractSetDealerStrategy):
+    name: str = "second_player"
 
-    def _get_index(self):
-        return 2
+    def _find_dealer(self) -> None:
+        self._dealer_seat = 2
 
 
 @pytest.mark.parametrize(
     "strategy, shuffler, expected_starting_player",
     [
-        (SecondPlayerStarts, None, 1),
-        (LastPlayerStarts, None, 2),
-        (HighestCardStarts, shuffler_factory([["13H"], ["1H"], ["7H"]]), 1),
+        (SecondPlayer, None, 1),
+        (LastPlayer, None, 2),
+        (HighestCard, shuffler_factory([["13H"], ["1H"], ["7H"]]), 1),
     ],
     ids=[
         "second seat",
@@ -144,8 +141,8 @@ class SecondPlayerStarts(AbstractStartingPlayerStrategy):
         "highest card",
     ],
 )
-def test_first_player_strategy(strategy, shuffler, expected_starting_player):
-    game = game_factory(shuffler=shuffler, first_player_strategy=strategy)
+def test_set_dealer_strategy(strategy, shuffler, expected_starting_player):
+    game = game_factory(shuffler=shuffler, set_dealer_strategy=strategy)
 
     game.start()
 
@@ -891,7 +888,7 @@ def test_start_game_with_blinds__only_2_players():
         betting_structure=BasicBettingStructure(
             small_blind=StaticBlindFormula(1), big_blind=StaticBlindFormula(2)
         ),
-        first_player_strategy=FirstPlayerStarts,
+        set_dealer_strategy=FirstPlayer,
     )
 
     game.start()

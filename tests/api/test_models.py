@@ -5,8 +5,8 @@ from api.models import (
 )
 from card_pkg.card import Card
 from card_pkg.hand import PokerHand
-from game_engine.engine import FirstPlayerStarts
-from poker_pkg.game import HighestCardStarts
+from game_engine.engine import FirstPlayer
+from poker_pkg.game import HighestCard
 from poker_pkg.player import PokerPlayer
 
 
@@ -18,6 +18,7 @@ def test_player():
         "id": None,
         "name": "Simon",
         "purse": 0,
+        "hand": None,
     }
 
 
@@ -37,33 +38,37 @@ def test_highest_card_starts_metadata():
 def test_polymorphic_metadata():
     result = FirstPlayerMetadata(
         **{
-            "strategy": HighestCardStarts.name,
+            "strategy": HighestCard.name,
             "data": {
                 str(1): {
                     "cards": PokerHand(cards=[Card("2H")]),
                     "seat": 1,
                 },
             },
+            "dealer_seat": 1,
         }
     )
     assert result.model_dump(mode="json") == {
-        "strategy": HighestCardStarts.name,
+        "strategy": HighestCard.name,
         "data": {
             "1": {
                 "cards": ["2H"],
                 "seat": 1,
             },
         },
+        "dealer_seat": 1,
     }
 
     result = FirstPlayerMetadata(
         **{
-            "strategy": FirstPlayerStarts.name,
+            "strategy": FirstPlayer.name,
             "data": {
                 "some": "value",
             },
+            "dealer_seat": 1,
         }
     )
     assert result.model_dump(mode="json") == {
-        "strategy": FirstPlayerStarts.name,
+        "strategy": FirstPlayer.name,
+        "dealer_seat": 1,
     }

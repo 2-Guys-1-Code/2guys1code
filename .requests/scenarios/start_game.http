@@ -22,3 +22,18 @@ content-type: application/json
 {
     "started": true
 }
+
+###
+
+GET http://0.0.0.0:8000/games/1 HTTP/1.1
+
+###
+
+POST http://0.0.0.0:8000/games/1/actions HTTP/1.1
+content-type: application/json
+
+{
+    "player_id": 19,
+    "action_data": {},
+    "action_name": "CHECK"
+}

@@ -4,7 +4,7 @@ import pytest
 
 from card_pkg.card import Card
 from card_pkg.deck import DeckWithoutJokers
-from game_engine.engine import AbstractStartingPlayerStrategy
+from game_engine.engine import AbstractSetDealerStrategy
 from poker_pkg.app import PokerApp, create_poker_app
 from poker_pkg.dealer import Dealer
 from poker_pkg.game import PokerGame, PokerTypes, create_poker_game
@@ -39,12 +39,12 @@ def make_pot(bets=None):
     return pot
 
 
-class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    name: str = "last_player_starts"  # TODO: This is duplicated
+class LastPlayer(AbstractSetDealerStrategy):
+    name: str = "last_player"  # TODO: This is duplicated
 
-    def _get_index(self):
+    def _find_dealer(self) -> None:
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat_position(player)
+        self._dealer_seat = self.game.table.get_seat_position(player)
 
 
 def game_factory(
@@ -59,7 +59,7 @@ def game_factory(
         "game_type": PokerTypes.STUD,
         "chips_per_player": 500,
         "dealer_factory": get_dealer,
-        "first_player_strategy": LastPlayerStarts,
+        "set_dealer_strategy": LastPlayer,
     }
 
     if type(players) is int:

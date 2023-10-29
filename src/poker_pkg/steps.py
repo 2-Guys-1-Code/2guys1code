@@ -129,6 +129,7 @@ class StartRoundStep(PlayerStep):
     def start(self) -> None:
         self.game.table.activate_all()
         self.init_hands(self.game.table.players)
+        self.init_pot(self.game.table.players)
         self.game.end_step()
 
     def end(self) -> None:
@@ -140,6 +141,9 @@ class StartRoundStep(PlayerStep):
     def init_hands(self, players: list[AbstractPokerPlayer]) -> None:
         for p in players:
             p.hand = self.hand_factory()
+
+    def init_pot(self, players: list[AbstractPokerPlayer]) -> None:
+        self.game.pot = self.game._pot_factory(players=players)
 
 
 class EndRoundStep(PlayerStep):

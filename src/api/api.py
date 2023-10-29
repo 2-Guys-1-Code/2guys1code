@@ -3,7 +3,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, status
 
 from api.models import Game, NewActionData, NewGameData, UpdateGameData
-from game_engine.errors import PlayerCannotJoin
+from game_engine.errors import PlayerCannotJoin, PlayerOutOfOrderException
 from poker_pkg.app import (
     ActionDoesNotExist,
     GameNotFound,
@@ -188,6 +188,11 @@ class ProxyAPI(FastAPI):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Player not found.",
+            )
+        except PlayerOutOfOrderException as e:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(e),
             )
         except ActionDoesNotExist as e:
             raise HTTPException(

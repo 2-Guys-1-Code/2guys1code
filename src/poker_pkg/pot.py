@@ -54,12 +54,15 @@ class SidePot:
 
 
 class Pot:
-    def __init__(self) -> None:
+    def __init__(self, players: List[AbstractPokerPlayer] = None) -> None:
         self.kitty = 0
-        self._reset_bets()
+        self._reset_bets(players)
 
-    def _reset_bets(self) -> None:
+    def _reset_bets(self, players: List[AbstractPokerPlayer]) -> None:
         self.bets = defaultdict(list)
+        if players is not None:
+            for p in players:
+                self.bets[p] = []
 
     def add_bet(self, player: AbstractPokerPlayer, amount: int) -> None:
         player.take_from_purse(amount)
@@ -106,7 +109,7 @@ class Pot:
             side_pot.distribute(winners[:])
             self.kitty += side_pot.kitty
 
-        self._reset_bets()
+        self._reset_bets(None)
 
     @property
     def total(self) -> int:

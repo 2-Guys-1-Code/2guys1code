@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from poker_pkg.app import PokerApp
 from poker_pkg.dealer import Dealer
-from poker_pkg.game import HighestCardStarts, create_poker_game
+from poker_pkg.game import HighestCard, create_poker_game
 from tests.api.conftest import api_app_factory, api_client_factory, app_factory
 from tests.poker_pkg.conftest import shuffler_factory
 
@@ -44,25 +44,23 @@ def test_create_game(api_client: TestClient) -> None:
     assert parsed_response == {
         "id": 1,
         "table": {
+            "active_seat": None,
             "seats": {
-                "1": {"id": 8, "name": "Steve", "purse": 500},
-                "2": None,
-                "3": None,
-            }
+                "1": {"player_id": 8, "is_active": True},
+                "2": {"player_id": None, "is_active": False},
+                "3": {"player_id": None, "is_active": False},
+            },
         },
-        "players": {"8": {"id": 8, "name": "Steve", "purse": 500}},
+        "players": [{"id": 8, "name": "Steve", "purse": 500, "hand": None}],
         "started": False,
         "current_player_id": None,
-        "first_player_metadata": None,
+        "set_dealer_metadata": None,
         "pot": None,
     }
 
 
 def test_cannot_create_game_without_player(api_client: TestClient) -> None:
-    try:
-        response = api_client.post("/games", json={"number_of_players": 3})
-    except Exception as e:
-        pass
+    response = api_client.post("/games", json={"number_of_players": 3})
 
     assert (
         response.status_code == 422
@@ -142,15 +140,16 @@ def test_get_games(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response[0]["id"] == 1
-    assert parsed_response[0]["players"] == {
-        "3": {"id": 3, "name": "Bob", "purse": 500}
-    }
+    assert parsed_response[0]["players"] == [
+        {"id": 3, "name": "Bob", "purse": 500, "hand": None}
+    ]
     assert parsed_response[0]["table"] == {
+        "active_seat": None,
         "seats": {
-            "1": {"id": 3, "name": "Bob", "purse": 500},
-            "2": None,
-            "3": None,
-        }
+            "1": {"player_id": 3, "is_active": True},
+            "2": {"player_id": None, "is_active": False},
+            "3": {"player_id": None, "is_active": False},
+        },
     }
 
 
@@ -172,15 +171,16 @@ def test_get_game(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response["id"] == 1
-    assert parsed_response["players"] == {
-        "3": {"id": 3, "name": "Bob", "purse": 500}
-    }
+    assert parsed_response["players"] == [
+        {"id": 3, "name": "Bob", "purse": 500, "hand": None}
+    ]
     assert parsed_response["table"] == {
+        "active_seat": None,
         "seats": {
-            "1": {"id": 3, "name": "Bob", "purse": 500},
-            "2": None,
-            "3": None,
-        }
+            "1": {"player_id": 3, "is_active": True},
+            "2": {"player_id": None, "is_active": False},
+            "3": {"player_id": None, "is_active": False},
+        },
     }
 
 
@@ -271,8 +271,19 @@ def test_start_game(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response["started"] == True
-    assert parsed_response["pot"] == {"total": 0}
+    assert parsed_response["pot"] == {
+        "total": 0,
+        "bets": {
+            "3": {"total": 0, "bets": []},
+            "8": {"total": 0, "bets": []},
+        },
+    }
     assert parsed_response["current_player_id"] == 3
+    # TODO: Make a decision on how to represent an "unknown" card
+    # assert parsed_response["players"] == [
+    #     {"id": 3, "name": "Bob", "purse": 500, "hand": [""] * 2},
+    #     {"id": 8, "name": "Steve", "purse": 500, "hand": [""] * 2},
+    # ]
 
 
 def test_start_game__game_doesnt_exist(api_client: TestClient) -> None:
@@ -313,6 +324,9 @@ def test_start_game__game_is_started() -> None:
     # start the game, then assert that the deck and current_player remain unchanged
     # caveat: current_player wouldn't change with the same fake first player strategy; assert only called once
 
+    api_client.patch(f"/games/{game.id}", json={"started": True})
+    # game._set_first_player = mock.MagicMock()
+
     response = api_client.patch(f"/games/{game.id}", json={"started": True})
 
     assert response.status_code == status.HTTP_200_OK
@@ -320,6 +334,10 @@ def test_start_game__game_is_started() -> None:
     # assert parsed_response["started"] == True
     # assert parsed_response["pot"] == {"total": 0}
     assert game.started is True
+    assert game.current_player_id == 3
+    assert len(game.dealer._deck) == 42
+
+    # game._set_first_player.assert_not_called()
     # TODO: more assertions
 
 
@@ -351,8 +369,9 @@ def test_start_game__highest_card_starts() -> None:
     assert response.status_code == status.HTTP_200_OK
     parsed_response = response.json()
     assert parsed_response["current_player_id"] == 3
-    assert parsed_response["first_player_metadata"] == {
-        "strategy": HighestCardStarts.name,
+    assert parsed_response["table"]["active_seat"] == 1
+    assert parsed_response["set_dealer_metadata"] == {
+        "strategy": HighestCard.name,
         "data": {
             "3": {
                 "cards": ["2H"],
@@ -363,6 +382,7 @@ def test_start_game__highest_card_starts() -> None:
                 "seat": 2,
             },
         },
+        "dealer_seat": 2,
     }
 
 
@@ -376,17 +396,16 @@ def test_join_a_game_with_picked_seats(api_client: TestClient) -> None:
             "seat": 2,
         },
     )
-    api_client.post(
+    response = api_client.post(
         "/games/1/players", json={"current_player_id": 8, "seat": 3}
     )
 
-    response = api_client.patch("/games/1", json={"started": True})
+    # response = api_client.patch("/games/1", json={"started": True})
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_201_CREATED
     parsed_response = response.json()
-    assert parsed_response["table"]["seats"]["2"]["id"] == 3
-    assert parsed_response["table"]["seats"]["3"]["id"] == 8
-    # TODO: Also check that hands were dealt
+    assert parsed_response["table"]["seats"]["2"]["player_id"] == 3
+    assert parsed_response["table"]["seats"]["3"]["player_id"] == 8
 
 
 # This can be added to the parametrized test below
@@ -414,6 +433,47 @@ def test_add_action_to_game__check(api_client: TestClient) -> None:
     assert response.status_code == status.HTTP_201_CREATED
     parsed_response = response.json()
     assert parsed_response["current_player_id"] == 8
+    assert parsed_response["table"]["active_seat"] == 3
+    assert parsed_response["pot"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["3"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["3"]["bets"] == [0]
+    assert parsed_response["pot"]["bets"]["8"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["8"]["bets"] == []
+
+
+def test_add_action_to_game__fold(api_client: TestClient) -> None:
+    # Create a "started game" factory fixture
+    api_client.post(
+        "/games",
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
+    )
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
+    response = api_client.patch("/games/1", json={"started": True})
+
+    # This fails because after folding, the round should end with
+    # player 8 winning the pot, but the game is not set up to do that yet
+    response = api_client.post(
+        "/games/1/actions",
+        json={"action_name": "FOLD", "player_id": 3, "action_data": {}},
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    parsed_response = response.json()
+    assert parsed_response["table"]["2"]["is_active"] == False
+    assert parsed_response["current_player_id"] == 8
+    assert parsed_response["table"]["active_seat"] == 3
+    assert parsed_response["pot"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["3"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["3"]["bets"] == []
+    assert parsed_response["pot"]["bets"]["8"]["total"] == 0
+    assert parsed_response["pot"]["bets"]["8"]["bets"] == []
 
 
 @pytest.mark.parametrize(
@@ -559,7 +619,7 @@ def test_invalid_action_to_game_raises_error(
     # assert parsed_response["detail"][0]["msg"] == "field required"
 
 
-def test_add_action_to_a_nonexistent_game_game(api_client: TestClient) -> None:
+def test_add_action_to_a_nonexistent_game(api_client: TestClient) -> None:
     response = api_client.post(
         "/games/1/actions",
         json={
@@ -636,3 +696,38 @@ def test_cannot_add_action_to_a_game_with_bad_player__existing_player_not_in_gam
     assert response.status_code == status.HTTP_404_NOT_FOUND
     parsed_response = response.json()
     assert parsed_response["detail"] == "Player not found."
+
+
+def test_cannot_add_action_to_a_game_with_bad_player__not_current_player(
+    api_client: TestClient,
+) -> None:
+    # Create a "started game" factory fixture
+    api_client.post(
+        "/games",
+        json={
+            "number_of_players": 3,
+            "current_player_id": 3,
+            "seating": "free_pick",
+            "seat": 2,
+        },
+    )
+    api_client.post(
+        "/games/1/players", json={"current_player_id": 8, "seat": 3}
+    )
+    api_client.patch("/games/1", json={"started": True})
+
+    response = api_client.post(
+        "/games/1/actions",
+        json={
+            "action_name": "BET",
+            "player_id": 8,
+            "action_data": {"bet_amount": 20},
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    parsed_response = response.json()
+    assert (
+        parsed_response["detail"]
+        == "Steve attempted to play, but it is Bob's turn."
+    )

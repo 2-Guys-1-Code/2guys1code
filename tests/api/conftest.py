@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.api import ProxyAPI, create_app
-from game_engine.engine import AbstractStartingPlayerStrategy
+from game_engine.engine import AbstractSetDealerStrategy
 from poker_pkg.app import PokerApp, create_poker_app
 from poker_pkg.game import create_poker_game
 from poker_pkg.player import PokerPlayer
@@ -27,12 +27,12 @@ def game_repository_factory():
     return MemoryRepository()
 
 
-class LastPlayerStarts(AbstractStartingPlayerStrategy):
-    name: str = "last_player_starts"
+class LastPlayer(AbstractSetDealerStrategy):
+    name: str = "last_player"
 
-    def _get_index(self):
+    def _find_dealer(self) -> None:
         player = self.game.table.get_nth_player(-1).player
-        return self.game.table.get_seat_position(player)
+        self._dealer_seat = self.game.table.get_seat_position(player)
 
 
 @mock.patch.multiple(
@@ -51,7 +51,7 @@ def api_app_factory(
     poker_config = poker_config or {
         "max_games": 1,
         "game_factory": game_factory
-        or partial(create_poker_game, first_player_strategy=LastPlayerStarts),
+        or partial(create_poker_game, set_dealer_strategy=LastPlayer),
     }
 
     get_player_repository.return_value = player_repository
@@ -78,7 +78,7 @@ def app_factory(
     poker_config = poker_config or {
         "max_games": 1,
         "game_factory": game_factory
-        or partial(create_poker_game, first_player_strategy=LastPlayerStarts),
+        or partial(create_poker_game, set_dealer_strategy=LastPlayer),
     }
 
     get_player_repository.return_value = player_repository

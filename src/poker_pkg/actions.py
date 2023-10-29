@@ -25,12 +25,6 @@ class PokerActionName(AbstractActionName):
         return self.value
 
 
-class PokerCheck(AbstractAction):
-    def do(self, player: AbstractPokerPlayer, **kwargs) -> None:
-        if self.game.pot.player_owed(player) != 0:
-            raise IllegalActionException()
-
-
 class PokerFold(AbstractAction):
     def do(self, player: AbstractPokerPlayer, **kwargs) -> None:
         self.game.table.deactivate_player(player)
@@ -62,6 +56,14 @@ class PokerBet(AbstractAction):
         self, player: AbstractPokerPlayer, amount: int
     ) -> None:
         self.game.pot.add_bet(player, amount)
+
+
+class PokerCheck(PokerBet):
+    def do(self, player: AbstractPokerPlayer, **kwargs) -> None:
+        if self.game.pot.player_owed(player) != 0:
+            raise IllegalActionException()
+
+        self._transfer_to_pot(player, 0)
 
 
 class PokerCall(PokerBet):

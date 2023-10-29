@@ -5,8 +5,8 @@ import pytest
 
 from game_engine.engine import (
     AbstractGameEngine,
-    AbstractStartingPlayerStrategy,
-    FirstPlayerStarts,
+    AbstractSetDealerStrategy,
+    FirstPlayer,
     GameEngine,
 )
 from game_engine.round_manager import (
@@ -17,7 +17,7 @@ from game_engine.round_manager import (
 from game_engine.table import GameTable
 from poker_pkg.betting_structure import AbstractBettingStructure
 from poker_pkg.dealer import Dealer
-from poker_pkg.game import HighestCardStarts, PokerGame
+from poker_pkg.game import HighestCard, PokerGame
 from poker_pkg.pot import Pot
 from poker_pkg.round_manager import (
     AutoAdvanceRoundManager,

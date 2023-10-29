@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, List
+from typing import Callable, List, Literal
 
 from game_engine.round_manager import AbstractRound, AbstractRoundManager
 
@@ -47,31 +47,37 @@ class AbstractGameEngine(ABC):
         pass
 
 
-class AbstractStartingPlayerStrategy(ABC):
+class AbstractSetDealerStrategy(ABC):
     # TODO: Make this a @property method so it breaks if not implemented?
-    name: str = "starting_player_strategy"
+    name: Literal = "set_dealer_strategy"
 
     def __init__(self, game: AbstractGameEngine) -> None:
         self.game = game
+        self._dealer_seat = None
 
     def _get_metadata(self):
         return {
             "strategy": self.name,
+            "dealer_seat": self._dealer_seat,
         }
 
     @abstractmethod
-    def _get_index(self):
+    def _find_dealer(self):
         pass
 
+    def _get_index(self) -> int | None:
+        return self._dealer_seat
+
     def get_first_player_index(self) -> (int, dict):
+        self._find_dealer()
         return self._get_index(), self._get_metadata()
 
 
-class FirstPlayerStarts(AbstractStartingPlayerStrategy):
-    name: str = "first_player_starts"
+class FirstPlayer(AbstractSetDealerStrategy):
+    name: Literal = "first_player"
 
-    def _get_index(self):
-        return 1
+    def _find_dealer(self):
+        self._dealer_seat = 1
 
 
 class AbstractAction(ABC):
@@ -132,12 +138,12 @@ class GameEngine(AbstractGameEngine):
         self,
         round_manager_factory: AbstractRoundManager,
         table_factory: Callable = GameTable,
-        first_player_strategy: AbstractStartingPlayerStrategy = FirstPlayerStarts,
+        set_dealer_strategy: AbstractSetDealerStrategy = FirstPlayer,
         **kwargs,
     ) -> None:
         self._table: GameTable = table_factory()
-        self._first_player_strategy: AbstractStartingPlayerStrategy = (
-            first_player_strategy(self)
+        self._set_dealer_strategy: AbstractSetDealerStrategy = (
+            set_dealer_strategy(self)
         )
         self.steps: List[AbstractRoundStep] = []
         self.rounds: List[AbstractRound] = []
@@ -182,9 +188,9 @@ class GameEngine(AbstractGameEngine):
         return self.round_count > 0
 
     def _set_first_player(self) -> None:
-        index, metadata = self._first_player_strategy.get_first_player_index()
+        index, metadata = self._set_dealer_strategy.get_first_player_index()
         # I think it might be best to just store the metadata in the
-        # _first_player_strategy instance and reach into it from the model
+        # _set_dealer_strategy instance and reach into it from the model
         self._metadata["starting_player"] = metadata
         self._table.set_chip_to_seat(index)
 
