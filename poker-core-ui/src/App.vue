@@ -2,11 +2,11 @@
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 import LocaleSwitcher from './components/LocaleSwitcher.vue'
-import { provide } from 'vue'
-import { useLocale } from 'vuetify'
+// import { provide } from 'vue'
+// import { useLocale } from 'vuetify'
 
-const { t: $t } = useLocale()
-provide('i18nObj', $t)
+// const { t: $t } = useLocale()
+// provide('i18nObj', $t)
 </script>
 
 <template>
@@ -17,9 +17,12 @@ provide('i18nObj', $t)
       <HelloWorld msg="You did it!" />
 
       <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/join">Join a game</RouterLink>
-        <RouterLink to="/create">Create a game</RouterLink>
+        <RouterLink to="/">{{ $t('$vuetify.home.navigation_home') }}</RouterLink>
+        <RouterLink to="/login">{{ $t('$vuetify.login.navigation_login') }}</RouterLink>
+        <RouterLink to="/signup">{{ $t('$vuetify.login.navigation_signup') }}</RouterLink>
+        <RouterLink to="/join">{{ $t('$vuetify.game.navigation_join-game') }}</RouterLink>
+        <RouterLink to="/create">{{ $t('$vuetify.game.navigation_create-game') }}</RouterLink>
+        <RouterLink to="/game">GAME ROOM</RouterLink>
       </nav>
 
       <LocaleSwitcher></LocaleSwitcher>

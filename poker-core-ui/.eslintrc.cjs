@@ -33,5 +33,6 @@ module.exports = {
         ignore: [],
       },
     ],
+    'indent': ['error', 2]
   },
 }
